@@ -62,6 +62,7 @@ export async function requireAuth(allowedRoles?: string[]) {
     // Redirect to appropriate dashboard based on role
     if (session.role === "ADMIN") redirect("/org");
     if (session.role === "COACH") redirect("/coach");
+    if (session.role === "STAFF") redirect("/staff");
     if (session.role === "PARENT") redirect("/parent");
     redirect("/login");
   }
@@ -143,6 +144,7 @@ export async function revokeAllSessions(userId: string) {
 export function homePathForRole(role: string, hasOrg: boolean) {
   if (role === "ADMIN") return hasOrg ? "/org" : "/onboarding";
   if (role === "COACH") return "/coach";
+  if (role === "STAFF") return "/staff";
   if (role === "PARENT") return "/parent";
   return "/login";
 }

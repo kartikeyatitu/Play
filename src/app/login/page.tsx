@@ -34,6 +34,7 @@ export default function LoginPage() {
       else if (res?.success) {
         if(res.role==="ADMIN") window.location.href = "/org";
         else if(res.role==="COACH") window.location.href = "/coach";
+        else if(res.role==="STAFF") window.location.href = "/staff";
         else window.location.href = "/parent";
       }
     } catch (err) {
@@ -63,6 +64,7 @@ export default function LoginPage() {
       else if (res?.success) {
         if (res.role === "ADMIN") router.push(res.hasOrg ? "/org" : "/onboarding");
         else if (res.role === "COACH") router.push("/coach");
+        else if (res.role === "STAFF") router.push("/staff");
         else router.push("/parent");
       }
     } catch (err) {
@@ -92,6 +94,7 @@ export default function LoginPage() {
           else if (res?.success) {
             if (res.role === "ADMIN") router.push(res.hasOrg ? "/org" : "/onboarding");
             else if (res.role === "COACH") router.push("/coach");
+        else if (res.role === "STAFF") router.push("/staff");
             else router.push("/parent");
           }
         } else if (method === "PHONE") {

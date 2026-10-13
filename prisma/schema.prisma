@@ -53,6 +53,8 @@ model Organization {
   students    Student[]
   batches     Batch[]
   subscription Subscription?
+  memberships     OrgMembership[]
+  staffAttendance StaffAttendance[]
 }
 
 // ==========================================
@@ -90,6 +92,7 @@ model User {
   uploadedPhotos   GalleryPhoto[] @relation("UploadedPhotos")
   auditLogs        AuditLog[]    @relation("UserAuditLogs")
   loginTokens      LoginToken[]
+  memberships      OrgMembership[]   @relation("UserMemberships")
 }
 
 model Student {
@@ -1074,3 +1077,54 @@ model BillingInvoice {
   @@index([subscriptionId])
 }
 
+
+// ==========================================
+// TEAM: memberships, staff roles, staff attendance (Sprint 1, additive)
+// ==========================================
+
+/// Who works at which academy and in what role. One person can belong to several academies
+/// (e.g. a coach at two academies). User.orgId stays the person's *active* academy.
+model OrgMembership {
+  id          String    @id @default(cuid())
+  userId      String
+  orgId       String
+  role        String    // OWNER | MANAGER | COACH | STAFF
+  staffRole   String?   // STAFF only: RECEPTIONIST | ACCOUNTANT | GROUNDSMAN | PHYSIO | OTHER
+  title       String?   // free text shown on the team list, e.g. "Head coach"
+  permissions String?   // JSON: { "<permission>": true|false } overrides on top of role defaults
+  status      String    @default("ACTIVE") // INVITED | ACTIVE | REMOVED
+  payType     String?   // MONTHLY | PER_SESSION
+  payAmount   Int?      // in the academy's currency (whole units)
+  joinedAt    DateTime  @default(now())
+  removedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User          @relation("UserMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  org         Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  attendance  StaffAttendance[]
+
+  @@unique([userId, orgId])
+  @@index([orgId, status])
+}
+
+/// Daily attendance for coaches and staff (one row per person per day).
+model StaffAttendance {
+  id           String    @id @default(cuid())
+  membershipId String
+  orgId        String
+  date         DateTime  // IST calendar day at 00:00 IST
+  status       String    // PRESENT | ABSENT | LEAVE | HALF_DAY
+  checkInAt    DateTime?
+  checkOutAt   DateTime?
+  note         String?
+  markedById   String?   // user who marked it (self check-in = same person)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  membership   OrgMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  org          Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, date])
+  @@index([orgId, date])
+}

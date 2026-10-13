@@ -7,43 +7,14 @@ import { requireAuth } from "@/lib/auth";
 import { cleanIndianPhone } from "@/lib/import-utils";
 
 export async function createCoach(formData: FormData) {
-  const session = await requireAuth(['ADMIN']);
+  // Coaches are team members: one login can coach at several academies (see actions/team.ts).
+  const { addTeamMember } = await import("@/app/actions/team");
   const name = String(formData.get("name") || "").trim();
-  const rawPhone = formData.get("phone") as string;
-  const phone = cleanIndianPhone(rawPhone);
-  const orgId = session.orgId;
-
-  if (!name || !phone) {
+  const phone = String(formData.get("phone") || "");
+  if (!name || !cleanIndianPhone(phone)) {
     throw new Error("Valid name and 10-digit Indian mobile number are required");
   }
-  if (!orgId) {
-    throw new Error("No organization found");
-  }
-
-  const existingUser = await db.user.findUnique({ where: { phone } });
-  if (existingUser) {
-    if (existingUser.orgId && existingUser.orgId !== orgId) {
-      throw new Error("This phone number is registered with another academy");
-    }
-    if (existingUser.role === "ADMIN" || existingUser.role === "SUPER_ADMIN") {
-      throw new Error("This phone number belongs to an admin account");
-    }
-    await db.user.update({
-      where: { id: existingUser.id },
-      data: { role: "COACH", name, orgId }
-    });
-  } else {
-    await db.user.create({
-      data: {
-        name,
-        phone,
-        role: "COACH",
-        orgId,
-      },
-    });
-  }
-
-  revalidatePath("/org");
+  await addTeamMember({ name, phone, role: "COACH" });
   return { success: true };
 }
 

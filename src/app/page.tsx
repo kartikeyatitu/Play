@@ -33,6 +33,7 @@ export default async function Home({
   if (session) {
     if (session.role === "ADMIN") redirect("/org");
     if (session.role === "COACH") redirect("/coach");
+    if (session.role === "STAFF") redirect("/staff");
     if (session.role === "PARENT") redirect("/parent");
   }
 

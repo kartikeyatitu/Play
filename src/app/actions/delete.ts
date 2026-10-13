@@ -3,12 +3,16 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
+import { isOrgOwner } from "@/lib/membership";
 
 export async function deleteAllData() {
   try {
     const session = await requireAuth(["ADMIN"]);
     if (!session.orgId) {
       return { success: false, message: "No organization found" };
+    }
+    if (!(await isOrgOwner(session.id, session.orgId))) {
+      return { success: false, message: "Only the academy owner can delete academy data." };
     }
     const oId = session.orgId;
 

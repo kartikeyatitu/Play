@@ -3,6 +3,7 @@
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { requireAuth } from "@/lib/auth";
+import { isOrgOwner } from "@/lib/membership";
 
 export async function updateAcademy(orgId: string, formData: FormData) {
     const session = await requireAuth(['ADMIN']);
@@ -18,6 +19,7 @@ export async function updateAcademy(orgId: string, formData: FormData) {
 
   if (!orgId) throw new Error("orgId is required");
   if (!session.orgId || session.orgId !== orgId) throw new Error("Unauthorized organization access");
+  if (!(await isOrgOwner(session.id, session.orgId))) throw new Error("Only the academy owner can change academy settings");
   if (!name || !city || !state) throw new Error("Required fields missing");
 
   await db.organization.update({
@@ -42,6 +44,7 @@ export async function updateAcademy(orgId: string, formData: FormData) {
 export async function updateAcademyPayments(formData: FormData) {
   const session = await requireAuth(["ADMIN"]);
   if (!session.orgId) return { success: false, error: "No academy found for your account." };
+  if (!(await isOrgOwner(session.id, session.orgId))) return { success: false, error: "Only the academy owner can change this." };
 
   const upiRaw = String(formData.get("upiId") ?? "").trim();
   if (upiRaw && !/^[a-zA-Z0-9._-]{2,256}@[a-zA-Z][a-zA-Z0-9.-]{1,64}$/.test(upiRaw)) {

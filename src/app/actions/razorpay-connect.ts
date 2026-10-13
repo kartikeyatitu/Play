@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { isOrgOwner } from "@/lib/membership";
 import { rateLimit } from "@/lib/rate-limit";
 import { sealSecret } from "@/lib/secret-box";
 import { razorpayKeyMode, verifyRazorpayCreds } from "@/lib/gateways/razorpay";
@@ -16,6 +17,7 @@ type Result = { success: true; mode: "test" | "live" } | { success: false; error
 export async function connectRazorpay(input: { keyId: string; keySecret: string; webhookSecret?: string }): Promise<Result> {
   const session = await requireAuth(["ADMIN"]);
   if (!session.orgId) return { success: false, error: "No academy found for your account." };
+  if (!(await isOrgOwner(session.id, session.orgId))) return { success: false, error: "Only the academy owner can change this." };
   if (!rateLimit(`rzp-connect:${session.orgId}`, 8, 10 * 60_000).allowed) {
     return { success: false, error: "Too many attempts. Please wait a few minutes." };
   }
@@ -51,6 +53,7 @@ export async function connectRazorpay(input: { keyId: string; keySecret: string;
 export async function disconnectRazorpay(): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth(["ADMIN"]);
   if (!session.orgId) return { success: false, error: "No academy found for your account." };
+  if (!(await isOrgOwner(session.id, session.orgId))) return { success: false, error: "Only the academy owner can change this." };
   await db.organization.update({
     where: { id: session.orgId },
     data: { razorpayKeyId: null, razorpayKeySecretEnc: null, razorpayWebhookSecretEnc: null, razorpayConnectedAt: null },
