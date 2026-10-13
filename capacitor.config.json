@@ -1,0 +1,31 @@
+{
+  "appId": "com.sportsos.app",
+  "appName": "Triq",
+  "webDir": "out",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://triqsports.vercel.app",
+    "cleartext": false,
+    "androidScheme": "https",
+    "allowNavigation": [
+      "triqsports.vercel.app",
+      "triq-app.vercel.app",
+      "sportsos-tau.vercel.app",
+      "*.razorpay.com",
+      "api.razorpay.com"
+    ]
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#09090b",
+      "showSpinner": true,
+      "androidSpinnerStyle": "small",
+      "spinnerColor": "#a3e635"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#09090b"
+    }
+  }
+}

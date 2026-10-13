@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.sportsos.app",
+      "sha256_cert_fingerprints": [
+        "8B:46:82:07:04:BE:27:E0:50:2D:A7:E8:3B:6D:0C:EA:2B:D6:61:6C:66:73:27:72:9B:6A:77:7F:4C:36:96:D2"
+      ]
+    }
+  }
+]

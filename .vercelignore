@@ -1,0 +1,8 @@
+.android-sdk/
+.jdk*/
+android/
+sportsos-release/
+.git
+node_modules/
+.next/
+out/

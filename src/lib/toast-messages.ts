@@ -1,0 +1,17 @@
+export const TOAST_MESSAGES = {
+  STUDENT_ADDED: "✅ Student added successfully",
+  STUDENT_DELETED: "Student removed",
+  COACH_ADDED: "✅ Coach added successfully",
+  BATCH_CREATED: "✅ Batch created",
+  FEE_PAID: "✅ Fee marked as PAID",
+  FEE_PENDING: "Fee marked as PENDING",
+  ANNOUNCEMENT_SENT: "📢 Announcement sent to all parents",
+  SESSION_GENERATED: "✅ Sessions generated for this week",
+  FEES_GENERATED: "✅ Monthly fees generated",
+  PHOTO_UPLOADED: "📸 Photo uploaded",
+  ROUTE_ADDED: "🚌 Transport route added",
+  COUPON_CREATED: "🎟️ Coupon code created",
+  DATA_EXPORTED: "📊 Data exported successfully",
+  TRANSFER_DONE: "✅ Student transferred to new batch",
+  ERROR: "❌ Something went wrong. Please try again.",
+} as const;

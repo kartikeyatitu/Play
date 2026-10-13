@@ -1,0 +1,46 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js
+/.next/
+/out/
+
+# Production
+/build
+
+# Misc
+.DS_Store
+*.pem
+*.log
+
+# Local env files
+.env*.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# SQLite databases & releases
+*.db
+*.db-journal
+*.jks
+sportsos-release/
+
+# Secrets (never commit)
+.env
+.env.vercel.tmp
+.env.production
+.env.mumbai
+!.env.example
+
+# Local SDKs & JDKs
+.android-sdk/
+.jdk*/

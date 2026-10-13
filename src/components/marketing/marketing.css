@@ -1,0 +1,92 @@
+/* Marketing-site-only animations. All classes are prefixed `mk-` so they never collide with app styles.
+   Everything is pure CSS (no JS animation libs) and disabled under prefers-reduced-motion. */
+
+/* Infinite marquee: the track holds two identical copies, so translating by -50% loops seamlessly. */
+@keyframes mk-marquee {
+  to { transform: translate3d(-50%, 0, 0); }
+}
+.mk-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: mk-marquee 45s linear infinite;
+}
+.mk-marquee:hover .mk-marquee-track { animation-play-state: paused; }
+.mk-marquee {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+}
+
+/* Gentle float for hero cards */
+@keyframes mk-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.mk-float { animation: mk-float 6s ease-in-out infinite; }
+.mk-float-delayed { animation: mk-float 7s ease-in-out 1.2s infinite; }
+
+/* Pop-in for notification-style cards */
+@keyframes mk-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.mk-pop { animation: mk-pop 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* Attendance ring draw-in. The element sets --mk-c (circumference) inline. */
+@keyframes mk-ring {
+  from { stroke-dashoffset: var(--mk-c); }
+}
+.mk-ring { animation: mk-ring 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both; }
+
+/* Progress bar grow */
+@keyframes mk-bar {
+  from { transform: scaleX(0); }
+}
+.mk-bar { transform-origin: left; animation: mk-bar 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s both; }
+
+/* Live dot pulse */
+@keyframes mk-ping {
+  75%, 100% { transform: scale(2.2); opacity: 0; }
+}
+.mk-ping { animation: mk-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite; }
+
+/* Soft glow behind hero product UI */
+.mk-glow {
+  background:
+    radial-gradient(40% 50% at 50% 40%, rgba(163, 230, 53, 0.18), transparent 70%),
+    radial-gradient(30% 40% at 80% 70%, rgba(16, 185, 129, 0.12), transparent 70%);
+}
+
+/* Dotted grid backdrop */
+.mk-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Progressive enhancement: scroll-driven reveal where supported (Chromium). Elsewhere content is simply visible. */
+@supports (animation-timeline: view()) {
+  .mk-reveal {
+    animation: mk-pop linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 40%;
+  }
+}
+
+/* FAQ chevron */
+.mk-faq summary::-webkit-details-marker { display: none; }
+.mk-faq[open] .mk-chevron { transform: rotate(45deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-marquee-track,
+  .mk-float,
+  .mk-float-delayed,
+  .mk-pop,
+  .mk-ring,
+  .mk-bar,
+  .mk-ping,
+  .mk-reveal {
+    animation: none !important;
+  }
+  .mk-marquee-track { flex-wrap: wrap; width: auto; justify-content: center; }
+  .mk-marquee-dup { display: none; }
+  .mk-marquee { -webkit-mask-image: none; mask-image: none; }
+}

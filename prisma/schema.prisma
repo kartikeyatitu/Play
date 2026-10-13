@@ -1,0 +1,1076 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// MULTI-TENANT: ORGANIZATION
+// ==========================================
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  sport       String?
+  city        String
+  state       String
+  phone       String?
+  email       String?
+  logo        String?
+  address     String?
+  plan        String   @default("FREE_TRIAL")
+  planExpiry  DateTime?
+  pincode     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Phase 0 (additive): payments & fee defaults
+  upiId             String?  // e.g. "academy@okicici" — used for "Pay via UPI" links/QR
+  defaultMonthlyFee Int?     // fallback fee (₹) when batch/student has none
+  coachSessionRate  Int?     // optional ₹ per session, used to estimate coach payouts
+
+  // M1 (additive): what kind of business signed up. ACADEMY | TURF | BOTH
+  businessType      String   @default("ACADEMY")
+
+  // White-label (additive): partner/academy accent + "Powered by Triq" toggle on shared cards
+  brandColor        String?  // hex, e.g. "#a3e635"; null = Triq lime
+  hidePoweredBy     Boolean  @default(false)
+
+  // M3 (additive): the academy's OWN Razorpay account. Money settles to the academy, never to Triq.
+  // Secrets are AES-256-GCM encrypted (src/lib/secret-box.ts) and must never be sent to the client.
+  razorpayKeyId            String?
+  razorpayKeySecretEnc     String?
+  razorpayWebhookSecretEnc String?
+  razorpayConnectedAt      DateTime?
+
+  users       User[]
+  students    Student[]
+  batches     Batch[]
+  subscription Subscription?
+}
+
+// ==========================================
+// V1 LEAN MVP: ACADEMY WORKFORCE
+// ==========================================
+
+model User {
+  id        String   @id @default(cuid())
+  phone     String?  @unique
+  email     String?  @unique
+  password  String?
+  name      String
+  role      String   @default("PARENT") // SUPER_ADMIN, ADMIN, COACH, PARENT
+  verificationData String?  // JSON: { steps: [{name, status, uploadUrl?, verifiedAt?}] }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orgId            String?
+  org              Organization? @relation(fields: [orgId], references: [id])
+
+  children         Student[]
+  batches          Batch[] // Batches where this user is the COACH
+  skillReports     SkillReport[]
+  sentMessages     Message[]     @relation("SentMessages")
+  receivedMessages Message[]     @relation("ReceivedMessages")
+  rsvps            RSVP[]
+  Media            Media[]
+  equipment        Equipment[]   @relation("AssignedEquipment")
+  referrals        Referral[]
+  incidents        Incident[]    @relation("CoachIncidents")
+  feedback         Feedback[]    @relation("ParentFeedback")
+  verified         Boolean       @default(false)
+  lastSeenAt       DateTime?     // throttled "last used the app" (requireAuth)
+  sessionVersion   Int           @default(0) // M1: bump to revoke every existing session cookie
+  uploadedPhotos   GalleryPhoto[] @relation("UploadedPhotos")
+  auditLogs        AuditLog[]    @relation("UserAuditLogs")
+  loginTokens      LoginToken[]
+}
+
+model Student {
+  id          String   @id @default(cuid())
+  parentId    String
+  name        String
+  dob         DateTime? // optional: many academy rosters don't have it
+  medicalInfo String?
+  points      Int      @default(0)
+  dietPlanUrl String? // e.g. Asthma, Allergies
+  bloodGroup  String?
+  feeOverride Int?     // Phase 0: per-student monthly fee (₹), overrides batch/org fee
+  createdAt   DateTime @default(now())
+
+  parent       User              @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  orgId        String?
+  org          Organization?     @relation(fields: [orgId], references: [id])
+  enrollments  BatchEnrollment[]
+  events       Event[]
+  feeRecords   FeeRecord[]
+  attendances  Attendance[]
+  skillReports SkillReport[]
+  RSVP         RSVP[]
+  Order        Order[]
+  Media        Media[]
+  incidents    Incident[]
+  receipts     Receipt[]
+}
+
+model Batch {
+  id        String   @id @default(cuid())
+  coachId   String
+  name      String // e.g., "U-14 Football Beginners"
+  sport     String
+  schedule  String // e.g., "Mon/Wed/Fri 4:00 PM"
+  monthlyFee Int?    // Phase 0: monthly fee (₹) for students in this batch
+  capacity   Int?    // Phase 0: optional max students
+  createdAt DateTime @default(now())
+
+  coach         User              @relation(fields: [coachId], references: [id])
+  orgId         String?
+  org           Organization?     @relation(fields: [orgId], references: [id])
+  enrollments   BatchEnrollment[]
+  sessions      Session[]
+  Event         Event[]
+  Booking       Booking[]
+  trialBookings TrialBooking[]
+  waitlist      Waitlist[]
+}
+
+model BatchEnrollment {
+  id        String   @id @default(cuid())
+  batchId   String
+  studentId String
+  joinedAt  DateTime @default(now())
+
+  batch   Batch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, studentId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  batchId   String
+  date      DateTime // The specific date this session happened
+  status    String   @default("COMPLETED") // SCHEDULED, COMPLETED, CANCELLED
+  recap        String?   // Coach's post-session recap shared with parents
+  cancelReason String?   // Set when status = CANCELLED
+  createdAt DateTime @default(now())
+
+  @@unique([batchId, date])
+
+  batch       Batch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  attendances Attendance[]
+  orgId       String?
+}
+
+model Attendance {
+  id        String  @id @default(cuid())
+  sessionId String
+  studentId String
+  isPresent Boolean @default(false)
+  status    String? // PRESENT, ABSENT, LATE, EXCUSED (null on legacy rows → derive from isPresent)
+  notes     String?
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+}
+
+// ==========================================
+// ARCHIVED / FUTURE FEATURES (COMMENTED OUT)
+// ==========================================
+
+// model User {
+//   id             String                   @id @default(cuid())
+//   phone          String                   @unique
+//   email          String?                  @unique
+//   fullName       String
+//   avatarUrl      String?
+//   createdAt      DateTime                 @default(now())
+//   updatedAt      DateTime                 @updatedAt
+//   memberships    OrganizationMembership[]
+//   children       Child[]
+//   staffProfiles  StaffMember[]
+//   athletePedigree AthletePedigree?
+//   specialistProfile SportsSpecialist?
+//   courseEnrollments CourseEnrollment[]
+// }
+// 
+// model Child {
+//   id             String       @id @default(cuid())
+//   parentId       String
+//   fullName       String
+//   dob            DateTime
+//   gender         String
+//   sportsId       String?      @unique
+//   parent         User         @relation(fields: [parentId], references: [id], onDelete: Cascade)
+//   enrollments    Enrollment[]
+//   attendance     Attendance[]
+//   consultations  SpecialistConsultation[]
+//   createdAt      DateTime     @default(now())
+// }
+// 
+// model Organization {
+//   id          String                   @id @default(cuid())
+//   name        String
+//   slug        String                   @unique
+//   type        String                   // SOCIETY, ACADEMY, FACILITY, CLUB, SCHOOL, GYM
+//   city        String
+//   address     String
+//   latitude    Float?
+//   longitude   Float?
+//   memberships OrganizationMembership[]
+//   facilities  Facility[]
+//   programs    Program[]
+//   staff       StaffMember[]
+//   createdAt   DateTime                 @default(now())
+//   updatedAt   DateTime                 @updatedAt
+// }
+// 
+// model OrganizationMembership {
+//   id             String       @id @default(cuid())
+//   userId         String
+//   organizationId String
+//   role           String       @default("MEMBER") // OWNER, ADMIN, COACH, STAFF, MEMBER, PARENT
+//   permissions    String       @default("[]")     // JSON string of permissions
+//   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+//   createdAt      DateTime     @default(now())
+// 
+//   @@unique([userId, organizationId])
+// }
+// 
+// model Sport {
+//   id       String    @id @default(cuid())
+//   name     String    @unique
+//   slug     String    @unique
+//   icon     String?
+//   programs Program[]
+// }
+// 
+
+// 
+// model Program {
+//   id             String         @id @default(cuid())
+//   organizationId String
+//   sportId        String
+//   facilityId     String?
+//   title          String
+//   description    String?
+//   minAge         Int            @default(4)
+//   maxAge         Int            @default(18)
+//   monthlyFee     Float
+//   trialFee       Float          @default(0)
+//   organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+//   sport          Sport          @relation(fields: [sportId], references: [id])
+//   facility       Facility?      @relation(fields: [facilityId], references: [id])
+//   batches        ProgramBatch[]
+//   createdAt      DateTime       @default(now())
+// }
+// 
+// model ProgramBatch {
+//   id          String       @id @default(cuid())
+//   programId   String
+//   name        String       // e.g. "Morning Juniors (Mon/Wed/Fri)"
+//   coachName   String       // Assigned coach
+//   daysOfWeek  String       // e.g. "Mon, Wed, Fri"
+//   startTime   String       // "06:30 AM"
+//   endTime     String       // "07:30 AM"
+//   maxCapacity Int          @default(20)
+//   program     Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
+//   enrollments Enrollment[]
+//   attendance  Attendance[]
+//   staffMemberId String?
+//   staffMember StaffMember? @relation(fields: [staffMemberId], references: [id])
+// }
+// 
+// model Enrollment {
+//   id         String       @id @default(cuid())
+//   batchId    String
+//   childId    String
+//   status     String       @default("TRIAL_REQUESTED") // TRIAL_REQUESTED, TRIAL_CONFIRMED, ACTIVE_PAID, CANCELLED
+//   validUntil DateTime?
+//   batch      ProgramBatch @relation(fields: [batchId], references: [id])
+//   child      Child        @relation(fields: [childId], references: [id])
+//   createdAt  DateTime     @default(now())
+// }
+// 
+// model CourtSlot {
+//   id         String   @id @default(cuid())
+//   facilityId String
+//   startTime  DateTime
+//   endTime    DateTime
+//   price      Float
+//   status     String   @default("AVAILABLE") // AVAILABLE, HOLD, BOOKED
+//   facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+// }
+// 
+// model Attendance {
+//   id        String       @id @default(cuid())
+//   batchId   String
+//   childId   String
+//   date      DateTime
+//   isPresent Boolean      @default(true)
+//   checkInAt DateTime?
+//   batch     ProgramBatch @relation(fields: [batchId], references: [id])
+//   child     Child        @relation(fields: [childId], references: [id])
+// }
+// 
+// // ==========================================
+// // WORKFORCE & STAFF MANAGEMENT
+// // ==========================================
+// model StaffMember {
+//   id                String           @id @default(cuid())
+//   organizationId    String
+//   userId            String
+//   role              String           @default("ASSISTANT_COACH") // HEAD_COACH, ASSISTANT_COACH, PERSONAL_TRAINER, FRONT_DESK, CARETAKER
+//   compensationType  String           @default("FIXED_SALARY")   // FIXED_SALARY, PER_SESSION, PER_STUDENT_COMMISSION, HYBRID
+//   baseSalary        Float            @default(0)
+//   perSessionRate    Float            @default(0)
+//   studentCommission Float            @default(0)
+//   certifications    String           @default("[]")
+//   policeVerified    Boolean          @default(false)
+//   isActive          Boolean          @default(true)
+//   shifts            StaffShift[]
+//   payrollLogs       PayrollLog[]
+//   assignedBatches   ProgramBatch[]
+//   organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+//   user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+// }
+// 
+// model StaffShift {
+//   id             String      @id @default(cuid())
+//   staffMemberId  String
+//   date           DateTime
+//   scheduledStart String
+//   scheduledEnd   String
+//   actualCheckIn  DateTime?
+//   actualCheckOut DateTime?
+//   isSubstituted  Boolean     @default(false)
+//   substituteId   String?
+//   staffMember    StaffMember @relation(fields: [staffMemberId], references: [id])
+// }
+// 
+// model PayrollLog {
+//   id            String      @id @default(cuid())
+//   staffMemberId String
+//   month         Int
+//   year          Int
+//   totalSessions Int
+//   grossPayout   Float
+//   tdsDeduction  Float       @default(0)
+//   netPayout     Float
+//   status        String      @default("PENDING")
+//   staffMember   StaffMember @relation(fields: [staffMemberId], references: [id])
+// }
+// 
+// // ==========================================
+// // EX-ATHLETE PROCOACH & SPARRING
+// // ==========================================
+// model AthletePedigree {
+//   id                 String  @id @default(cuid())
+//   userId             String  @unique
+//   highestLevel       String  // INTERNATIONAL, NATIONAL, STATE, UNIVERSITY
+//   sport              String
+//   achievements       String  // JSON string
+//   yearsCompeted      Int
+//   isSparringOpen     Boolean @default(true)
+//   sparringRate       Float   @default(1000.0)
+//   privateLessonRate  Float   @default(1500.0)
+//   verifiedBadge      Boolean @default(false)
+//   user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+// }
+// 
+// // ==========================================
+// // SPORTS SCIENCE & CARE SUITE
+// // ==========================================
+// model SportsSpecialist {
+//   id             String                  @id @default(cuid())
+//   userId         String                  @unique
+//   category       String                  // NUTRITIONIST, PSYCHOLOGIST, PHYSIOTHERAPIST, STRENGTH_AND_CONDITIONING
+//   qualifications String
+//   consultFee     Float                   @default(1500.0)
+//   bio            String?
+//   consultations  SpecialistConsultation[]
+//   user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+// }
+// 
+// model SpecialistConsultation {
+//   id           String           @id @default(cuid())
+//   specialistId String
+//   childId      String
+//   dateTime     DateTime
+//   type         String           // DIET_PLAN, MENTAL_CONDITIONING, INJURY_REHAB
+//   notes        String?
+//   status       String           @default("SCHEDULED")
+//   specialist   SportsSpecialist @relation(fields: [specialistId], references: [id])
+//   child        Child            @relation(fields: [childId], references: [id])
+// }
+// 
+// // ==========================================
+// // BRANDS (DECATHLON & YONEX) & PROCUREMENT
+// // ==========================================
+// model Brand {
+//   id              String             @id @default(cuid())
+//   name            String             // "Yonex India", "Decathlon India"
+//   slug            String             @unique
+//   logoUrl         String
+//   category        String             // EQUIPMENT, RETAIL, HYDRATION
+//   wholesaleItems  WholesaleProduct[]
+//   sponsorships    BrandSponsorship[]
+//   createdAt       DateTime           @default(now())
+// }
+// 
+// model WholesaleProduct {
+//   id             String   @id @default(cuid())
+//   brandId        String
+//   title          String   // e.g. "Yonex Mavis 350 (Box of 10 Tubes)"
+//   sku            String   @unique
+//   retailPrice    Float
+//   wholesalePrice Float
+//   minOrderQty    Int      @default(5)
+//   inStock        Boolean  @default(true)
+//   brand          Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+// }
+// 
+// model BrandSponsorship {
+//   id          String   @id @default(cuid())
+//   brandId     String
+//   title       String   // e.g. "Yonex Grassroots Kit Contract"
+//   targetSport String
+//   stipendVal  Float
+//   status      String   @default("ACTIVE")
+//   brand       Brand    @relation(fields: [brandId], references: [id])
+// }
+// 
+// // ==========================================
+// // EDU-OS & SPORTS COURSES
+// // ==========================================
+// model Course {
+//   id              String             @id @default(cuid())
+//   title           String
+//   slug            String             @unique
+//   category        String             // COACHING, SPORTS_MANAGEMENT, REFEREE
+//   price           Float              @default(0)
+//   durationHours   Int
+//   level           String             // BEGINNER, INTERMEDIATE, ADVANCED
+//   modules         CourseModule[]
+//   enrollments     CourseEnrollment[]
+//   createdAt       DateTime           @default(now())
+// }
+// 
+// model CourseModule {
+//   id       String @id @default(cuid())
+//   courseId String
+//   title    String
+//   videoUrl String?
+//   content  String?
+//   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+// }
+// 
+// model CourseEnrollment {
+//   id          String   @id @default(cuid())
+//   courseId    String
+//   userId      String
+//   progress    Float    @default(0)
+//   isCompleted Boolean  @default(false)
+//   course      Course   @relation(fields: [courseId], references: [id])
+//   user        User     @relation(fields: [userId], references: [id])
+//   createdAt   DateTime @default(now())
+// }
+// 
+// // ==========================================
+// // TOURNAMENT ENGINE
+// // ==========================================
+// model Tournament {
+//   id             String   @id @default(cuid())
+//   title          String
+//   slug           String   @unique
+//   sport          String
+//   venueName      String
+//   startDate      DateTime
+//   endDate        DateTime
+//   entryFee       Float
+//   prizePool      Float
+//   status         String   @default("UPCOMING") // UPCOMING, LIVE, COMPLETED
+//   createdAt      DateTime @default(now())
+// }
+// 
+// // ==========================================
+// // AUDIT & FINANCIAL LEDGER
+// // ==========================================
+// model LedgerEntry {
+//   id             String   @id @default(cuid())
+//   transactionId  String
+//   accountType    String   // ESCROW, RWA_MAINTENANCE, ACADEMY_PAYOUT, SPORTSOS_FEE
+//   debit          Float    @default(0)
+//   credit         Float    @default(0)
+//   createdAt      DateTime @default(now())
+// }
+// 
+// model ProcessedEvent {
+//   id        String   @id @default(cuid())
+//   eventId   String   @unique
+//   createdAt DateTime @default(now())
+// }
+// 
+
+model VerificationToken {
+  id        String   @id @default(cuid())
+  phone     String
+  token     String
+  attempts  Int      @default(0) // wrong guesses against this phone's code; the code is burned after 5
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([phone, token])
+}
+
+// One-tap login links generated by an academy admin (shared on WhatsApp).
+// Only the sha256 hash of the token is stored; tokens are single-use and expire.
+model LoginToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdById String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model FeeRecord {
+  id        String    @id @default(cuid())
+  studentId String
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  amount    Float     @default(0)
+  month     String // Format: "YYYY-MM"
+  status    String    @default("PENDING") // PENDING, PAID
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, month])
+  orgId       String?
+  receipt     Receipt?
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  createdAt DateTime @default(now())
+  authorId  String
+  orgId       String?
+  batchId   String? // null = whole academy; set = only parents of this batch
+  kind      String? // GENERAL, RECAP, CANCELLATION
+}
+
+model SkillReport {
+  id         String   @id @default(cuid())
+  studentId  String
+  coachId    String
+  month      String // "YYYY-MM"
+  technique  Int      @default(3) // 1-5 stars
+  fitness    Int      @default(3)
+  discipline Int      @default(3)
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  coach   User    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, month])
+  orgId       String?
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  title     String
+  date      DateTime
+  location  String?
+  batchId   String
+  batch     Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  rsvps     RSVP[]
+  createdAt DateTime @default(now())
+  Student   Student? @relation(fields: [studentId], references: [id])
+  studentId String?
+  orgId       String?
+}
+
+model RSVP {
+  id        String  @id @default(cuid())
+  eventId   String
+  studentId String
+  status    String // "GOING", "NOT_GOING", "PENDING"
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  User      User?   @relation(fields: [userId], references: [id])
+  userId    String?
+
+  @@unique([eventId, studentId])
+  orgId       String?
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  stock       Int      @default(100)
+  createdAt   DateTime @default(now())
+  orders      Order[]
+  orgId       String?
+}
+
+model Order {
+  id        String   @id @default(cuid())
+  productId String
+  studentId String
+  status    String   @default("PENDING") // PENDING, DELIVERED
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  orgId       String?
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  senderId   String
+  receiverId String
+  createdAt  DateTime @default(now())
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  orgId       String?
+}
+
+model Media {
+  id        String   @id @default(cuid())
+  studentId String
+  coachId   String
+  title     String
+  videoUrl  String // e.g. YouTube or Drive link
+  createdAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  coach   User    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  orgId       String?
+}
+
+model Facility {
+  id        String    @id @default(cuid())
+  name      String // e.g. "Turf 1", "Tennis Court A"
+  type      String // e.g. "PITCH", "COURT", "INDOOR"
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+  orgId       String?
+
+  // M4 (additive): hourly turf/court booking settings. Money amounts are whole rupees.
+  hourlyRate    Int     @default(0)
+  openHour      Int     @default(6) // IST, 0-23
+  closeHour     Int     @default(23) // IST, 1-24 (last bookable slot ends at this hour)
+  advanceAmount Int     @default(0) // online advance in rupees; 0 = collect the full amount online
+  isActive      Boolean @default(true)
+  turfBookings  TurfBooking[]
+}
+
+// M4 (additive): an hourly court/turf booking (walk-in, phone, academy lease, or online via Razorpay).
+// Double-booking is prevented by an advisory lock + overlap check in src/lib/turf-engine.ts AND by a
+// Postgres exclusion constraint (scripts/apply-turf-constraint.ts) as a last line of defence.
+model TurfBooking {
+  id                String    @id @default(cuid())
+  orgId             String
+  facilityId        String
+  startTime         DateTime
+  endTime           DateTime
+  customerName      String
+  customerPhone     String
+  amount            Int // total in rupees
+  advancePaid       Int       @default(0) // rupees received so far
+  onlineDue         Int       @default(0) // rupees the customer must pay online to confirm (ONLINE source)
+  status            String    @default("CONFIRMED") // HOLD | CONFIRMED | CANCELLED | EXPIRED | COMPLETED | NO_SHOW | PAID_CONFLICT
+  source            String    @default("COUNTER") // COUNTER | ONLINE | LEASE
+  holdExpiresAt     DateTime?
+  providerOrderId   String?   @unique // Razorpay order id for the online advance
+  providerPaymentId String?
+  leaseGroupId      String? // groups the weekly repeats of one academy lease
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@index([facilityId, startTime])
+  @@index([orgId, startTime])
+}
+
+model Booking {
+  id         String   @id @default(cuid())
+  facilityId String
+  batchId    String
+  startTime  DateTime
+  endTime    DateTime
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  batch    Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+}
+
+model Equipment {
+  id           String   @id @default(cuid())
+  name         String // e.g. "Size 5 Footballs", "Training Cones"
+  quantity     Int      @default(0)
+  assignedToId String? // Coach ID
+  createdAt    DateTime @default(now())
+
+  assignedTo User? @relation("AssignedEquipment", fields: [assignedToId], references: [id])
+  orgId       String?
+}
+
+model TrialBooking {
+  id          String   @id @default(cuid())
+  parentName  String
+  parentPhone String
+  childName   String
+  childAge    Int
+  batchId     String
+  status      String   @default("PENDING") // PENDING, CONFIRMED, COMPLETED, NO_SHOW
+  date        DateTime
+  createdAt   DateTime @default(now())
+  batch       Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+}
+
+model Referral {
+  id           String   @id @default(cuid())
+  referrerId   String // Parent who referred
+  refereePhone String // Phone of new parent
+  status       String   @default("PENDING") // PENDING, CONVERTED
+  discount     Float    @default(500)
+  createdAt    DateTime @default(now())
+  referrer     User     @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+}
+
+model Incident {
+  id          String   @id @default(cuid())
+  studentId   String
+  coachId     String
+  type        String // INJURY, MISCONDUCT, OTHER
+  description String
+  severity    String   @default("LOW") // LOW, MEDIUM, HIGH
+  createdAt   DateTime @default(now())
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  coach       User     @relation("CoachIncidents", fields: [coachId], references: [id], onDelete: Cascade)
+  orgId       String?
+}
+
+model Holiday {
+  id        String   @id @default(cuid())
+  orgId     String?
+  title     String // e.g. "Diwali", "Christmas"
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  @@index([orgId])
+}
+
+model Waitlist {
+  id          String   @id @default(cuid())
+  batchId     String
+  parentName  String
+  parentPhone String
+  childName   String
+  status      String   @default("WAITING") // WAITING, NOTIFIED, ENROLLED
+  createdAt   DateTime @default(now())
+  batch       Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  orgId       String?
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  parentId  String
+  rating    Int // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+  parent    User     @relation("ParentFeedback", fields: [parentId], references: [id], onDelete: Cascade)
+  orgId       String?
+}
+
+model Coupon {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  discount   Float // percentage or flat
+  type       String   @default("FLAT") // FLAT, PERCENT
+  isActive   Boolean  @default(true)
+  usageLimit Int      @default(100)
+  usedCount  Int      @default(0)
+  createdAt  DateTime @default(now())
+  orgId       String?
+}
+
+model GalleryPhoto {
+  id         String   @id @default(cuid())
+  url        String
+  caption    String?
+  uploadedById String
+  uploadedBy User     @relation("UploadedPhotos", fields: [uploadedById], references: [id])
+  createdAt  DateTime @default(now())
+  orgId       String?
+}
+
+model TransportRoute {
+  id            String   @id @default(cuid())
+  name          String
+  driverName    String
+  driverPhone   String
+  vehicleNumber String
+  stops         String   @default("[]")
+  studentNames  String   @default("[]")
+  createdAt     DateTime @default(now())
+  orgId       String?
+}
+
+model FeePlan {
+  id        String   @id @default(cuid())
+  name      String   // "Monthly", "Quarterly", "Annual"
+  duration  Int      // months: 1, 3, 12
+  amount    Float    // e.g., 2500, 7000, 25000
+  sport     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  orgId       String?
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String   // "MARK_FEE_PAID", "ADD_STUDENT", "DELETE_BATCH"
+  details   String?  // JSON string with context
+  createdAt DateTime @default(now())
+  user      User     @relation("UserAuditLogs", fields: [userId], references: [id])
+  orgId       String?
+}
+
+model Lead {
+  id          String   @id @default(cuid())
+  parentName  String
+  parentPhone String
+  childName   String
+  childAge    Int?
+  sport       String?
+  source      String   @default("WALK_IN") // WALK_IN, WEBSITE, REFERRAL, SOCIAL_MEDIA, PHONE_CALL, WHATSAPP
+  status      String   @default("NEW") // NEW, CONTACTED, TRIAL_BOOKED, TRIAL_ATTENDED, ENROLLED, LOST
+  notes       String?
+  followUpDate DateTime?
+  assignedTo  String?  // coach or admin ID
+  orgId       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
+// Online fee payments (Razorpay / Stripe). One row per checkout attempt.
+// The amount is fixed server-side from the FeeRecord when the row is created and re-checked
+// against what the gateway reports, so a client can never pay less and still mark a fee PAID.
+model Payment {
+  id                String    @id @default(cuid())
+  orgId             String
+  studentId         String
+  feeRecordId       String
+  parentId          String
+  provider          String // RAZORPAY | STRIPE
+  providerOrderId   String    @unique // Razorpay order_id or Stripe checkout session id
+  providerPaymentId String?
+  amount            Int // minor units (paise / cents)
+  currency          String // INR, USD ...
+  status            String    @default("CREATED") // CREATED | PAID | FAILED
+  kind              String    @default("CHECKOUT") // CHECKOUT (parent app) | LINK (Razorpay payment link sent by the academy)
+  linkUrl           String? // short_url of a Razorpay payment link
+  failureReason     String?
+  createdAt         DateTime  @default(now())
+  paidAt            DateTime?
+
+  @@index([feeRecordId])
+  @@index([orgId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Public directory (growth engine): academies listed from public sources
+// (Google Places etc.) that can be claimed by their owners. Additive.
+// ---------------------------------------------------------------------------
+model ListedAcademy {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  city          String   // lowercase slug, e.g. "gurgaon"
+  area          String?  // e.g. "Sector 56", "Golf Course Road"
+  sports        String   // comma-separated lowercase slugs, e.g. "cricket,football"
+  address       String?
+  lat           Float?
+  lng           Float?
+  phone         String?
+  website       String?
+  instagram     String?
+  rating        Float?
+  ratingCount   Int?
+  googlePlaceId String?  @unique
+  source        String   @default("google_places")
+  claimStatus   String   @default("UNCLAIMED") // UNCLAIMED, PENDING, CLAIMED
+  claimedOrgId  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  leads         DirectoryLead[]
+  claims        ClaimRequest[]
+
+  @@index([city])
+  @@index([claimStatus])
+}
+
+/// Parent enquiries / free-trial requests from the public directory.
+model DirectoryLead {
+  id              String         @id @default(cuid())
+  listedAcademyId String?
+  listedAcademy   ListedAcademy? @relation(fields: [listedAcademyId], references: [id])
+  orgId           String?        // set when the enquiry is for a Triq academy
+  parentName      String
+  phone           String
+  childName       String?
+  childAge        Int?
+  sport           String?
+  message         String?
+  status          String         @default("NEW") // NEW, CONTACTED, CONVERTED, SPAM
+  createdAt       DateTime       @default(now())
+
+  @@index([listedAcademyId])
+  @@index([orgId])
+}
+
+/// Owner asks to claim a directory listing (verified manually / by call).
+model ClaimRequest {
+  id              String        @id @default(cuid())
+  listedAcademyId String
+  listedAcademy   ListedAcademy @relation(fields: [listedAcademyId], references: [id])
+  name            String
+  phone           String
+  email           String?
+  role            String        @default("OWNER") // OWNER, COACH, MANAGER
+  status          String        @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt       DateTime      @default(now())
+
+  @@index([listedAcademyId])
+}
+
+/// Marketing-site leads (owner landing page, WhatsApp CTA, demo requests).
+model SalesLead {
+  id         String   @id @default(cuid())
+  name       String
+  phone      String
+  academy    String?
+  city       String?
+  sport      String?
+  students   Int?
+  source     String   @default("landing") // landing, directory_claim, outbound, referral
+  utm        String?
+  status     String   @default("NEW") // NEW, CONTACTED, DEMO, TRIAL, WON, LOST
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  @@index([status])
+}
+
+// M1 (additive): DB-backed fixed-window rate limiter. The in-memory limiter in src/lib/rate-limit.ts
+// resets on every serverless cold start, so abuse-sensitive limits (OTP, login) persist here.
+model RateLimit {
+  key       String   @id
+  count     Int      @default(0)
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+}
+
+/// Official, verifiable digital fee receipt for parents and academies
+model Receipt {
+  id              String     @id @default(cuid())
+  receiptNumber   String     @unique
+  token           String     @unique
+  orgId           String
+  studentId       String
+  feeRecordId     String?    @unique
+  studentName     String
+  parentName      String?
+  parentPhone     String?
+  batchName       String?
+  sport           String?
+  month           String     // "YYYY-MM"
+  amount          Float
+  paymentMode     String     @default("UPI") // UPI, CASH, RAZORPAY, BANK_TRANSFER
+  transactionRef  String?
+  issuedAt        DateTime   @default(now())
+  createdAt       DateTime   @default(now())
+
+  student         Student?   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  feeRecord       FeeRecord? @relation(fields: [feeRecordId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([token])
+  @@index([receiptNumber])
+}
+
+/// Triq SaaS subscription tiers & billing for academies
+model Subscription {
+  id                    String           @id @default(cuid())
+  orgId                 String           @unique
+  plan                  String           @default("FREE") // FREE, STARTER, PRO, ENTERPRISE
+  status                String           @default("ACTIVE") // ACTIVE, TRIALING, PAST_DUE, CANCELED
+  maxStudents           Int              @default(30)
+  priceMonthly          Int              @default(0)
+  currentPeriodStart    DateTime         @default(now())
+  currentPeriodEnd      DateTime?
+  cancelAtPeriodEnd     Boolean          @default(false)
+  razorpaySubscriptionId String?        @unique
+  razorpayCustomerId   String?
+  gracePeriodEndsAt     DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  org                   Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoices              BillingInvoice[]
+
+  @@index([orgId])
+  @@index([status])
+}
+
+/// Triq platform billing invoices
+model BillingInvoice {
+  id                 String       @id @default(cuid())
+  subscriptionId     String
+  orgId              String
+  invoiceNumber      String       @unique
+  amount             Int          // In INR
+  currency           String       @default("INR")
+  status             String       @default("PAID")
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  paidAt             DateTime?
+  pdfUrl             String?
+  createdAt          DateTime     @default(now())
+
+  subscription       Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([subscriptionId])
+}
+

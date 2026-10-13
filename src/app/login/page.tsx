@@ -1,0 +1,249 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { sendOtp, verifyOtpAndLogin, registerWithEmail, loginWithEmail, loginWithGoogle } from "@/app/actions/auth";
+import { useRouter } from "next/navigation";
+import { Loader2, ArrowLeft, Mail, Phone } from "lucide-react";
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+
+export default function LoginPage() {
+  const [mode, setMode] = useState<"SIGN_IN" | "REGISTER">("SIGN_IN");
+  const [method, setMethod] = useState<"EMAIL" | "PHONE">("EMAIL");
+  const [step, setStep] = useState<1 | 2>(1);
+  
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const { verifyOtpAndLogin } = await import('@/app/actions/auth');
+      const res = await verifyOtpAndLogin(phone, otp);
+      if (res?.error) setError(res.error);
+      else if (res?.success) {
+        if(res.role==="ADMIN") window.location.href = "/org";
+        else if(res.role==="COACH") window.location.href = "/coach";
+        else window.location.href = "/parent";
+      }
+    } catch (err) {
+      setError("Failed to verify OTP.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  
+  const router = useRouter();
+
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+  function resetState() {
+    setStep(1);
+    setError(null);
+    setMessage(null);
+  }
+
+  async function handleGoogleSuccess(credentialResponse: any) {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await loginWithGoogle(credentialResponse.credential || "MOCK_CREDENTIAL");
+      if (res?.error) setError(res.error);
+      else if (res?.success) {
+        if (res.role === "ADMIN") router.push(res.hasOrg ? "/org" : "/onboarding");
+        else if (res.role === "COACH") router.push("/coach");
+        else router.push("/parent");
+      }
+    } catch (err) {
+      setError("Google authentication failed.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAction(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    
+    try {
+      if (mode === "REGISTER") {
+        if (method === "EMAIL") {
+          const res = await registerWithEmail(name, email, phone, password);
+          if (res?.error) setError(res.error);
+          else if (res?.success) router.push("/onboarding");
+        }
+      } else {
+        if (method === "EMAIL") {
+          const res = await loginWithEmail(email, password);
+          if (res?.error) setError(res.error);
+          else if (res?.success) {
+            if (res.role === "ADMIN") router.push(res.hasOrg ? "/org" : "/onboarding");
+            else if (res.role === "COACH") router.push("/coach");
+            else router.push("/parent");
+          }
+        } else if (method === "PHONE") {
+          const res = await sendOtp(phone);
+          if (res?.error) setError(res.error);
+          else if (res?.smsSent) {
+            setMessage("OTP sent via SMS!");
+            setStep(2);
+          }
+        }
+      }
+    } catch (err) {
+      setError("An unexpected error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const content = (
+    <div className="min-h-screen bg-zinc-950 bg-grid bg-orbs flex flex-col items-center justify-center p-4 text-zinc-50 font-sans page-transition">
+      <div className="w-full max-w-sm space-y-8 bg-zinc-900/40 backdrop-blur-xl p-8 rounded-3xl border border-zinc-800/50 shadow-2xl relative overflow-hidden glass">
+        
+        <div className="text-center space-y-2 relative z-10">
+          <h1 className="text-3xl font-black tracking-tight uppercase italic gradient-text">
+            TRIQ
+          </h1>
+          <p className="text-zinc-400 text-sm">
+            {mode === "SIGN_IN" ? "Sign in to your workspace" : "Create a new Academy Workspace"}
+          </p>
+        </div>
+
+        {step === 1 && (
+          <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+            <button type="button" onClick={() => { setMode("SIGN_IN"); resetState(); }}
+              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode === "SIGN_IN" ? "bg-zinc-800 text-white shadow" : "text-zinc-500 hover:text-zinc-300"}`}>
+              Sign In
+            </button>
+            <button type="button" onClick={() => { setMode("REGISTER"); setMethod("EMAIL"); resetState(); }}
+              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode === "REGISTER" ? "bg-zinc-800 text-white shadow" : "text-zinc-500 hover:text-zinc-300"}`}>
+              Register
+            </button>
+          </div>
+        )}
+
+        {error && <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-3 rounded-xl text-sm text-center font-medium">{error}</div>}
+        {message && <div className="bg-lime-500/10 border border-lime-500/20 text-lime-400 p-3 rounded-xl text-sm text-center font-medium">{message}</div>}
+
+        {step === 1 ? (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            
+            {/* GOOGLE SSO BUTTON */}
+            {(method === "EMAIL" || mode === "REGISTER") && (
+              <div className="flex flex-col items-center justify-center border-b border-zinc-800/50 pb-6">
+                {googleClientId ? (
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => setError("Google Login Failed")}
+                    theme="filled_black"
+                    shape="circle"
+                    width="100%"
+                    text={mode === "REGISTER" ? "signup_with" : "signin_with"}
+                  />
+                ) : process.env.NODE_ENV !== "production" ? (
+                  <button 
+                    type="button" 
+                    onClick={() => handleGoogleSuccess({})}
+                    disabled={loading}
+                    className="w-full bg-white text-black hover:bg-gray-100 flex items-center justify-center py-2.5 rounded-full font-medium text-sm transition-colors"
+                  >
+                    <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                    Continue with Google (Mock Mode)
+                  </button>
+                ) : null}
+                <div className="text-xs text-zinc-600 font-bold uppercase tracking-widest mt-6">Or use email</div>
+              </div>
+            )}
+
+            <form onSubmit={handleAction} className="space-y-4">
+              
+              {mode === "REGISTER" && (
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-1">Your Name</label>
+                  <Input type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. John Doe" className="bg-zinc-900 border-zinc-800 text-white h-12" />
+                </div>
+              )}
+
+              {method === "EMAIL" || mode === "REGISTER" ? (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-1">Email Address</label>
+                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="name@academy.com" className="bg-zinc-900 border-zinc-800 text-white h-12" />
+                  </div>
+                  {mode === "REGISTER" && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-1">Phone Number</label>
+                      <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required placeholder="e.g. 9999999999" className="bg-zinc-900 border-zinc-800 text-white h-12" />
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-1">Password</label>
+                    <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" minLength={6} className="bg-zinc-900 border-zinc-800 text-white h-12" />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-1">Phone Number</label>
+                  <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required placeholder="e.g. 9999999999" className="bg-zinc-900 border-zinc-800 text-white h-12" />
+                  <p className="text-[11px] text-zinc-500 pl-1">Coach or parent? Your academy admin can send you a one-tap login link on WhatsApp.</p>
+                </div>
+              )}
+
+              <Button type="submit" disabled={loading} className="w-full h-12 text-base bg-lime-400 text-zinc-950 hover:bg-lime-500 font-bold mt-4">
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (mode === "REGISTER" ? "Create Account" : (method === "EMAIL" ? "Sign In" : "Send OTP"))}
+              </Button>
+
+              {mode === "SIGN_IN" && (
+                <div className="pt-4 flex items-center justify-center">
+                  <button type="button" onClick={() => { setMethod(method === "EMAIL" ? "PHONE" : "EMAIL"); resetState(); }} className="text-xs text-zinc-400 hover:text-white flex items-center transition-colors">
+                    {method === "EMAIL" ? <><Phone className="w-3 h-3 mr-1.5" /> Sign in with Phone Number</> : <><Mail className="w-3 h-3 mr-1.5" /> Sign in with Email / Password</>}
+                  </button>
+                </div>
+              )}
+            </form>
+          </div>
+        ) : (
+          <form onSubmit={handleVerifyOtp} className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-1">OTP Code</label>
+              <Input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="••••••" maxLength={6} required className="bg-zinc-900 border-zinc-800 text-white h-14 text-2xl tracking-[0.5em] text-center font-mono focus-visible:ring-lime-400" />
+            </div>
+            <Button type="submit" disabled={loading || otp.length < 6} className="w-full h-12 text-base bg-lime-400 text-zinc-950 hover:bg-lime-500 font-bold mt-4">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Login"}
+            </Button>
+            <button type="button" onClick={() => { setStep(1); setOtp(""); setError(null); setMessage(null); }} className="w-full flex items-center justify-center text-xs font-medium text-zinc-500 hover:text-zinc-300 py-2 mt-2 transition-colors">
+              <ArrowLeft className="w-3 h-3 mr-1.5" /> Change Phone Number
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+
+  if (!googleClientId) return content;
+
+  return (
+    <GoogleOAuthProvider clientId={googleClientId}>
+      {content}
+    </GoogleOAuthProvider>
+  );
+}
