@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: "/",
         // Authenticated app areas, internal ops and APIs are never indexed.
-        disallow: ["/api/", "/org", "/coach", "/parent", "/student", "/ops", "/onboarding", "/auth", "/login", "/delete-account"],
+        disallow: ["/api/", "/org", "/coach", "/staff", "/parent", "/student", "/ops", "/onboarding", "/auth", "/login", "/delete-account"],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

@@ -60,3 +60,17 @@ export async function isOrgOwner(userId: string, orgId: string | null | undefine
   const m = await getMembership(userId, orgId);
   return m?.role === "OWNER";
 }
+
+/**
+ * Prisma `where` for "coaches of this academy". Coaches can work at several academies, so this goes
+ * through memberships rather than User.orgId (which is only the coach's *active* academy). Users from
+ * before memberships existed are matched by orgId until their membership is backfilled.
+ */
+export function coachesOfOrg(orgId: string) {
+  return {
+    OR: [
+      { memberships: { some: { orgId, role: "COACH", status: "ACTIVE" } } },
+      { role: "COACH", orgId, memberships: { none: { orgId } } },
+    ],
+  };
+}

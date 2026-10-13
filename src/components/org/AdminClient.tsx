@@ -13,6 +13,7 @@ import dynamic from "next/dynamic";
 import { CommandPalette } from "@/components/ui/command-palette";
 import { FeeToggle } from "@/components/org/FeeToggle";
 import { SeedButton } from "@/components/org/SeedButton";
+import { TeamPanel } from "@/components/org/TeamPanel";
 import { OnboardingWizard } from "@/components/org/OnboardingWizard";
 import { ProductTour } from "@/components/org/ProductTour";
 import { LoginLinkButton } from "@/components/org/LoginLinkButton";
@@ -170,6 +171,7 @@ const moreGroups: NavGroup[] = [
   {
     label: "Run",
     items: [
+      { id: "team", label: "Team", icon: NAV_ICONS.people },
       { id: "batches", label: "Batches", icon: NAV_ICONS.batches },
       { id: "leads", label: "Leads", icon: NAV_ICONS.people },
       { id: "communication", label: "Messages", icon: NAV_ICONS.communication },
@@ -371,7 +373,16 @@ export function AdminClient({ session, org, students, batches, coaches, allFeeRe
                 />
               )}
               <div>
-                <SectionHeader title="Coaches" description={`${coaches.length} active`} actions={<CreateCoachDialog orgId={session.orgId} />} />
+                <SectionHeader
+                  title="Coaches"
+                  description={`${coaches.length} active`}
+                  actions={
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => go("team")} className="text-sm text-lime-300 hover:underline">Manage team →</button>
+                      <CreateCoachDialog orgId={session.orgId} />
+                    </div>
+                  }
+                />
                 <div className="rounded-xl border border-zinc-800/50 overflow-hidden">
                   <div className="overflow-x-auto w-full custom-scrollbar">
                     <Table className="min-w-[500px]">
@@ -703,6 +714,9 @@ export function AdminClient({ session, org, students, batches, coaches, allFeeRe
               </div>
             </div>
           )}
+
+          {/* TEAM: coaches, staff, roles, daily attendance */}
+          {activeTab === "team" && <TeamPanel />}
 
           {/* OPERATIONS */}
           {activeTab === "operations" && (

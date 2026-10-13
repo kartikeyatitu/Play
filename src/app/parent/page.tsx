@@ -5,6 +5,7 @@ import { ParentClient } from '@/components/parent/ParentClient';
 import { istMonthString } from '@/lib/fees';
 
 import { requireAuth } from '@/lib/auth';
+import { coachesOfOrg } from '@/lib/membership';
 
 /** Keep only step names + statuses of a coach's verification JSON (drops uploaded document URLs). */
 function publicVerificationSummary(raw: string | null): string | null {
@@ -53,9 +54,9 @@ export default async function ParentPage() {
     }),
     db.user.findFirst({ where: { role: 'ADMIN', ...orgFilter }, select: { id: true, name: true } }),
     db.user.findMany({
-      where: { role: 'COACH', verified: true, ...orgFilter },
+      where: { verified: true, ...coachesOfOrg(orgId) },
       include: {
-        batches: { select: { sport: true } }
+        batches: { where: { orgId }, select: { sport: true } }
       }
     }),
     db.feedback.findFirst({

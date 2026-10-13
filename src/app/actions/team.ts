@@ -51,7 +51,7 @@ export async function getTeam() {
 
   const members = await db.orgMembership.findMany({
     where: { orgId, status: { not: "REMOVED" } },
-    orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
+    orderBy: { joinedAt: "asc" },
     select: {
       id: true,
       role: true,
@@ -69,6 +69,10 @@ export async function getTeam() {
 
   const viewerPerms = effectivePermissions(membership.role, membership.staffRole, membership.permissions);
   const canSeePay = viewerPerms.has("payroll.view");
+
+  // Owner first, then managers, coaches and staff; within a role, by joining date
+  const rank: Record<string, number> = { OWNER: 0, MANAGER: 1, COACH: 2, STAFF: 3 };
+  members.sort((a, b) => (rank[a.role] ?? 9) - (rank[b.role] ?? 9));
 
   return {
     viewer: { membershipId: membership.id, role: membership.role, permissions: [...viewerPerms] },

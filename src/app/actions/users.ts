@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
+import { coachesOfOrg } from "@/lib/membership";
 
 import { cleanIndianPhone } from "@/lib/import-utils";
 
@@ -23,7 +24,7 @@ export async function updateCoach(coachId: string, data: { name?: string; phone?
   if (!session.orgId) throw new Error("No academy found");
 
   const coach = await db.user.findFirst({
-    where: { id: coachId, orgId: session.orgId, role: "COACH" },
+    where: { id: coachId, ...coachesOfOrg(session.orgId) },
   });
   if (!coach) throw new Error("Coach not found");
 

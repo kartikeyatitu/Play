@@ -8,6 +8,9 @@ import { RSVPBadge, CreateMatchModal } from "@/components/coach/MatchManager";
 import { CoachTabs, type CoachTab } from "@/components/coach/CoachTabs";
 import { BatchBroadcast } from "@/components/coach/BatchBroadcast";
 import { TodayStatPills } from "@/components/coach/TodayStatPills";
+import { AcademySwitcher } from "@/components/team/AcademySwitcher";
+import { CheckInCard } from "@/components/team/CheckInCard";
+import { getMyAttendance } from "@/app/actions/team";
 import { CoachMePanel } from "@/components/coach/CoachMePanel";
 import { InviteParentsCard } from "@/components/coach/InviteParentsCard";
 import { requireAuth } from "@/lib/auth";
@@ -33,6 +36,7 @@ export default async function CoachDashboard({
 }) {
   // ADMINs may also use the coach view (owner-coaches taking attendance)
   const session = await requireAuth(["COACH", "ADMIN"]);
+  const myAttendance = await getMyAttendance().catch(() => null);
   if (!session.orgId) redirect(session.role === "ADMIN" ? "/onboarding" : "/login");
   const orgId = session.orgId as string;
   const isAdmin = session.role === "ADMIN";
@@ -252,9 +256,12 @@ export default async function CoachDashboard({
       <div>
         <p className="text-xs text-zinc-500 font-medium">{todayLabel}</p>
         <h2 className="text-3xl font-black tracking-tight text-white leading-tight">
-          {greeting().replace(/^Good /, "")}, <span style={{ color: "var(--brand)" }}>{firstName(coach.name)}</span>
+          {greeting()}, <span style={{ color: "var(--brand)" }}>{firstName(coach.name)}</span>
         </h2>
       </div>
+
+      <AcademySwitcher className="w-full" />
+      {myAttendance && <CheckInCard initial={myAttendance.today} />}
 
       <TodayStatPills sessions={activeToday.length} inToday={todayIn} total={todayTotal} toWatch={toWatchToday} />
 

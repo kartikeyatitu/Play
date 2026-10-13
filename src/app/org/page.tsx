@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AdminClient, type AdminSecondaryData } from "@/components/org/AdminClient";
 
 import { requireAuth } from "@/lib/auth";
+import { coachesOfOrg } from "@/lib/membership";
 import { resolveStudentFee, istMonthString, istToday } from "@/lib/fees";
 import { 
   getAttendanceAnalytics,
@@ -214,7 +215,7 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
       include: { coach: userBrief, enrollments: true },
     }),
     db.user.findMany({
-      where: { role: "COACH", ...orgFilter },
+      where: coachesOfOrg(orgId),
       select: {
         id: true,
         name: true,
@@ -226,7 +227,8 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
         orgId: true,
         createdAt: true,
         // This month's sessions (counted for "Sessions" / payout)
-        batches: { include: { sessions: { where: { date: { gte: monthStart } }, select: { id: true, date: true } } } },
+        // Only this academy's batches: a coach may also coach elsewhere
+        batches: { where: { orgId }, include: { sessions: { where: { date: { gte: monthStart } }, select: { id: true, date: true } } } },
       },
     }),
     // Match by student org too (older fee records may lack orgId)

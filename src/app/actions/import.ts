@@ -2,6 +2,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
+import { coachesOfOrg } from "@/lib/membership";
 import { resolveFeeAmount, istMonthString } from "@/lib/fees";
 import { parseDob, cleanIndianPhone } from "@/lib/import-utils";
 
@@ -98,7 +99,7 @@ export async function importStudents(rows: ImportRow[]) {
               (await db.batch.findFirst({ where: { orgId, name: { contains: batchName, mode: "insensitive" } } }));
             if (!batch) {
               const firstCoach =
-                (await db.user.findFirst({ where: { role: "COACH", orgId } })) ||
+                (await db.user.findFirst({ where: coachesOfOrg(orgId) })) ||
                 (await db.user.findUnique({ where: { id: session.id } }));
               if (firstCoach) {
                 batch = await db.batch.create({

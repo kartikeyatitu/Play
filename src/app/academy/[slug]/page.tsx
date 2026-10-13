@@ -20,7 +20,7 @@ export default async function AcademyProfilePage({
       _count: {
         select: {
           students: true,
-          users: { where: { role: "COACH" } },
+          memberships: { where: { role: "COACH", status: "ACTIVE" } },
         },
       },
     },
@@ -31,7 +31,7 @@ export default async function AcademyProfilePage({
   }
 
   const sports = Array.from(new Set(org.batches.map(b => b.sport).filter(Boolean)));
-  const coachCount = org._count.users;
+  const coachCount = org._count.memberships;
   const studentCount = org._count.students;
 
   return (
