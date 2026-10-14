@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ensureTeamSchema } from "@/lib/schema-ensure";
 import { db } from "@/lib/db";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -12,6 +13,7 @@ export default async function AcademyProfilePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  await ensureTeamSchema();
   const org = await db.organization.findUnique({
     where: { slug },
     include: {

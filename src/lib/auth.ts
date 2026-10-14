@@ -67,6 +67,10 @@ export async function requireAuth(allowedRoles?: string[]) {
     redirect("/login");
   }
 
+  // Make sure tables added after launch exist (no-op once created)
+  const { ensureTeamSchema } = await import("@/lib/schema-ensure");
+  await ensureTeamSchema();
+
   // Fetch live user and organization data from DB
   const { db } = await import("@/lib/db");
   const user = await db.user.findUnique({
