@@ -63,6 +63,9 @@ DO $$ BEGIN
     FOREIGN KEY ("orgId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+ALTER TABLE "OrgMembership" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "StaffAttendance" ENABLE ROW LEVEL SECURITY;
+
 -- Backfill: every existing academy admin becomes OWNER, every coach becomes COACH.
 -- (The app also does this lazily, so this step is a convenience, not a requirement.)
 INSERT INTO "OrgMembership" ("id", "userId", "orgId", "role", "status", "joinedAt", "createdAt", "updatedAt")

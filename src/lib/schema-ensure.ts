@@ -26,6 +26,9 @@ const TEAM_SCHEMA: string[] = [
   `DO $$ BEGIN ALTER TABLE "OrgMembership" ADD CONSTRAINT "OrgMembership_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
   `DO $$ BEGIN ALTER TABLE "OrgMembership" ADD CONSTRAINT "OrgMembership_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
   `DO $$ BEGIN ALTER TABLE "StaffAttendance" ADD CONSTRAINT "StaffAttendance_membershipId_fkey" FOREIGN KEY ("membershipId") REFERENCES "OrgMembership" ("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+  // Close Supabase's public REST path; the app connects as the table owner and is not affected
+  `ALTER TABLE "OrgMembership" ENABLE ROW LEVEL SECURITY`,
+  `ALTER TABLE "StaffAttendance" ENABLE ROW LEVEL SECURITY`,
   `DO $$ BEGIN ALTER TABLE "StaffAttendance" ADD CONSTRAINT "StaffAttendance_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
 ];
 
