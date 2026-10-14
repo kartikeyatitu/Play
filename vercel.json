@@ -1,5 +1,5 @@
 {
-  "buildCommand": "prisma db execute --schema prisma/schema.prisma --file prisma/sql/2026-10-14_team_memberships.sql && prisma generate && next build",
+  "buildCommand": "prisma db execute --url \"$DATABASE_URL\" --file prisma/sql/2026-10-14_team_memberships.sql && prisma generate && next build",
   "framework": "nextjs",
   "regions": ["bom1"]
 }
