@@ -4,6 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, LogIn, LogOut } from "lucide-react";
 import { selfCheckIn, selfCheckOut, type getMyAttendance } from "@/app/actions/team";
+import { unwrap } from "@/lib/action-result";
 import { ATTENDANCE_LABELS, isStaffAttendanceStatus, roleLabel } from "@/lib/team";
 import { AcademySwitcher } from "@/components/team/AcademySwitcher";
 
@@ -27,7 +28,7 @@ export function StaffHome({ name, data, logoutAction }: { name: string; data: Da
   async function checkIn() {
     setBusy(true);
     try {
-      const res = await selfCheckIn();
+      const res = unwrap(await selfCheckIn());
       setToday({ status: "PRESENT", checkInAt: res.checkInAt ?? new Date().toISOString(), checkOutAt: null });
       if ("vibrate" in navigator) navigator.vibrate?.(15);
       toast.success(`Checked in at ${time(res.checkInAt ?? null)}. Have a great day, ${firstName}!`);
@@ -41,7 +42,7 @@ export function StaffHome({ name, data, logoutAction }: { name: string; data: Da
   async function checkOut() {
     setBusy(true);
     try {
-      const res = await selfCheckOut();
+      const res = unwrap(await selfCheckOut());
       setToday((t) => (t ? { ...t, checkOutAt: res.checkOutAt ?? new Date().toISOString() } : t));
       toast.success("Checked out. See you tomorrow!");
     } catch (e: any) {
@@ -126,7 +127,11 @@ export function StaffHome({ name, data, logoutAction }: { name: string; data: Da
               {data.month.map((d) => (
                 <li key={d.date} className="flex items-center justify-between px-4 py-3 text-sm">
                   <span className="text-zinc-300">
-                    {new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(d.date))}
+                    {(() => {
+                      const parts = new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).formatToParts(new Date(d.date));
+                      const get = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
+                      return `${get("weekday")}, ${get("day")} ${get("month")}`;
+                    })()}
                   </span>
                   <span className="inline-flex items-center gap-2 text-zinc-400">
                     <span className={`w-2 h-2 rounded-full ${DOT[d.status] || "bg-zinc-500"}`} />

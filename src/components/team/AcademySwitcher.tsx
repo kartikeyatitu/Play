@@ -4,6 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { ArrowLeftRight } from "lucide-react";
 import { getMyAcademies, switchAcademy } from "@/app/actions/team";
+import { unwrap } from "@/lib/action-result";
 import { roleLabel } from "@/lib/team";
 
 type Academy = Awaited<ReturnType<typeof getMyAcademies>>[number];
@@ -30,7 +31,7 @@ export function AcademySwitcher({ className = "" }: { className?: string }) {
         onChange={async (e) => {
           setSwitching(true);
           try {
-            const res = await switchAcademy(e.target.value);
+            const res = unwrap(await switchAcademy(e.target.value));
             window.location.href = res.redirectTo;
           } catch (err: any) {
             toast.error(err?.message || "Couldn't switch academy");

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { addTeamMember, getTeam, markStaffAttendance, removeTeamMember, updateTeamMember } from "@/app/actions/team";
+import { unwrap } from "@/lib/action-result";
 import {
   ATTENDANCE_LABELS,
   STAFF_ATTENDANCE_STATUSES,
@@ -16,7 +17,7 @@ import {
   type StaffAttendanceStatus,
 } from "@/lib/team";
 
-type Team = Awaited<ReturnType<typeof getTeam>>;
+type Team = Extract<Awaited<ReturnType<typeof getTeam>>, { ok: true }>;
 type Member = Team["members"][number];
 
 const fieldCls = "w-full h-11 rounded-lg bg-zinc-900 border border-zinc-800 px-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-lime-400/60";
@@ -56,7 +57,7 @@ export function TeamPanel() {
 
   const load = React.useCallback(async () => {
     try {
-      setTeam(await getTeam());
+      setTeam(unwrap(await getTeam()));
       setError(null);
     } catch (e: any) {
       setError(e?.message || "Couldn't load your team");
@@ -80,7 +81,7 @@ export function TeamPanel() {
       }
     );
     try {
-      await markStaffAttendance(member.id, status);
+      unwrap(await markStaffAttendance(member.id, status));
     } catch (e: any) {
       setTeam(prev);
       toast.error(e?.message || "Couldn't save attendance");
@@ -94,7 +95,7 @@ export function TeamPanel() {
     if (!confirm(`Remove ${member.name} from your team? Their login and history stay, but they lose access to this academy.`)) return;
     setBusyId(member.id);
     try {
-      const res = await removeTeamMember(member.id);
+      const res = unwrap(await removeTeamMember(member.id));
       toast.success(`${member.name} removed from the team`);
       if (res.assignedBatches) toast.warning(`${res.assignedBatches} batch${res.assignedBatches > 1 ? "es still list" : " still lists"} ${member.name} as coach. Assign a new coach in Batches.`);
       await load();
@@ -317,11 +318,11 @@ function MemberDialog({
         ...(canSetPay ? { payType: payType || null, payAmount: payType ? String(form.get("payAmount") || "") : null } : {}),
       };
       if (editing && member) {
-        await updateTeamMember(member.id, base);
+        unwrap(await updateTeamMember(member.id, base));
         await onSaved(`${member.name}'s details updated`);
       } else {
         const name = String(form.get("name") || "");
-        const res = await addTeamMember({ ...base, name, phone: String(form.get("phone") || "") });
+        const res = unwrap(await addTeamMember({ ...base, name, phone: String(form.get("phone") || "") }));
         await onSaved(res.joinedOtherAcademy ? `${name} added. They also work at another academy and can switch between them.` : `${name} added to your team`);
       }
     } catch (e: any) {

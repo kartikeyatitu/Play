@@ -55,6 +55,8 @@ model Organization {
   subscription Subscription?
   memberships     OrgMembership[]
   staffAttendance StaffAttendance[]
+  staffPayouts    StaffPayout[]
+  expenses        Expense[]
 }
 
 // ==========================================
@@ -1103,6 +1105,7 @@ model OrgMembership {
   user        User          @relation("UserMemberships", fields: [userId], references: [id], onDelete: Cascade)
   org         Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
   attendance  StaffAttendance[]
+  payouts     StaffPayout[]
 
   @@unique([userId, orgId])
   @@index([orgId, status])
@@ -1126,5 +1129,58 @@ model StaffAttendance {
   org          Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([membershipId, date])
+  @@index([orgId, date])
+}
+
+// ==========================================
+// PAYROLL & EXPENSES (Sprint 2, additive)
+// ==========================================
+
+/// One person's pay for one month. Amounts are whole units of the academy's currency.
+/// While PENDING the figures are recalculated from attendance/sessions; once PAID they are frozen.
+model StaffPayout {
+  id           String    @id @default(cuid())
+  orgId        String
+  membershipId String
+  month        String    // "YYYY-MM"
+  payType      String    // MONTHLY | PER_SESSION (copied from the membership when calculated)
+  rate         Int       // monthly salary or per-session rate used
+  units        Float     // days present (MONTHLY) or sessions taken (PER_SESSION)
+  baseAmount   Int
+  bonus        Int       @default(0)
+  deduction    Int       @default(0)
+  advance      Int       @default(0) // advance already given, subtracted from this payout
+  netAmount    Int
+  status       String    @default("PENDING") // PENDING | PAID
+  paidAt       DateTime?
+  paymentMode  String?   // CASH | UPI | BANK
+  reference    String?
+  note         String?
+  paidById     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  org          Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  membership   OrgMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, month])
+  @@index([orgId, month])
+}
+
+/// Money the academy spends: ground rent, equipment, travel, utilities...
+model Expense {
+  id          String   @id @default(cuid())
+  orgId       String
+  date        DateTime // IST calendar day at 00:00 (same convention as sessions)
+  category    String   // RENT | EQUIPMENT | UTILITIES | TRAVEL | MARKETING | EVENTS | OTHER
+  amount      Int
+  note        String?
+  paymentMode String?  // CASH | UPI | BANK | CARD
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
   @@index([orgId, date])
 }

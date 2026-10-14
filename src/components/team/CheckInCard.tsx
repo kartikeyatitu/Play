@@ -4,6 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, LogIn } from "lucide-react";
 import { selfCheckIn, selfCheckOut, type getMyAttendance } from "@/app/actions/team";
+import { unwrap } from "@/lib/action-result";
 
 type Today = Awaited<ReturnType<typeof getMyAttendance>>["today"];
 
@@ -23,7 +24,7 @@ export function CheckInCard({ initial }: { initial: Today }) {
         onClick={async () => {
           setBusy(true);
           try {
-            const res = await selfCheckIn();
+            const res = unwrap(await selfCheckIn());
             setToday({ status: "PRESENT", checkInAt: res.checkInAt ?? new Date().toISOString(), checkOutAt: null });
             if ("vibrate" in navigator) navigator.vibrate?.(15);
             toast.success(`Checked in at ${time(res.checkInAt)}`);
@@ -54,7 +55,7 @@ export function CheckInCard({ initial }: { initial: Today }) {
           onClick={async () => {
             setBusy(true);
             try {
-              const res = await selfCheckOut();
+              const res = unwrap(await selfCheckOut());
               setToday((t) => (t ? { ...t, checkOutAt: res.checkOutAt ?? new Date().toISOString() } : t));
               toast.success("Checked out. Great work today!");
             } catch (e: any) {

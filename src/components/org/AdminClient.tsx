@@ -14,6 +14,7 @@ import { CommandPalette } from "@/components/ui/command-palette";
 import { FeeToggle } from "@/components/org/FeeToggle";
 import { SeedButton } from "@/components/org/SeedButton";
 import { TeamPanel } from "@/components/org/TeamPanel";
+import { PayrollPanel } from "@/components/org/PayrollPanel";
 import { OnboardingWizard } from "@/components/org/OnboardingWizard";
 import { ProductTour } from "@/components/org/ProductTour";
 import { LoginLinkButton } from "@/components/org/LoginLinkButton";
@@ -172,6 +173,7 @@ const moreGroups: NavGroup[] = [
     label: "Run",
     items: [
       { id: "team", label: "Team", icon: NAV_ICONS.people },
+      { id: "payroll", label: "Payroll", icon: NAV_ICONS.wallet },
       { id: "batches", label: "Batches", icon: NAV_ICONS.batches },
       { id: "leads", label: "Leads", icon: NAV_ICONS.people },
       { id: "communication", label: "Messages", icon: NAV_ICONS.communication },
@@ -717,6 +719,7 @@ export function AdminClient({ session, org, students, batches, coaches, allFeeRe
 
           {/* TEAM: coaches, staff, roles, daily attendance */}
           {activeTab === "team" && <TeamPanel />}
+          {activeTab === "payroll" && <PayrollPanel onOpenTeam={() => go("team")} />}
 
           {/* OPERATIONS */}
           {activeTab === "operations" && (

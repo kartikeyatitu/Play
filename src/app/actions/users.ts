@@ -15,7 +15,8 @@ export async function createCoach(formData: FormData) {
   if (!name || !cleanIndianPhone(phone)) {
     throw new Error("Valid name and 10-digit Indian mobile number are required");
   }
-  await addTeamMember({ name, phone, role: "COACH" });
+  const added = await addTeamMember({ name, phone, role: "COACH" });
+  if (!added.ok) throw new Error(added.error);
   return { success: true };
 }
 

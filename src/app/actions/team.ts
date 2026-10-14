@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { attempt } from "@/lib/action-result";
 import { requireAuth } from "@/lib/auth";
 import { cleanIndianPhone } from "@/lib/import-utils";
 import { istToday } from "@/lib/fees";
@@ -43,7 +44,7 @@ function cleanPay(payType?: string | null, payAmount?: number | string | null) {
 }
 
 /** The whole team of the active academy, with today's attendance for each person. */
-export async function getTeam() {
+async function getTeamImpl() {
   const { session, membership } = await requireMember(["ADMIN"]);
   const orgId = session.orgId;
   await backfillOrgMemberships(orgId);
@@ -107,7 +108,7 @@ export async function getTeam() {
  * Add a coach or staff member by phone. A coach who already works at another academy keeps their
  * login and gets this academy added to their list; parents and other academies' owners are refused.
  */
-export async function addTeamMember(input: TeamMemberInput) {
+async function addTeamMemberImpl(input: TeamMemberInput) {
   const { session } = await requirePermission("team.manage");
   const orgId = session.orgId;
 
@@ -160,7 +161,7 @@ export async function addTeamMember(input: TeamMemberInput) {
 }
 
 /** Change someone's role, title, pay or individual permissions. */
-export async function updateTeamMember(
+async function updateTeamMemberImpl(
   membershipId: string,
   data: { role?: string; staffRole?: string | null; title?: string | null; payType?: string | null; payAmount?: number | string | null; permissions?: Record<string, boolean> }
 ) {
@@ -208,7 +209,7 @@ export async function updateTeamMember(
 }
 
 /** Remove someone from this academy. Their login and history stay; they lose access here. */
-export async function removeTeamMember(membershipId: string) {
+async function removeTeamMemberImpl(membershipId: string) {
   const { session, membership: me } = await requirePermission("team.manage");
   const orgId = session.orgId;
   const target = await db.orgMembership.findFirst({ where: { id: membershipId, orgId, status: { not: "REMOVED" } } });
@@ -237,7 +238,7 @@ export async function removeTeamMember(membershipId: string) {
 }
 
 /** Owner/manager marks a team member's attendance for a day (defaults to today, India time). */
-export async function markStaffAttendance(membershipId: string, status: string, dateIso?: string, note?: string) {
+async function markStaffAttendanceImpl(membershipId: string, status: string, dateIso?: string, note?: string) {
   const { session } = await requirePermission("team.manage");
   const orgId = session.orgId;
   if (!isStaffAttendanceStatus(status)) throw new Error("Choose present, absent, leave or half day");
@@ -273,7 +274,7 @@ export async function getStaffAttendanceMonth(month: string) {
 }
 
 /** Coach or staff checks themselves in for today. */
-export async function selfCheckIn() {
+async function selfCheckInImpl() {
   const { session, membership } = await requireMember(["ADMIN", "COACH", "STAFF"]);
   const date = istToday();
   const now = new Date();
@@ -290,7 +291,7 @@ export async function selfCheckIn() {
 }
 
 /** Coach or staff checks out at the end of the day. */
-export async function selfCheckOut() {
+async function selfCheckOutImpl() {
   const { membership } = await requireMember(["ADMIN", "COACH", "STAFF"]);
   const date = istToday();
   const existing = await db.staffAttendance.findUnique({ where: { membershipId_date: { membershipId: membership.id, date } } });
@@ -347,11 +348,46 @@ export async function getMyAcademies() {
 }
 
 /** Switch the person's active academy. Returns where to send them next. */
-export async function switchAcademy(orgId: string) {
+async function switchAcademyImpl(orgId: string) {
   const session = await requireAuth(["ADMIN", "COACH", "STAFF"]);
   const membership = await db.orgMembership.findUnique({ where: { userId_orgId: { userId: session.id, orgId: String(orgId) } } });
   if (!membership || membership.status !== "ACTIVE") throw new Error("You are not a member of that academy");
   const appRole = appRoleFor(membership.role as TeamRole);
   await db.user.update({ where: { id: session.id }, data: { orgId: membership.orgId, role: appRole } });
   return { success: true, redirectTo: appRole === "ADMIN" ? "/org" : appRole === "COACH" ? "/coach" : "/staff" };
+}
+
+// ───── Public actions: return { ok, error } so messages survive production builds ─────
+
+export async function getTeam() {
+  return attempt(() => getTeamImpl(), "team");
+}
+
+export async function addTeamMember(input: TeamMemberInput) {
+  return attempt(() => addTeamMemberImpl(input), "team");
+}
+
+export async function updateTeamMember(membershipId: string,
+  data: { role?: string; staffRole?: string | null; title?: string | null; payType?: string | null; payAmount?: number | string | null; permissions?: Record<string, boolean> }) {
+  return attempt(() => updateTeamMemberImpl(membershipId, data), "team");
+}
+
+export async function removeTeamMember(membershipId: string) {
+  return attempt(() => removeTeamMemberImpl(membershipId), "team");
+}
+
+export async function markStaffAttendance(membershipId: string, status: string, dateIso?: string, note?: string) {
+  return attempt(() => markStaffAttendanceImpl(membershipId, status, dateIso, note), "team");
+}
+
+export async function selfCheckIn() {
+  return attempt(() => selfCheckInImpl(), "team");
+}
+
+export async function selfCheckOut() {
+  return attempt(() => selfCheckOutImpl(), "team");
+}
+
+export async function switchAcademy(orgId: string) {
+  return attempt(() => switchAcademyImpl(orgId), "team");
 }

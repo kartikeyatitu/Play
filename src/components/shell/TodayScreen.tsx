@@ -40,9 +40,16 @@ const inrCompact = (n: number) => {
   return inr(n);
 };
 
+/** "Wednesday, 14 October" built from parts, so server (Node) and browser ICU always render the same text. */
+function stableDate(d: Date, width: "long" | "short") {
+  const parts = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", weekday: width, day: "numeric", month: width }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("weekday")}, ${get("day")} ${get("month")}`;
+}
+
 function istParts(now = new Date()) {
   const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", hour12: false }).format(now)) % 24;
-  const dateLabel = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" }).format(now);
+  const dateLabel = stableDate(now, "long");
   return { hour, dateLabel };
 }
 
@@ -154,7 +161,7 @@ export function TodayScreen({
     );
   }
   if (nextTrial) {
-    const when = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short" }).format(new Date(nextTrial.date));
+    const when = stableDate(new Date(nextTrial.date), "short");
     attention.push(
       <AttentionItem
         key="trial"
