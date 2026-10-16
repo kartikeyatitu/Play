@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
+import { FEATURES } from "@/lib/features";
 import { logout } from "@/app/actions/auth";
 import { redirect } from "next/navigation";
 import { AdminClient, type AdminSecondaryData } from "@/components/org/AdminClient";
@@ -7,7 +9,7 @@ import { requireAuth } from "@/lib/auth";
 import { coachesOfOrg, getMembership } from "@/lib/membership";
 import { effectivePermissions } from "@/lib/team";
 import { loadTodayPulse } from "@/lib/today";
-import { resolveStudentFee, istMonthString, istToday } from "@/lib/fees";
+import { resolveStudentFee, istMonthString, istToday, type FeeMonthStatus } from "@/lib/fees";
 import { 
   getAttendanceAnalytics,
   getRevenueAnalytics,
@@ -85,6 +87,50 @@ async function loadTodayInsights(orgId: string) {
 }
 
 /**
+ * Attendance for the students listed on this page (max 20), WITHOUT shipping each student's full
+ * history (every attendance row they ever had, before). One query returns, per student:
+ *  - the all-time present/total counts (window aggregates) → `attendanceSummary`, which is all the
+ *    "Attendance Rate by Batch" chart needs;
+ *  - only the rows the UI actually reads, in the same order as before (sessionId DESC):
+ *    the newest 3 (At-Risk badge reads `slice(0, 3)` + `length >= 3`) and the oldest 10
+ *    (ChurnPredictor reads `slice(-5)` / `slice(-10)`). With ≤ 13 rows this IS the full list; with
+ *    more it has the same first 3 / last 10 entries, so both render exactly as before.
+ * At most 13 rows per student come back instead of the entire history.
+ */
+type StudentAttendance = {
+  attendances: { sessionId: string; isPresent: boolean }[];
+  attendanceSummary: { present: number; total: number };
+};
+async function loadStudentAttendance(studentIds: string[]): Promise<Map<string, StudentAttendance>> {
+  const byStudent = new Map<string, StudentAttendance>();
+  if (studentIds.length === 0) return byStudent;
+  // ORDER BY "sessionId" uses the same column collation Prisma's `orderBy: { sessionId: "desc" }` did.
+  // Counts are cast to int: raw COUNT() is bigint, which JSON.stringify (toClient) cannot serialise.
+  const rows = await db.$queryRaw<{ studentId: string; sessionId: string; isPresent: boolean; total: number; present: number }[]>`
+    SELECT t."studentId", t."sessionId", t."isPresent", t."total", t."present"
+    FROM (
+      SELECT a."studentId", a."sessionId", a."isPresent",
+        ROW_NUMBER() OVER (PARTITION BY a."studentId" ORDER BY a."sessionId" DESC) AS rn_desc,
+        ROW_NUMBER() OVER (PARTITION BY a."studentId" ORDER BY a."sessionId" ASC) AS rn_asc,
+        (COUNT(*) OVER (PARTITION BY a."studentId"))::int AS "total",
+        (COUNT(*) FILTER (WHERE a."isPresent") OVER (PARTITION BY a."studentId"))::int AS "present"
+      FROM "Attendance" a
+      WHERE a."studentId" IN (${Prisma.join(studentIds)})
+    ) t
+    WHERE t.rn_desc <= 3 OR t.rn_asc <= 10
+    ORDER BY t."studentId", t."sessionId" DESC`;
+  for (const r of rows) {
+    let e = byStudent.get(r.studentId);
+    if (!e) {
+      e = { attendances: [], attendanceSummary: { present: Number(r.present), total: Number(r.total) } };
+      byStudent.set(r.studentId, e);
+    }
+    e.attendances.push({ sessionId: r.sessionId, isPresent: r.isPresent });
+  }
+  return byStudent;
+}
+
+/**
  * Data for tabs that are NOT visible on first paint (store, gallery, marketing, operations,
  * inbox, waitlist, fee plans/coupons, lead stats, AI insights). All queries start immediately
  * and run concurrently with the core queries, but the page does not wait for them: the promise
@@ -140,12 +186,14 @@ async function loadSecondaryData(orgId: string): Promise<AdminSecondaryData> {
     db.feedback.findMany({ where: orgFilter, include: { parent: userBrief }, orderBy: { createdAt: "desc" }, take: 200 }),
     db.referral.findMany({ where: { referrer: orgFilter }, include: { referrer: userBrief }, orderBy: { createdAt: "desc" }, take: 300 }),
     getLeadStats(orgId),
-    // These scope to the caller's own academy internally (the argument is ignored)
-    getAttendanceAnalytics(orgId),
-    getRevenueAnalytics(orgId),
-    getBatchHealthAnalytics(orgId),
-    getStudentGrowthAnalytics(orgId),
-    getParentEngagementAnalytics(orgId),
+    // These scope to the caller's own academy internally (the argument is ignored).
+    // Their only consumer is the "AI Insights" tab, which exists only when FEATURES.experimental
+    // is on — so skip the work entirely otherwise (the tab can't be opened; nothing changes on screen).
+    FEATURES.experimental ? getAttendanceAnalytics(orgId) : null,
+    FEATURES.experimental ? getRevenueAnalytics(orgId) : null,
+    FEATURES.experimental ? getBatchHealthAnalytics(orgId) : null,
+    FEATURES.experimental ? getStudentGrowthAnalytics(orgId) : null,
+    FEATURES.experimental ? getParentEngagementAnalytics(orgId) : null,
   ]);
 
   return toClient({
@@ -180,6 +228,8 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
   }
   const orgId = session.orgId as string;
   const orgFilter = { orgId };
+  // Match by student org too (older fee records may lack orgId)
+  const orgFeeScope: Prisma.FeeRecordWhereInput = { OR: [orgFilter, { student: orgFilter }] };
 
   const currentMonth = istMonthString();
 
@@ -188,33 +238,34 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
+  const studentsPromise = db.student.findMany({
+    where: orgFilter,
+    skip: (page - 1) * 20,
+    take: 20,
+    include: {
+      parent: { select: { id: true, name: true, phone: true, email: true } },
+      enrollments: { include: { batch: { select: { id: true, name: true, sport: true, monthlyFee: true } } } },
+      feeRecords: { where: { month: currentMonth } },
+      // Attendance is no longer included here (it pulled each listed student's full history);
+      // see loadStudentAttendance, which runs as soon as this page of students is known.
+      // (skillReports were fetched here but never rendered on the org dashboard — removed)
+    },
+  });
+
   // Core data for the first paint — every independent query in ONE round of Promise.all.
   // Issued BEFORE the secondary queries so they get pooled connections first.
   const corePromise = Promise.all([
     db.student.count({ where: orgFilter }),
     db.student.count({ where: { ...orgFilter, createdAt: { gte: weekAgo } } }),
-    db.student.findMany({
-      where: orgFilter,
-      skip: (page - 1) * 20,
-      take: 20,
-      include: {
-        parent: { select: { id: true, name: true, phone: true, email: true } },
-        enrollments: { include: { batch: { select: { id: true, name: true, sport: true, monthlyFee: true } } } },
-        feeRecords: { where: { month: currentMonth } },
-        // Only the attendance fields the dashboard reads (at-risk badge, today's attendance,
-        // churn predictor, attendance-by-batch chart)
-        attendances: {
-          select: { id: true, sessionId: true, isPresent: true, status: true, session: { select: { id: true, date: true, status: true } } },
-          orderBy: { sessionId: "desc" },
-        },
-        // (skillReports were fetched here but never rendered on the org dashboard — removed)
-      },
-    }),
+    studentsPromise,
+    // Chained on the student page (needs its ids) but still overlaps the other core queries
+    studentsPromise.then((rows) => loadStudentAttendance(rows.map((s) => s.id))),
     db.batch.findMany({
       where: orgFilter,
       // Sessions/attendances and enrolled student rows were fetched here but never read
-      // from `batches` by the dashboard UI — only enrollment counts are used.
-      include: { coach: userBrief, enrollments: true },
+      // from `batches` by the dashboard UI — only enrollment counts (`enrollments.length`)
+      // are used, so ship just the ids (`.length` unchanged, the other columns dropped).
+      include: { coach: userBrief, enrollments: { select: { id: true } } },
     }),
     db.user.findMany({
       where: coachesOfOrg(orgId),
@@ -233,10 +284,20 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
         batches: { where: { orgId }, include: { sessions: { where: { date: { gte: monthStart } }, select: { id: true, date: true } } } },
       },
     }),
-    // Match by student org too (older fee records may lack orgId)
+    // All-time fee totals per (month, status) instead of every fee record ever (was unbounded:
+    // students × months). At most months × statuses rows; every fee number on the dashboard
+    // (KPIs, dues, overdue, sparkline, analytics charts) is derived from these buckets.
+    db.feeRecord.groupBy({
+      by: ["month", "status"],
+      where: orgFeeScope,
+      _count: { _all: true },
+      _sum: { amount: true },
+    }),
+    // "Today's collection" needs individual payments (filtered by IST day on the client):
+    // only rows paid in the last 48h — a superset of "paid today in IST" — instead of all history.
     db.feeRecord.findMany({
-      where: { OR: [orgFilter, { student: orgFilter }] },
-      select: { id: true, studentId: true, month: true, status: true, amount: true, paidAt: true },
+      where: { AND: [orgFeeScope, { status: "PAID", paidAt: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) } }] },
+      select: { id: true, amount: true, status: true, paidAt: true },
     }),
     db.trialBooking.findMany({
       where: { batch: orgFilter },
@@ -273,10 +334,12 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
   const [
     totalStudents,
     newStudentsThisWeek,
-    students,
+    studentRows,
+    studentAttendance,
     batches,
     coaches,
-    allFeeRecords,
+    feeGroups,
+    recentPaidFees,
     trialBookings,
     pendingVerification,
     org,
@@ -285,10 +348,26 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
   const [baseInsights, pulse] = await Promise.all([insightsPromise, pulsePromise]);
   const insights = baseInsights ? { ...baseInsights, pulse } : null;
 
-  // Same filter as the old separate `currentMonthFees` query, derived instead of re-queried
-  const currentMonthFees = allFeeRecords.filter((f) => f.month === currentMonth);
-  const paidFeesCount = currentMonthFees.filter((f) => f.status === "PAID").length;
-  const totalFees = currentMonthFees.length;
+  // Same per-student shape the UI read before: `attendances` (sessionId DESC, bounded — see
+  // loadStudentAttendance) plus `attendanceSummary` (all-time counts for the analytics chart).
+  const students = studentRows.map((s) => ({
+    ...s,
+    ...(studentAttendance.get(s.id) ?? { attendances: [], attendanceSummary: { present: 0, total: 0 } }),
+  }));
+
+  const feeSummary: FeeMonthStatus[] = feeGroups.map((g) => ({
+    month: g.month,
+    status: g.status,
+    count: g._count._all,
+    amount: g._sum.amount ?? 0,
+  }));
+  const countOf = (gs: FeeMonthStatus[]) => gs.reduce((n, g) => n + g.count, 0);
+  const amountOf = (gs: FeeMonthStatus[]) => gs.reduce((s, g) => s + g.amount, 0);
+
+  // Current month's fee records (all statuses), derived from the buckets instead of rows
+  const currentMonthFees = feeSummary.filter((f) => f.month === currentMonth);
+  const paidFeesCount = countOf(currentMonthFees.filter((f) => f.status === "PAID"));
+  const totalFees = countOf(currentMonthFees);
 
   // ── Real trends (replace hard-coded "12% from last month", "+3 this week", fake sparkline) ──
   const monthKey = (offset: number) => {
@@ -296,15 +375,14 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
     const d = new Date(Date.UTC(y, m - 1 + offset, 1));
     return d.toISOString().slice(0, 7);
   };
-  const paidInMonth = (mk: string) =>
-    allFeeRecords.filter((f) => f.month === mk && f.status === "PAID").reduce((s, f) => s + (f.amount || 0), 0);
+  const paidInMonth = (mk: string) => amountOf(feeSummary.filter((f) => f.month === mk && f.status === "PAID"));
   const revenueThisMonth = paidInMonth(currentMonth);
   const revenueLastMonth = paidInMonth(monthKey(-1));
   const revenueTrendPct = revenueLastMonth > 0 ? Math.round(((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100) : null;
   const revenueSparkline = [-5, -4, -3, -2, -1, 0].map((o) => paidInMonth(monthKey(o)));
 
   // Pending dues = sum of the actual unpaid fee amounts (all months)
-  const unpaidFees = allFeeRecords.filter((f) => f.status !== "PAID");
+  const unpaidFees = feeSummary.filter((f) => f.status !== "PAID");
 
   // Resolved monthly fee per student on this page (override → batch → academy default; 0 = not set)
   const studentFees: Record<string, number> = {};
@@ -318,7 +396,7 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
   const stats = {
     totalStudents,
     revenueThisMonth,
-    pendingDues: unpaidFees.reduce((sum, f) => sum + (f.amount || 0), 0),
+    pendingDues: amountOf(unpaidFees),
     paidFeesCount,
     feesCollectedRatio: totalFees > 0 ? `${paidFeesCount} / ${totalFees}` : "0 / 0",
     revenueTrendPct,
@@ -326,7 +404,7 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
     newStudentsThisWeek,
     typicalFee,
     // Total billed for the current month (sum of this month's fee records)
-    billedThisMonth: currentMonthFees.reduce((sum, f) => sum + (f.amount || 0), 0),
+    billedThisMonth: amountOf(currentMonthFees),
   };
 
   return (
@@ -336,7 +414,8 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
       students={toClient(students)}
       batches={toClient(batches)}
       coaches={toClient(coaches)}
-      allFeeRecords={toClient(allFeeRecords)}
+      feeSummary={feeSummary}
+      recentPaidFees={toClient(recentPaidFees)}
       trials={toClient(trialBookings)}
       leads={toClient(leads)}
       secondary={secondary}
