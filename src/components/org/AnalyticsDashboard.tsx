@@ -6,19 +6,22 @@ import {
   PieChart, Pie, Cell, AreaChart, Area, Legend
 } from "recharts";
 
+import type { FeeMonthStatus } from "@/lib/fees";
+
 interface AnalyticsDashboardProps {
   students: any[];
   batches: any[];
-  feeRecords: any[];
+  /** All-time fee record counts/amounts per (month, status) — computed by a groupBy on the server */
+  feeSummary: FeeMonthStatus[];
   sessions: any[];
 }
 
 const COLORS = ["#10b981", "#06b6d4", "#8b5cf6", "#f59e0b", "#ef4444", "#ec4899"];
 
-export function AnalyticsDashboard({ students, batches, feeRecords, sessions }: AnalyticsDashboardProps) {
-  // === CHART 1: Fee Collection (Pie Chart) ===
-  const paid = feeRecords.filter((f: any) => f.status === "PAID").length;
-  const pending = feeRecords.filter((f: any) => f.status !== "PAID").length;
+export function AnalyticsDashboard({ students, batches, feeSummary, sessions }: AnalyticsDashboardProps) {
+  // === CHART 1: Fee Collection (Pie Chart) === (record counts, summed over the month buckets)
+  const paid = feeSummary.filter((f) => f.status === "PAID").reduce((n, f) => n + f.count, 0);
+  const pending = feeSummary.filter((f) => f.status !== "PAID").reduce((n, f) => n + f.count, 0);
   const feeData = [
     { name: "Paid", value: paid },
     { name: "Pending", value: pending },
@@ -38,9 +41,9 @@ export function AnalyticsDashboard({ students, batches, feeRecords, sessions }: 
   const sportData = Object.entries(sportCounts).map(([name, value]) => ({ name, value }));
 
   // === CHART 4: Revenue by Month (Area Chart) ===
-  // Group fee records by month
+  // Paid amount per month (each bucket already holds the month's summed amount)
   const revenueByMonth: Record<string, number> = {};
-  feeRecords.forEach((f: any) => {
+  feeSummary.forEach((f) => {
     if (f.status === "PAID") {
       const month = f.month || "Unknown";
       revenueByMonth[month] = (revenueByMonth[month] || 0) + (f.amount || 0);
@@ -63,10 +66,16 @@ export function AnalyticsDashboard({ students, batches, feeRecords, sessions }: 
   students.forEach((s: any) => {
     const batchName = s.enrollments?.[0]?.batch?.name || "Unknown";
     if (!attendanceByBatch[batchName]) attendanceByBatch[batchName] = { present: 0, total: 0 };
-    s.attendances?.forEach((a: any) => {
-      attendanceByBatch[batchName].total++;
-      if (a.isPresent) attendanceByBatch[batchName].present++;
-    });
+    // `attendances` is now a bounded slice; the all-time counts come in `attendanceSummary`
+    if (s.attendanceSummary) {
+      attendanceByBatch[batchName].total += s.attendanceSummary.total;
+      attendanceByBatch[batchName].present += s.attendanceSummary.present;
+    } else {
+      s.attendances?.forEach((a: any) => {
+        attendanceByBatch[batchName].total++;
+        if (a.isPresent) attendanceByBatch[batchName].present++;
+      });
+    }
   });
   const attendanceData = Object.entries(attendanceByBatch).map(([name, data]) => ({
     name: name.length > 12 ? name.slice(0, 12) + "..." : name,

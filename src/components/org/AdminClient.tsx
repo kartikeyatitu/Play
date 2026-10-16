@@ -5,6 +5,7 @@ import { TodayScreen, type TodayInsights } from "@/components/shell/TodayScreen"
 import { BookingsScreen } from "@/components/shell/BookingsScreen";
 import { MoreScreen } from "@/components/shell/MoreScreen";
 import { FEATURES } from "@/lib/features";
+import type { FeeMonthStatus } from "@/lib/fees";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -127,7 +128,10 @@ interface AdminClientProps {
   students: any[];
   batches: any[];
   coaches: any[];
-  allFeeRecords: any[];
+  /** All-time fee record counts/amounts per (month, status) — replaces shipping every fee record */
+  feeSummary: FeeMonthStatus[];
+  /** Fee records paid in the last 48h (for "Today's collection") */
+  recentPaidFees: any[];
   trials: any[];
   leads?: any[];
   /** Streamed (not awaited on the server) — data for tabs not visible on first paint */
@@ -209,7 +213,7 @@ const HIDDEN_TABS = new Set<string>([
 /** Demo-data loader is a development tool: Settings only, never in production. */
 const SHOW_SEED = process.env.NODE_ENV !== "production";
 
-export function AdminClient({ session, org, students, batches, coaches, allFeeRecords, trials, leads = [], secondary, currentMonth, stats, logoutAction, currentPage = 1, totalStudents = 0, studentFees = {}, pendingVerification = [], insights = null }: AdminClientProps) {
+export function AdminClient({ session, org, students, batches, coaches, feeSummary, recentPaidFees, trials, leads = [], secondary, currentMonth, stats, logoutAction, currentPage = 1, totalStudents = 0, studentFees = {}, pendingVerification = [], insights = null }: AdminClientProps) {
   const academyName = org?.name || session.orgName || "Your Academy";
   const orgSlug = org?.slug || session.orgSlug || "";
   const upiId = org?.upiId || null;
@@ -280,7 +284,8 @@ export function AdminClient({ session, org, students, batches, coaches, allFeeRe
             <TodayScreen
               ownerName={session?.name}
               batches={batches}
-              allFeeRecords={allFeeRecords}
+              feeSummary={feeSummary}
+              recentPaidFees={recentPaidFees}
               pendingVerification={pendingVerification}
               leads={leads}
               trials={trials}
@@ -605,7 +610,7 @@ export function AdminClient({ session, org, students, batches, coaches, allFeeRe
           {activeTab === "analytics" && (
             <div className="space-y-6">
               {/* `sessions` is unused by AnalyticsDashboard — no longer fetched/shipped */}
-              <AnalyticsDashboard students={students} batches={batches} feeRecords={allFeeRecords} sessions={[]} />
+              <AnalyticsDashboard students={students} batches={batches} feeSummary={feeSummary} sessions={[]} />
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <RevenueProjection paidCount={stats.paidFeesCount} totalStudents={stats.totalStudents} ratePerStudent={stats.typicalFee ?? 0} collectedAmount={stats.revenueThisMonth} targetAmount={stats.billedThisMonth} />
                 <CapacityAlerts batches={batches} />

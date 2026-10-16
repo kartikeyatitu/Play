@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { CheckCircle2, CreditCard, UserPlus, CalendarClock, ClipboardCheck, Clock, MessageCircle, Users, Wallet } from "lucide-react";
 import { FEATURES } from "@/lib/features";
-import { istDateString, scheduleRunsOn, istWeekday } from "@/lib/fees";
+import { istDateString, scheduleRunsOn, istWeekday, type FeeMonthStatus } from "@/lib/fees";
 import { KpiTile } from "@/components/shell/KpiTile";
 import { AttentionItem } from "@/components/shell/AttentionItem";
 import { SectionHeader } from "@/components/shell/SectionHeader";
@@ -24,7 +24,10 @@ export interface TodayInsights {
 export interface TodayScreenProps {
   ownerName?: string | null;
   batches: any[];
-  allFeeRecords: any[];
+  /** All-time fee record counts/amounts per (month, status) (server groupBy, not raw rows) */
+  feeSummary: FeeMonthStatus[];
+  /** Fee records paid in the last 48h — filtered to "today (IST)" below */
+  recentPaidFees: any[];
   pendingVerification: any[];
   leads: any[];
   trials: any[];
@@ -66,7 +69,7 @@ function istParts(now = new Date()) {
 }
 
 export function TodayScreen({
-  ownerName, batches, allFeeRecords, pendingVerification, leads, trials, insights, currentMonth, pendingDues, onNavigate, top,
+  ownerName, batches, feeSummary, recentPaidFees, pendingVerification, leads, trials, insights, currentMonth, pendingDues, onNavigate, top,
 }: TodayScreenProps) {
   const { hour, dateLabel } = istParts();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -74,13 +77,19 @@ export function TodayScreen({
 
   // ── KPIs (real data only) ───────────────────────────────────────────────────────
   const todayStr = istDateString();
-  const paidToday = allFeeRecords.filter((f) => f.status === "PAID" && f.paidAt && istDateString(new Date(f.paidAt)) === todayStr);
+  const paidToday = recentPaidFees.filter((f) => f.status === "PAID" && f.paidAt && istDateString(new Date(f.paidAt)) === todayStr);
   const collectedToday = paidToday.reduce((s, f) => s + (f.amount || 0), 0);
 
-  const unpaid = allFeeRecords.filter((f) => f.status !== "PAID");
+  // Same filters as before, applied to the (month, status) buckets; counts/amounts are summed
+  const countOf = (gs: FeeMonthStatus[]) => gs.reduce((n, g) => n + g.count, 0);
+  const amountOf = (gs: FeeMonthStatus[]) => gs.reduce((s, g) => s + g.amount, 0);
+  const unpaid = feeSummary.filter((f) => f.status !== "PAID");
+  const unpaidCount = countOf(unpaid);
   const overdue = unpaid.filter((f) => f.status === "PENDING" && f.month < currentMonth);
-  const overdueAmount = overdue.reduce((s, f) => s + (f.amount || 0), 0);
+  const overdueCount = countOf(overdue);
+  const overdueAmount = amountOf(overdue);
   const pendingThisMonth = unpaid.filter((f) => f.status === "PENDING" && f.month === currentMonth);
+  const pendingThisMonthCount = countOf(pendingThisMonth);
 
   const sessionsToday = insights?.todaySessions ?? [];
   const markedTotal = sessionsToday.reduce((s, x) => s + x.marked, 0);
@@ -128,24 +137,24 @@ export function TodayScreen({
       />,
     );
   }
-  if (overdue.length > 0) {
+  if (overdueCount > 0) {
     attention.push(
       <AttentionItem
         key="overdue"
         tone="danger"
-        title={`${overdue.length} overdue fee${overdue.length === 1 ? "" : "s"}`}
+        title={`${overdueCount} overdue fee${overdueCount === 1 ? "" : "s"}`}
         detail={`${inr(overdueAmount)} from earlier months`}
         onClick={() => onNavigate("fees")}
       />,
     );
   }
-  if (pendingThisMonth.length > 0) {
+  if (pendingThisMonthCount > 0) {
     attention.push(
       <AttentionItem
         key="pending"
         tone="warn"
-        title={`${pendingThisMonth.length} fee${pendingThisMonth.length === 1 ? "" : "s"} pending this month`}
-        detail={inr(pendingThisMonth.reduce((s, f) => s + (f.amount || 0), 0))}
+        title={`${pendingThisMonthCount} fee${pendingThisMonthCount === 1 ? "" : "s"} pending this month`}
+        detail={inr(amountOf(pendingThisMonth))}
         onClick={() => onNavigate("fees")}
       />,
     );
@@ -240,7 +249,7 @@ export function TodayScreen({
         <KpiTile
           label="Pending dues"
           value={inrCompact(pendingDues)}
-          hint={unpaid.length > 0 ? `${unpaid.length} fee${unpaid.length === 1 ? "" : "s"}` : "All settled"}
+          hint={unpaidCount > 0 ? `${unpaidCount} fee${unpaidCount === 1 ? "" : "s"}` : "All settled"}
           tone={pendingDues > 0 ? "warn" : "default"}
           onClick={() => onNavigate("fees")}
         />

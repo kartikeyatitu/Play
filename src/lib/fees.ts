@@ -1,6 +1,18 @@
 // Shared fee / payment / time helpers (server + client safe; no DB access here).
 
 /**
+ * One (month, status) bucket of an academy's fee records: how many records and their summed
+ * amount. The owner dashboard ships these all-time buckets (from a `groupBy`, so at most
+ * months × statuses rows) instead of every fee record the academy has ever had.
+ */
+export interface FeeMonthStatus {
+  month: string;
+  status: string;
+  count: number;
+  amount: number;
+}
+
+/**
  * Resolve a student's monthly fee in ₹.
  * Order: student.feeOverride → first batch with a monthlyFee → org.defaultMonthlyFee → 0.
  * 0 means "fee not set" — the UI should prompt the admin to set it instead of inventing a number.
