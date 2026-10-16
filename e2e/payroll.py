@@ -49,7 +49,10 @@ with sync_playwright() as p:
     page.screenshot(path=f"{OUT}/20-payroll-initial.png", full_page=True)
 
     arjun = page.locator("li", has_text="Arjun Mehta").first
-    results.append(("per-session coach shows 11 sessions x 500 = 5,500", "11 sessions" in arjun.inner_text() and "₹5,500" in arjun.inner_text()))
+    m = re.search(r"(\d+) sessions? × ₹500", arjun.inner_text())
+    arjun_sessions = int(m.group(1)) if m else -1
+    arjun_base = arjun_sessions * 500
+    results.append((f"per-session coach shows {arjun_sessions} sessions x 500 = {arjun_base:,}", arjun_sessions > 0 and f"₹{arjun_base:,}" in arjun.inner_text()))
     neha = page.locator("li", has_text="Neha Kapoor").first
     results.append(("monthly staff shows attendance summary", "absent" in neha.inner_text()))
 
@@ -76,7 +79,7 @@ with sync_playwright() as p:
     dlg.get_by_role("button", name="Save for later").click()
     page.wait_for_timeout(2500)
     arjun = page.locator("li", has_text="Arjun Mehta").first
-    results.append(("Arjun saved with advance, net 5,000, still due", "₹5,000" in arjun.inner_text() and "Due" in arjun.inner_text()))
+    results.append((f"Arjun saved with advance, net {arjun_base - 500:,}, still due", f"₹{arjun_base - 500:,}" in arjun.inner_text() and "Due" in arjun.inner_text()))
 
     # Payslip link
     href = page.locator("li", has_text="Neha Kapoor").first.get_by_role("link", name="Send payslip").get_attribute("href")

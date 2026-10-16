@@ -44,3 +44,4 @@ sportsos-release/
 # Local SDKs & JDKs
 .android-sdk/
 .jdk*/
+.claude/
