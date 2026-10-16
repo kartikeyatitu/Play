@@ -2,10 +2,12 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
+import { checkPermission } from "@/lib/membership";
 
 export async function createProduct(name: string, price: number, description: string) {
-    const session = await requireAuth(['ADMIN']);
-  if (!session.orgId) return { success: false, error: "No organization found" };
+  const auth = await checkPermission("settings.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   await db.product.create({
     data: { name, price, description, orgId: session.orgId }
   });
@@ -40,10 +42,13 @@ export async function placeOrder(productId: string, studentId: string) {
 }
 
 export async function fulfillOrder(orderId: string) {
-    const session = await requireAuth(['ADMIN']);
+  // Handing over a sold item is a counter/collection task, not a catalogue change
+  const auth = await checkPermission("fees.collect");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   // Scope via the student (Order.orgId was not populated historically)
   const result = await db.order.updateMany({
-    where: { id: orderId, student: { orgId: session.orgId || "__no_org__" } },
+    where: { id: orderId, student: { orgId: session.orgId } },
     data: { status: "DELIVERED" }
   });
   if (result.count === 0) return { success: false, error: "Order not found" };

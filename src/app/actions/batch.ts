@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
+import { checkPermission, hasPermission, requirePermission } from "@/lib/membership";
 
 /** Parse an optional non-negative integer form value. Empty → null. Invalid → undefined. */
 function parseOptionalInt(value: FormDataEntryValue | null): number | null | undefined {
@@ -15,8 +15,7 @@ function parseOptionalInt(value: FormDataEntryValue | null): number | null | und
 }
 
 export async function createBatch(formData: FormData) {
-    const session = await requireAuth(['ADMIN']);
-  if (!session.orgId) throw new Error("No academy found for your account");
+  const { session } = await requirePermission("batches.manage");
   const name = formData.get("name") as string;
   const sport = formData.get("sport") as string;
   const schedule = formData.get("schedule") as string;
@@ -54,10 +53,11 @@ export async function createBatch(formData: FormData) {
 
 /** ADMIN only: update a batch's monthly fee and/or capacity (org-scoped). */
 export async function updateBatchSettings(batchId: string, formData: FormData) {
-  const session = await requireAuth(["ADMIN"]);
-  if (!session.orgId) return { success: false, error: "No academy found for your account." };
+  const auth = await checkPermission("batches.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session, membership } = auth;
 
-  const batch = await db.batch.findFirst({ where: { id: batchId, orgId: session.orgId }, select: { id: true } });
+  const batch = await db.batch.findFirst({ where: { id: batchId, orgId: session.orgId }, select: { id: true, monthlyFee: true } });
   if (!batch) return { success: false, error: "Batch not found in your academy." };
 
   const monthlyFee = parseOptionalInt(formData.get("monthlyFee"));
@@ -72,6 +72,10 @@ export async function updateBatchSettings(batchId: string, formData: FormData) {
   const data: { monthlyFee?: number | null; capacity?: number | null } = {};
   if (monthlyFee !== undefined) data.monthlyFee = monthlyFee;
   if (capacity !== undefined) data.capacity = capacity;
+  // Changing what a batch charges is a fee decision, not just a schedule one
+  if (data.monthlyFee !== undefined && data.monthlyFee !== batch.monthlyFee && !hasPermission(membership, "fees.manage")) {
+    return { success: false, error: "You don't have permission to change fees." };
+  }
 
   await db.batch.update({ where: { id: batch.id }, data });
   revalidatePath("/org");
@@ -89,13 +93,17 @@ export async function updateBatch(
     capacity?: number | null;
   }
 ) {
-  const session = await requireAuth(["ADMIN"]);
-  if (!session.orgId) return { success: false, error: "No academy found" };
+  const auth = await checkPermission("batches.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session, membership } = auth;
 
   const batch = await db.batch.findFirst({
     where: { id: batchId, orgId: session.orgId },
   });
   if (!batch) return { success: false, error: "Batch not found" };
+  if (data.monthlyFee !== undefined && data.monthlyFee !== batch.monthlyFee && !hasPermission(membership, "fees.manage")) {
+    return { success: false, error: "You don't have permission to change fees." };
+  }
 
   const updateData: any = {};
   if (data.name?.trim()) updateData.name = data.name.trim();
@@ -121,8 +129,9 @@ export async function updateBatch(
 }
 
 export async function deleteBatch(batchId: string) {
-  const session = await requireAuth(["ADMIN"]);
-  if (!session.orgId) return { success: false, error: "No academy found" };
+  const auth = await checkPermission("batches.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
 
   const batch = await db.batch.findFirst({
     where: { id: batchId, orgId: session.orgId },

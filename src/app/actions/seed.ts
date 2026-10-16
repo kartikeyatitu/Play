@@ -1,12 +1,14 @@
 "use server";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
+import { checkPermission } from "@/lib/membership";
 
 export async function seedDemoData(inputOrgId?: string) {
-  const session = await requireAuth(['ADMIN']);
+  // Demo data writes users, fees and content into the academy: owner-level (settings.manage)
+  const auth = await checkPermission("settings.manage");
+  if (!auth.ok) return { success: false, message: auth.error === "No academy found" ? "Create your academy first." : auth.error };
+  const { session } = auth;
   // Only ever seed into the signed-in admin's own academy (inputOrgId must match if given)
-  if (!session.orgId) return { success: false, message: "Create your academy first." };
   if (inputOrgId && inputOrgId !== session.orgId) return { success: false, message: "You can only load demo data into your own academy." };
   const targetOrgId: string = session.orgId;
   const orgId = targetOrgId;

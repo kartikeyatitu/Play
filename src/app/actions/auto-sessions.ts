@@ -2,12 +2,11 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/membership";
 import { istToday, istWeekday, scheduleRunsOn } from "@/lib/fees";
 
 export async function generateTodaySessions() {
-    const session = await requireAuth(['ADMIN']);
-  if (!session.orgId) return { created: 0, skipped: 0 };
+  const { session } = await requirePermission("batches.manage");
   // "Today" in Asia/Kolkata (stored as 00:00 UTC of the IST calendar day)
   const today = istToday();
   const dayName = istWeekday();

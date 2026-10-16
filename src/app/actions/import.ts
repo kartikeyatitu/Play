@@ -1,8 +1,7 @@
 "use server";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
-import { coachesOfOrg } from "@/lib/membership";
+import { checkPermission, coachesOfOrg } from "@/lib/membership";
 import { resolveFeeAmount, istMonthString } from "@/lib/fees";
 import { parseDob, cleanIndianPhone } from "@/lib/import-utils";
 
@@ -26,10 +25,11 @@ export interface ImportRowError {
 const MAX_ROWS = 1000;
 
 export async function importStudents(rows: ImportRow[]) {
-  const session = await requireAuth(['ADMIN']);
+  const auth = await checkPermission("students.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
     const orgId = session.orgId;
-    if (!orgId) return { success: false, error: "No academy found for your account." };
     if (!Array.isArray(rows) || rows.length === 0) return { success: false, error: "The file has no rows to import." };
     if (rows.length > MAX_ROWS) return { success: false, error: `Please import at most ${MAX_ROWS} students at a time (this file has ${rows.length}).` };
 

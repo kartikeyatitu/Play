@@ -2,7 +2,7 @@
 
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { checkPermission } from "@/lib/membership";
 import { rateLimit } from "@/lib/rate-limit";
 import { resolveStudentFee } from "@/lib/fees";
 import { finalizePayment } from "@/lib/payment-service";
@@ -17,9 +17,10 @@ type LinkResult = { success: true; url: string; amount: number; reused: boolean 
  * PAID automatically via webhook (or "Check status") — the parent doesn't need to log in.
  */
 export async function createFeePaymentLink(studentId: string, month: string): Promise<LinkResult> {
-  const session = await requireAuth(["ADMIN"]);
+  const auth = await checkPermission("fees.collect");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
-    if (!session.orgId) return { success: false, error: "No academy found for your account." };
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) return { success: false, error: "Invalid month." };
     if (!rateLimit(`plink:${session.orgId}`, 30, 60_000).allowed) return { success: false, error: "Too many links at once. Please wait a minute." };
 
@@ -93,9 +94,10 @@ export async function createFeePaymentLink(studentId: string, month: string): Pr
 
 /** ADMIN: ask Razorpay whether the latest link for this fee was paid (fallback when no webhook is set up). */
 export async function syncFeePaymentLink(studentId: string, month: string): Promise<{ success: boolean; paid?: boolean; status?: string; error?: string }> {
-  const session = await requireAuth(["ADMIN"]);
+  const auth = await checkPermission("fees.collect");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
-    if (!session.orgId) return { success: false, error: "No academy found for your account." };
     const creds = await getOrgRazorpay(session.orgId);
     if (!creds) return { success: false, error: "Razorpay isn't connected." };
     const fee = await db.feeRecord.findFirst({ where: { studentId, month, student: { orgId: session.orgId } } });

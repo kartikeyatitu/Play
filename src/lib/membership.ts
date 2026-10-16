@@ -47,6 +47,41 @@ export async function requirePermission(permission: Permission) {
   return ctx;
 }
 
+/** True when this membership holds the permission (role defaults plus per-person overrides). */
+export function hasPermission(
+  membership: { role: string; staffRole?: string | null; permissions?: string | null },
+  permission: Permission,
+) {
+  return effectivePermissions(membership.role, membership.staffRole, membership.permissions).has(permission);
+}
+
+// Messages thrown by requireMember / requirePermission that are safe to show to the user.
+const ACCESS_ERRORS = new Set([
+  "No academy found",
+  "You are not an active member of this academy",
+  "You don't have permission to do this",
+]);
+
+export type PermissionCheck =
+  | ({ ok: true; error?: undefined } & Awaited<ReturnType<typeof requireMember>>)
+  | { ok: false; error: string; session?: undefined; membership?: undefined };
+
+/**
+ * Same check as requirePermission, for actions that report errors as values instead of throwing.
+ * Access failures come back as { ok: false, error }; Next.js redirects (signed out / wrong app) and
+ * unexpected errors keep propagating exactly as before. Pass null to only require an active
+ * owner/manager membership (for actions that pick the permission after loading data).
+ */
+export async function checkPermission(permission: Permission | null): Promise<PermissionCheck> {
+  try {
+    const ctx = permission ? await requirePermission(permission) : await requireMember(["ADMIN"]);
+    return { ok: true, ...ctx };
+  } catch (e: any) {
+    if (typeof e?.message === "string" && ACCESS_ERRORS.has(e.message)) return { ok: false, error: e.message };
+    throw e;
+  }
+}
+
 /** Only the academy owner (payment setup, billing, deleting the academy). */
 export async function requireOwner() {
   const ctx = await requireMember(["ADMIN"]);

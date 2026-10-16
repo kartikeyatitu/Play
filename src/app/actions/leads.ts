@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
+import { checkPermission } from "@/lib/membership";
 
 // Tenant scope: the orgId argument is ignored (untrusted) — always use the session's org.
 export async function getLeads(_orgId?: string) {
@@ -29,9 +30,10 @@ export async function createLead(data: {
   notes?: string;
   orgId?: string;
 }) {
-    const session = await requireAuth(['ADMIN']);
+  const auth = await checkPermission("leads.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
-    if (!session.orgId) return { success: false, error: "No organization found" };
     const lead = await db.lead.create({
       data: {
         parentName: data.parentName,
@@ -53,9 +55,11 @@ export async function createLead(data: {
 }
 
 export async function updateLeadStatus(leadId: string, status: string) {
-    const session = await requireAuth(['ADMIN']);
+  const auth = await checkPermission("leads.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
-    const existing = await db.lead.findFirst({ where: { id: leadId, orgId: session.orgId || "__no_org__" } });
+    const existing = await db.lead.findFirst({ where: { id: leadId, orgId: session.orgId } });
     if (!existing) return { success: false, error: "Lead not found" };
     const lead = await db.lead.update({
       where: { id: existing.id },
@@ -70,9 +74,11 @@ export async function updateLeadStatus(leadId: string, status: string) {
 }
 
 export async function updateLead(leadId: string, data: { notes?: string; followUpDate?: Date }) {
-    const session = await requireAuth(['ADMIN']);
+  const auth = await checkPermission("leads.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
-    const existing = await db.lead.findFirst({ where: { id: leadId, orgId: session.orgId || "__no_org__" } });
+    const existing = await db.lead.findFirst({ where: { id: leadId, orgId: session.orgId } });
     if (!existing) return { success: false, error: "Lead not found" };
     // Only allow whitelisted fields (prevents e.g. moving a lead to another org via `orgId`)
     const lead = await db.lead.update({
@@ -140,10 +146,11 @@ export async function getLeadStats(_orgId?: string) {
 import { cleanIndianPhone } from "@/lib/import-utils";
 
 export async function convertLeadToStudent(leadId: string, batchId: string) {
-  const session = await requireAuth(['ADMIN']);
+  const auth = await checkPermission("leads.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
     const orgId = session.orgId;
-    if (!orgId) throw new Error("No organization found");
 
     const lead = await db.lead.findFirst({ where: { id: leadId, orgId } });
     if (!lead) throw new Error("Lead not found");

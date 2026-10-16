@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { checkPermission } from "@/lib/membership";
 import { resolveStudentFee, istMonthString } from "@/lib/fees";
 
 function escapeCSV(val: unknown): string {
@@ -12,10 +12,9 @@ function escapeCSV(val: unknown): string {
 
 export async function exportAllStudentsCSV(): Promise<{ success: boolean; csv?: string; filename?: string; count?: number; error?: string }> {
   try {
-    const session = await requireAuth(["ADMIN"]);
-    if (!session.orgId) {
-      return { success: false, error: "Academy context not found." };
-    }
+    const auth = await checkPermission("reports.view");
+    if (!auth.ok) return { success: false, error: auth.error };
+    const { session } = auth;
 
     const orgId = session.orgId;
     const currentMonth = istMonthString();

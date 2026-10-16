@@ -1,6 +1,7 @@
 "use server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/membership";
 
 export async function logAction(_userId: string, action: string, details?: Record<string, any>) {
     const session = await requireAuth(['ADMIN']);
@@ -15,10 +16,10 @@ export async function logAction(_userId: string, action: string, details?: Recor
 }
 
 export async function getAuditLog(limit: number = 50) {
-    const session = await requireAuth(['ADMIN']);
+  const { session } = await requirePermission("reports.view");
   const take = Math.min(Math.max(1, Number(limit) || 50), 500);
   return db.auditLog.findMany({
-    where: { orgId: session.orgId || "__no_org__" },
+    where: { orgId: session.orgId },
     include: { user: { select: { name: true, role: true } } },
     orderBy: { createdAt: "desc" },
     take,

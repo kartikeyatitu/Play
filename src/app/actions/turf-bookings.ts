@@ -2,7 +2,7 @@
 
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { checkPermission } from "@/lib/membership";
 import { cleanIndianPhone } from "@/lib/import-utils";
 import { reserveSlot, confirmUpiBooking, UPI_REPORTED } from "@/lib/turf-engine";
 import {
@@ -63,8 +63,9 @@ function istParts(d: Date): { date: string; hour: number } {
 }
 
 export async function getTurfBoard(dateStr: string): Promise<TurfBoard | { error: string }> {
-  const session = await requireAuth(["ADMIN"]);
-  if (!session.orgId) return { error: "No academy found for your account." };
+  const auth = await checkPermission("bookings.manage");
+  if (!auth.ok) return { error: auth.error };
+  const { session } = auth;
   const orgId = session.orgId;
   const date = isValidDateStr(dateStr) ? dateStr : todayIstStr();
   const { start, end } = istDayRange(date);
@@ -166,8 +167,9 @@ type SaveFacilityInput = {
 };
 
 export async function saveFacility(input: SaveFacilityInput): Promise<{ success: true; id: string } | { success: false; error: string }> {
-  const session = await requireAuth(["ADMIN"]);
-  if (!session.orgId) return { success: false, error: "No academy found for your account." };
+  const auth = await checkPermission("bookings.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   const name = String(input?.name ?? "").trim();
   const type = String(input?.type ?? "TURF").trim().toUpperCase().slice(0, 20) || "TURF";
   const hourlyRate = Math.round(Number(input?.hourlyRate));
@@ -197,8 +199,9 @@ export async function saveFacility(input: SaveFacilityInput): Promise<{ success:
 }
 
 export async function archiveFacility(id: string): Promise<{ success: boolean; error?: string }> {
-  const session = await requireAuth(["ADMIN"]);
-  if (!session.orgId) return { success: false, error: "No academy found for your account." };
+  const auth = await checkPermission("bookings.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   const future = await db.turfBooking.count({
     where: { facilityId: id, orgId: session.orgId, status: { in: ["HOLD", "CONFIRMED"] }, endTime: { gt: new Date() } },
   });
@@ -225,9 +228,10 @@ export type CounterResult =
   | { success: false; error: string };
 
 export async function createCounterBooking(input: CounterInput): Promise<CounterResult> {
-  const session = await requireAuth(["ADMIN"]);
+  const auth = await checkPermission("bookings.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
-    if (!session.orgId) return { success: false, error: "No academy found for your account." };
     const orgId = session.orgId;
 
     const date = String(input?.date ?? "");
@@ -288,9 +292,10 @@ export async function createCounterBooking(input: CounterInput): Promise<Counter
 export type BookingAction = "CANCEL" | "NO_SHOW" | "COMPLETE" | "COLLECT_BALANCE" | "CANCEL_SERIES" | "CONFIRM_UPI" | "REJECT_UPI";
 
 export async function updateBooking(id: string, action: BookingAction): Promise<{ success: boolean; error?: string }> {
-  const session = await requireAuth(["ADMIN"]);
+  const auth = await checkPermission("bookings.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
-    if (!session.orgId) return { success: false, error: "No academy found for your account." };
     const orgId = session.orgId;
     const b = await db.turfBooking.findFirst({ where: { id, orgId } });
     if (!b) return { success: false, error: "Booking not found." };

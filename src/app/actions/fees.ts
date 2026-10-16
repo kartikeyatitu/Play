@@ -1,12 +1,13 @@
 "use server";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
+import { checkPermission } from "@/lib/membership";
 import { resolveStudentFee } from "@/lib/fees";
 
 export async function toggleFeeStatus(studentId: string, month: string) {
-    const session = await requireAuth(['ADMIN']);
-  if (!session.orgId) return { success: false, error: "No academy found for your account." };
+  const auth = await checkPermission("fees.collect");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) return { success: false, error: "Invalid month." };
 
   // Student must belong to the admin's academy
