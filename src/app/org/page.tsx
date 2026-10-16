@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { AdminClient, type AdminSecondaryData } from "@/components/org/AdminClient";
 
 import { requireAuth } from "@/lib/auth";
-import { coachesOfOrg } from "@/lib/membership";
+import { coachesOfOrg, getMembership } from "@/lib/membership";
+import { effectivePermissions } from "@/lib/team";
+import { loadTodayPulse } from "@/lib/today";
 import { resolveStudentFee, istMonthString, istToday } from "@/lib/fees";
 import { 
   getAttendanceAnalytics,
@@ -257,6 +259,13 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
   // Today-screen insights (attendance today / low attendance) run alongside the core queries; a
   // failure here must never take the dashboard down, so it degrades to "no insights".
   const insightsPromise = loadTodayInsights(orgId).catch(() => null);
+  // Team check-ins, absent students and money pulse for the Today screen (same degrade-to-null rule)
+  const pulsePromise = getMembership(session.id, orgId)
+    .then((m) => loadTodayPulse(orgId, { canSeePay: !!m && effectivePermissions(m.role, m.staffRole, m.permissions).has("payroll.view") }))
+    .catch((e) => {
+      console.error("[triq] today pulse failed", e);
+      return null;
+    });
   // Mark as handled so an early rejection can't surface as an unhandledRejection before
   // React attaches its own handlers; React still receives (and reports) the error.
   secondary.catch(() => {});
@@ -273,7 +282,8 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
     org,
     leads,
   ] = await corePromise;
-  const insights = await insightsPromise;
+  const [baseInsights, pulse] = await Promise.all([insightsPromise, pulsePromise]);
+  const insights = baseInsights ? { ...baseInsights, pulse } : null;
 
   // Same filter as the old separate `currentMonthFees` query, derived instead of re-queried
   const currentMonthFees = allFeeRecords.filter((f) => f.month === currentMonth);

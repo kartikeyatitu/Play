@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { CheckCircle2, CreditCard, UserPlus, CalendarClock, ClipboardCheck, Clock } from "lucide-react";
+import { CheckCircle2, CreditCard, UserPlus, CalendarClock, ClipboardCheck, Clock, MessageCircle, Users, Wallet } from "lucide-react";
 import { FEATURES } from "@/lib/features";
 import { istDateString, scheduleRunsOn, istWeekday } from "@/lib/fees";
 import { KpiTile } from "@/components/shell/KpiTile";
@@ -9,12 +9,16 @@ import { AttentionItem } from "@/components/shell/AttentionItem";
 import { SectionHeader } from "@/components/shell/SectionHeader";
 import { EmptyState, shellButton } from "@/components/shell/EmptyState";
 import { InlineAttendance } from "@/components/shell/InlineAttendance";
+import type { TodayPulse } from "@/lib/today";
+import { monthLabel } from "@/lib/payroll";
 
 /** Server-computed, academy-wide numbers (see loadTodayInsights in src/app/org/page.tsx). */
 export interface TodayInsights {
   todaySessions: { batchId: string; status: string; marked: number; present: number }[];
   lowAttendanceCount: number;
   lowAttendance: { id: string; name: string; pct: number; sessions: number }[];
+  /** Team check-ins, absent students, unpaid salaries and month money (see src/lib/today.ts). */
+  pulse?: TodayPulse | null;
 }
 
 export interface TodayScreenProps {
@@ -45,6 +49,14 @@ function stableDate(d: Date, width: "long" | "short") {
   const parts = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", weekday: width, day: "numeric", month: width }).formatToParts(d);
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
   return `${get("weekday")}, ${get("day")} ${get("month")}`;
+}
+
+/** wa.me link with a ready message; Indian 10-digit numbers get the 91 prefix. */
+function whatsappLink(phone: string | null | undefined, text: string) {
+  const digits = (phone || "").replace(/\D/g, "");
+  if (!digits) return null;
+  const to = digits.length === 10 ? `91${digits}` : digits;
+  return `https://wa.me/${to}?text=${encodeURIComponent(text)}`;
 }
 
 function istParts(now = new Date()) {
@@ -173,6 +185,32 @@ export function TodayScreen({
     );
   }
 
+  const pulse = insights?.pulse ?? null;
+  if (pulse?.payroll) {
+    const n = pulse.payroll.unpaid.length;
+    attention.push(
+      <AttentionItem
+        key="payroll"
+        tone="warn"
+        title={`${n} salar${n === 1 ? "y" : "ies"} for ${monthLabel(pulse.payroll.month)} not paid yet`}
+        detail={pulse.payroll.unpaid.slice(0, 3).join(", ") + (n > 3 ? ` +${n - 3} more` : "")}
+        onClick={() => onNavigate("payroll")}
+      />,
+    );
+  }
+  if (pulse?.team && pulse.team.notMarked.length > 0 && hour >= 10) {
+    const n = pulse.team.notMarked.length;
+    attention.push(
+      <AttentionItem
+        key="team"
+        tone="info"
+        title={`${n} team member${n === 1 ? "" : "s"} not checked in`}
+        detail={pulse.team.notMarked.slice(0, 3).map((m) => m.name).join(", ") + (n > 3 ? ` +${n - 3} more` : "")}
+        onClick={() => onNavigate("team")}
+      />,
+    );
+  }
+
   const quick: { label: string; icon: ReactNode; tab: string }[] = [
     { label: "Add student", icon: <UserPlus className="w-4 h-4" />, tab: "people" },
     { label: "Collect fee", icon: <CreditCard className="w-4 h-4" />, tab: "fees" },
@@ -213,6 +251,49 @@ export function TodayScreen({
         />
       </div>
 
+      {/* This month so far (owners/managers with payroll access) */}
+      {pulse?.money && (
+        <button
+          type="button"
+          onClick={() => onNavigate("payroll")}
+          className="w-full text-left rounded-xl border border-zinc-800/70 bg-zinc-900/40 px-4 py-3 hover:border-zinc-700 transition-colors"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] uppercase tracking-wider text-zinc-500 inline-flex items-center gap-1.5">
+              <Wallet className="w-3.5 h-3.5" /> This month so far
+            </span>
+            {(() => {
+              const out = pulse.money.expenses + pulse.money.salariesPaid;
+              const net = pulse.money.collected - out;
+              return (
+                <span className={`text-sm font-semibold tabular-nums ${net >= 0 ? "brand-text" : "text-rose-300"}`}>
+                  {net >= 0 ? "+" : "−"}{inrCompact(Math.abs(net))}
+                </span>
+              );
+            })()}
+          </div>
+          <div className="mt-1 text-xs text-zinc-400 tabular-nums">
+            {inrCompact(pulse.money.collected)} fees in · {inrCompact(pulse.money.salariesPaid)} salaries · {inrCompact(pulse.money.expenses)} expenses
+          </div>
+        </button>
+      )}
+
+      {/* Team today */}
+      {pulse?.team && (
+        <button
+          type="button"
+          onClick={() => onNavigate("team")}
+          className="w-full flex items-center justify-between gap-3 rounded-xl border border-zinc-800/70 bg-zinc-900/40 px-4 py-3 text-left hover:border-zinc-700 transition-colors"
+        >
+          <span className="inline-flex items-center gap-2 text-sm text-zinc-300">
+            <Users className="w-4 h-4 brand-text" />
+            Team: <span className="font-semibold text-zinc-50 tabular-nums">{pulse.team.checkedIn}/{pulse.team.total}</span> checked in
+            {pulse.team.onLeave > 0 && <span className="text-zinc-500">· {pulse.team.onLeave} on leave</span>}
+          </span>
+          <span className="text-xs text-zinc-500">View →</span>
+        </button>
+      )}
+
       {/* Quick actions */}
       <div className={`grid gap-2.5 ${quick.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
         {quick.map((q) => (
@@ -237,6 +318,45 @@ export function TodayScreen({
           />
         )}
       </section>
+
+      {/* Absent today: one-tap WhatsApp check-in with the parent */}
+      {pulse && pulse.absentToday.length > 0 && (
+        <section>
+          <SectionHeader title={`Absent today (${pulse.absentToday.length})`} description="Check in with parents. Kids whose parents hear from the academy come back." />
+          <ul className="divide-y divide-zinc-800/70 rounded-xl border border-zinc-800/70 bg-zinc-900/40">
+            {pulse.absentToday.slice(0, 8).map((a) => {
+              const firstChild = a.name.split(" ")[0];
+              const parent = (a.parentName || "").split(" ")[0];
+              const link = whatsappLink(
+                a.parentPhone,
+                `Hi${parent ? ` ${parent}` : ""}, we missed ${firstChild} at today's ${a.batchName} session${pulse.academyName ? ` at ${pulse.academyName}` : ""}. Hope all is well! Let us know if ${firstChild} would like a make-up session.`
+              );
+              return (
+                <li key={a.studentId} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <div className="min-w-0">
+                    <div className="text-sm text-zinc-100 truncate">{a.name}</div>
+                    <div className="text-xs text-zinc-500 truncate">{a.batchName}</div>
+                  </div>
+                  {link ? (
+                    <a
+                      href={link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Message ${a.name}'s parent on WhatsApp`}
+                      className="shrink-0 h-9 px-3 rounded-lg border border-zinc-700 text-xs font-semibold text-zinc-200 hover:border-zinc-500 inline-flex items-center gap-1.5"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" /> Message parent
+                    </a>
+                  ) : (
+                    <span className="text-xs text-zinc-600">No phone</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {pulse.absentToday.length > 8 && <p className="mt-2 text-xs text-zinc-500">+{pulse.absentToday.length - 8} more absent today</p>}
+        </section>
+      )}
 
       {/* Today's sessions — attendance is taken right here */}
       <section>
