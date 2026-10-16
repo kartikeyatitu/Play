@@ -1,7 +1,7 @@
 "use server";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/membership";
 
 // Points rules:
 // +10 for each session attended
@@ -11,9 +11,17 @@ import { requireAuth } from "@/lib/auth";
 // -5 for each missed session
 
 export async function recalculatePoints(studentId: string) {
-    const session = await requireAuth(['ADMIN']);
+  const { session } = await requirePermission("students.manage");
+  const result = await recalculateStudentPoints(session.orgId, studentId);
+  revalidatePath("/parent");
+  revalidatePath("/org");
+  return result;
+}
+
+/** Recomputes one student's points (caller has already checked access to `orgId`). */
+async function recalculateStudentPoints(orgId: string, studentId: string) {
   const student = await db.student.findFirst({
-    where: { id: studentId, orgId: session.orgId || "__no_org__" },
+    where: { id: studentId, orgId },
     include: {
       attendances: { include: { session: true }, orderBy: { sessionId: "desc" } },
       skillReports: { orderBy: { createdAt: "desc" }, take: 5 },
@@ -48,24 +56,24 @@ export async function recalculatePoints(studentId: string) {
   points = Math.max(0, points);
 
   await db.student.update({ where: { id: student.id }, data: { points } });
-  revalidatePath("/parent");
-  revalidatePath("/org");
   return { success: true, points };
 }
 
 export async function recalculateAllPoints() {
-    const session = await requireAuth(['ADMIN']);
+  const { session } = await requirePermission("students.manage");
   // Tenant scope: only this academy's students
-  const students = await db.student.findMany({ where: { orgId: session.orgId || "__no_org__" }, select: { id: true } });
-  const results = await Promise.all(students.map(s => recalculatePoints(s.id)));
+  const students = await db.student.findMany({ where: { orgId: session.orgId }, select: { id: true } });
+  const results = await Promise.all(students.map(s => recalculateStudentPoints(session.orgId, s.id)));
+  revalidatePath("/parent");
+  revalidatePath("/org");
   return { success: true, updated: results.length };
 }
 
 // Get point breakdown for a student
 export async function getPointBreakdown(studentId: string) {
-    const session = await requireAuth(['ADMIN']);
+  const { session } = await requirePermission("students.manage");
   const student = await db.student.findFirst({
-    where: { id: studentId, orgId: session.orgId || "__no_org__" },
+    where: { id: studentId, orgId: session.orgId },
     include: {
       attendances: { include: { session: true } },
       skillReports: true,

@@ -2,8 +2,7 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
-import { coachesOfOrg } from "@/lib/membership";
+import { coachesOfOrg, requirePermission } from "@/lib/membership";
 
 import { cleanIndianPhone } from "@/lib/import-utils";
 
@@ -21,8 +20,7 @@ export async function createCoach(formData: FormData) {
 }
 
 export async function updateCoach(coachId: string, data: { name?: string; phone?: string }) {
-  const session = await requireAuth(["ADMIN"]);
-  if (!session.orgId) throw new Error("No academy found");
+  const { session } = await requirePermission("team.manage");
 
   const coach = await db.user.findFirst({
     where: { id: coachId, ...coachesOfOrg(session.orgId) },
@@ -47,7 +45,7 @@ export async function updateCoach(coachId: string, data: { name?: string; phone?
 }
 
 export async function createStudent(formData: FormData) {
-    const session = await requireAuth(['ADMIN']);
+  const { session } = await requirePermission("students.manage");
   const studentName = formData.get("studentName") as string;
   const dobString = formData.get("dob") as string;
   const parentName = formData.get("parentName") as string;
@@ -142,8 +140,7 @@ export async function updateStudent(
     batchId?: string;
   }
 ) {
-  const session = await requireAuth(["ADMIN"]);
-  if (!session.orgId) throw new Error("No academy found");
+  const { session } = await requirePermission("students.manage");
 
   const student = await db.student.findFirst({
     where: { id: studentId, orgId: session.orgId },
@@ -198,8 +195,7 @@ export async function updateStudent(
 }
 
 export async function deleteStudent(studentId: string) {
-  const session = await requireAuth(["ADMIN"]);
-  if (!session.orgId) throw new Error("No academy found");
+  const { session } = await requirePermission("students.manage");
 
   const student = await db.student.findFirst({
     where: { id: studentId, orgId: session.orgId },

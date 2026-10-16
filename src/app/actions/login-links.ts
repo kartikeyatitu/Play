@@ -4,7 +4,8 @@ import crypto from "crypto";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireAuth, setSessionCookie, homePathForRole } from "@/lib/auth";
+import { setSessionCookie, homePathForRole } from "@/lib/auth";
+import { checkPermission, hasPermission } from "@/lib/membership";
 
 const LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -29,10 +30,13 @@ async function appOrigin() {
 /**
  * ADMIN only. Creates a single-use, 7-day one-tap login link for a coach/parent/admin
  * in the admin's own academy. Only the sha256 hash of the token is stored.
+ * Parents need students.manage, coaches team.manage; links for admin accounts are owner-only
+ * (a link signs in AS that person, so a manager must not be able to mint one for the owner).
  */
 export async function createLoginLink(userId: string) {
-  const session = await requireAuth(["ADMIN"]);
-  if (!session.orgId) return { success: false as const, error: "No academy found for your account." };
+  const auth = await checkPermission(null);
+  if (!auth.ok) return { success: false as const, error: auth.error };
+  const { session, membership } = auth;
 
   const user = await db.user.findFirst({
     where: { id: userId, orgId: session.orgId },
@@ -42,6 +46,11 @@ export async function createLoginLink(userId: string) {
   if (!["COACH", "PARENT", "ADMIN"].includes(user.role)) {
     return { success: false as const, error: "Login links are only available for coaches, parents and admins." };
   }
+  const allowed =
+    user.role === "ADMIN"
+      ? membership.role === "OWNER"
+      : hasPermission(membership, user.role === "PARENT" ? "students.manage" : "team.manage");
+  if (!allowed) return { success: false as const, error: "You don't have permission to do this" };
 
   const token = crypto.randomBytes(32).toString("hex");
   await db.loginToken.create({

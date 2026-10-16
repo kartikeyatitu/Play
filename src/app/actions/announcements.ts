@@ -1,12 +1,13 @@
 "use server";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
+import { checkPermission } from "@/lib/membership";
 
 export async function broadcastAnnouncement(title: string, message: string, _adminId: string) {
-    const session = await requireAuth(['ADMIN']);
+  const auth = await checkPermission("settings.manage");
+  if (!auth.ok) return { error: auth.error };
+  const { session } = auth;
   if (!title || !message) return { error: "Missing fields" };
-  if (!session.orgId) return { error: "No organization found" };
   
   await db.announcement.create({ data: { orgId: session.orgId, 
       title,

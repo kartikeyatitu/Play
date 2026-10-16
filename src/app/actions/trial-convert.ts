@@ -2,13 +2,13 @@
 
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/membership";
 
 export async function convertTrialToStudent(trialId: string) {
-    const session = await requireAuth(['ADMIN']);
+  const { session } = await requirePermission("students.manage");
   // Tenant scope: TrialBooking has no orgId column — scope via its batch
   const trial = await db.trialBooking.findFirst({
-    where: { id: trialId, batch: { orgId: session.orgId || "__no_org__" } },
+    where: { id: trialId, batch: { orgId: session.orgId } },
     include: { batch: true }
   });
 
@@ -80,9 +80,9 @@ export async function convertTrialToStudent(trialId: string) {
 }
 
 export async function updateTrialStatus(trialId: string, status: string) {
-    const session = await requireAuth(['ADMIN']);
+  const { session } = await requirePermission("leads.manage");
   const result = await db.trialBooking.updateMany({
-    where: { id: trialId, batch: { orgId: session.orgId || "__no_org__" } },
+    where: { id: trialId, batch: { orgId: session.orgId } },
     data: { status }
   });
   if (result.count === 0) throw new Error("Trial not found");

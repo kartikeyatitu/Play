@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
+import { checkPermission } from "@/lib/membership";
 
 export async function addToWaitlist(
   batchId: string,
@@ -10,10 +10,12 @@ export async function addToWaitlist(
   parentPhone: string,
   childName: string
 ) {
-    const session = await requireAuth(['ADMIN']);
+  const auth = await checkPermission("students.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
     // Tenant scope: batch must belong to the admin's academy
-    const batch = await db.batch.findFirst({ where: { id: batchId, orgId: session.orgId || "__no_org__" } });
+    const batch = await db.batch.findFirst({ where: { id: batchId, orgId: session.orgId } });
     if (!batch) return { success: false, error: "Batch not found" };
 
     const entry = await db.waitlist.create({
@@ -35,10 +37,11 @@ export async function addToWaitlist(
 }
 
 export async function updateWaitlistStatus(id: string, status: string) {
-    const session = await requireAuth(['ADMIN']);
+  const auth = await checkPermission("students.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
     const orgId = session.orgId;
-    if (!orgId) throw new Error("No organization found");
     if (!["WAITING", "NOTIFIED", "ENROLLED"].includes(status)) throw new Error("Invalid waitlist status");
     // Scope via the batch (Waitlist.orgId was not populated historically)
     const waitlist = await db.waitlist.findFirst({ where: { id, batch: { orgId } } });

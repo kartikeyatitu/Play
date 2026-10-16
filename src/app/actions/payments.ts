@@ -2,15 +2,17 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
+import { checkPermission } from "@/lib/membership";
 import { resolveStudentFee } from "@/lib/fees";
 import crypto from "crypto";
 
 
 // ─── Mark Fee as Paid (ADMIN only — e.g. cash/UPI received in person) ───
 export async function markFeePaid(studentId: string, month: string, paymentId: string) {
-  const session = await requireAuth(["ADMIN"]);
+  const auth = await checkPermission("fees.collect");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
-    if (!session.orgId) return { success: false, error: "No academy found for your account." };
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) return { success: false, error: "Invalid month." };
     const student = await db.student.findFirst({
       where: { id: studentId, orgId: session.orgId },
@@ -101,9 +103,10 @@ export async function rejectFeePayment(feeRecordId: string) {
 }
 
 async function setFeeStatusAsAdmin(feeRecordId: string, status: "PAID" | "PENDING") {
-  const session = await requireAuth(["ADMIN"]);
+  const auth = await checkPermission("fees.collect");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
-    if (!session.orgId) return { success: false, error: "No academy found for your account." };
     const fee = await db.feeRecord.findUnique({
       where: { id: feeRecordId },
       include: { student: { select: { orgId: true } } },

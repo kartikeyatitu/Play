@@ -2,12 +2,13 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
+import { checkPermission } from "@/lib/membership";
 
 export async function createCoupon(code: string, discount: number, type: string) {
-    const session = await requireAuth(['ADMIN']);
+  const auth = await checkPermission("fees.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
-    if (!session.orgId) return { success: false, error: "No organization found" };
     const cleanCode = String(code ?? "").trim().toUpperCase();
     if (!/^[A-Z0-9_-]{3,32}$/.test(cleanCode)) return { success: false, error: "Code must be 3-32 letters, numbers, - or _" };
     if (type !== "FLAT" && type !== "PERCENT") return { success: false, error: "Invalid coupon type" };
@@ -29,10 +30,12 @@ export async function createCoupon(code: string, discount: number, type: string)
 }
 
 export async function getCoupons() {
-    const session = await requireAuth(['ADMIN']);
+  const auth = await checkPermission("fees.manage");
+  if (!auth.ok) return { success: false, error: auth.error, data: [] };
+  const { session } = auth;
   try {
     const coupons = await db.coupon.findMany({
-      where: { orgId: session.orgId || "__no_org__" },
+      where: { orgId: session.orgId },
       orderBy: { createdAt: "desc" },
     });
     return { success: true, data: coupons };

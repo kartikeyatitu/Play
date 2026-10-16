@@ -1,7 +1,7 @@
 "use server"
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/membership";
 import { resolveStudentFee, istMonthString } from "@/lib/fees";
 
 /**
@@ -10,8 +10,7 @@ import { resolveStudentFee, istMonthString } from "@/lib/fees";
  * Students with no fee configured are skipped (reported back) instead of inventing an amount.
  */
 export async function generateMonthlyFees() {
-    const session = await requireAuth(['ADMIN']);
-  if (!session.orgId) return 0
+  const { session } = await requirePermission("fees.manage");
   const org = await db.organization.findUnique({ where: { id: session.orgId }, select: { defaultMonthlyFee: true } })
   const students = await db.student.findMany({
     where: { orgId: session.orgId },

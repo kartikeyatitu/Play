@@ -2,21 +2,23 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
+import { checkPermission } from "@/lib/membership";
 
 export async function transferStudent(
   studentId: string,
   fromBatchId: string,
   toBatchId: string
 ) {
-    const session = await requireAuth(['ADMIN']);
+  const auth = await checkPermission("students.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
   try {
     if (fromBatchId === toBatchId) {
       return { success: false, error: "Cannot transfer to the same batch" };
     }
 
     // Tenant scope: student and both batches must belong to the admin's academy
-    const orgId = session.orgId || "__no_org__";
+    const orgId = session.orgId;
     const [student, fromBatch, toBatch] = await Promise.all([
       db.student.findFirst({ where: { id: studentId, orgId }, select: { id: true } }),
       db.batch.findFirst({ where: { id: fromBatchId, orgId }, select: { id: true } }),

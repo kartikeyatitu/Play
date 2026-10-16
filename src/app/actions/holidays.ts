@@ -3,12 +3,12 @@
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/membership";
 
 // Holidays belong to one academy. They used to be global, so every academy saw (and could
 // pollute) every other academy's calendar.
 export async function addHoliday(title: string, dateStr: string) {
-  const session = await requireAuth(['ADMIN']);
-  if (!session.orgId) throw new Error("No academy found for your account.");
+  const { session } = await requirePermission("batches.manage");
 
   const cleanTitle = (title || "").trim().slice(0, 80);
   const date = new Date(dateStr);
@@ -31,8 +31,7 @@ export async function getHolidays() {
 }
 
 export async function deleteHoliday(holidayId: string) {
-  const session = await requireAuth(['ADMIN']);
-  if (!session.orgId) throw new Error("No academy found for your account.");
+  const { session } = await requirePermission("batches.manage");
 
   const holiday = await db.holiday.findFirst({
     where: { id: holidayId, orgId: session.orgId },
