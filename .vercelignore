@@ -6,3 +6,8 @@ sportsos-release/
 node_modules/
 .next/
 out/
+# Secrets live in Vercel → Settings → Environment Variables, never in uploads
+.env
+.env.*
+!.env.example
+*.db

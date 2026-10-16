@@ -1,0 +1,3 @@
+DELETE FROM "StaffAttendance";
+DELETE FROM "OrgMembership" WHERE "userId" IN (SELECT id FROM "User" WHERE phone IN ('9000000002','9000000003'));
+DELETE FROM "User" WHERE phone IN ('9000000002','9000000003');
