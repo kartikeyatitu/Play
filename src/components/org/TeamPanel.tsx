@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { addTeamMember, getTeam, markStaffAttendance, removeTeamMember, updateTeamMember } from "@/app/actions/team";
 import { unwrap } from "@/lib/action-result";
+import { track } from "@/lib/analytics";
 import {
   ATTENDANCE_LABELS,
   STAFF_ATTENDANCE_STATUSES,
@@ -323,6 +324,7 @@ function MemberDialog({
       } else {
         const name = String(form.get("name") || "");
         const res = unwrap(await addTeamMember({ ...base, name, phone: String(form.get("phone") || "") }));
+        track("team_member_added", { role: String(base.role), staff_role: base.staffRole ? String(base.staffRole) : null, joined_other_academy: Boolean(res.joinedOtherAcademy) });
         await onSaved(res.joinedOtherAcademy ? `${name} added. They also work at another academy and can switch between them.` : `${name} added to your team`);
       }
     } catch (e: any) {

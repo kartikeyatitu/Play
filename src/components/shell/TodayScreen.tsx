@@ -11,6 +11,7 @@ import { EmptyState, shellButton } from "@/components/shell/EmptyState";
 import { InlineAttendance } from "@/components/shell/InlineAttendance";
 import type { TodayPulse } from "@/lib/today";
 import { monthLabel } from "@/lib/payroll";
+import { track } from "@/lib/analytics";
 
 /** Server-computed, academy-wide numbers (see loadTodayInsights in src/app/org/page.tsx). */
 export interface TodayInsights {
@@ -343,6 +344,7 @@ export function TodayScreen({
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`Message ${a.name}'s parent on WhatsApp`}
+                      onClick={() => track("parent_whatsapp_clicked", { surface: "today_absent" })}
                       className="shrink-0 h-9 px-3 rounded-lg border border-zinc-700 text-xs font-semibold text-zinc-200 hover:border-zinc-500 inline-flex items-center gap-1.5"
                     >
                       <MessageCircle className="w-3.5 h-3.5" /> Message parent

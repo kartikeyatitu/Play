@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Loader2, LogIn } from "lucide-react";
 import { selfCheckIn, selfCheckOut, type getMyAttendance } from "@/app/actions/team";
 import { unwrap } from "@/lib/action-result";
+import { track } from "@/lib/analytics";
 
 type Today = Awaited<ReturnType<typeof getMyAttendance>>["today"];
 
@@ -25,6 +26,7 @@ export function CheckInCard({ initial }: { initial: Today }) {
           setBusy(true);
           try {
             const res = unwrap(await selfCheckIn());
+            track("staff_checked_in", { surface: "coach_card" });
             setToday({ status: "PRESENT", checkInAt: res.checkInAt ?? new Date().toISOString(), checkOutAt: null });
             if ("vibrate" in navigator) navigator.vibrate?.(15);
             toast.success(`Checked in at ${time(res.checkInAt)}`);
