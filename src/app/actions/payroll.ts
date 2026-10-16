@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { attempt } from "@/lib/action-result";
+import { attempt } from "@/lib/action-attempt";
 import { istMonthString, istToday } from "@/lib/fees";
 import { backfillOrgMemberships, requirePermission } from "@/lib/membership";
 import { effectivePermissions, roleLabel } from "@/lib/team";

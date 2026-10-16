@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Loader2, MessageCircle, Plus, Receipt, Trash
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { addExpense, deleteExpense, getPayroll, markPayoutPaid, markPayoutUnpaid, savePayoutAdjustments } from "@/app/actions/payroll";
+import { track } from "@/lib/analytics";
 import {
   EXPENSE_CATEGORIES,
   EXPENSE_LABELS,
@@ -369,6 +370,7 @@ function PayDialog({ row, month, onClose, onDone }: { row: Row | null; month: st
         : await savePayoutAdjustments(row!.membershipId, month, adj);
     setSaving(null);
     if (!res.ok) return toast.error(res.error);
+    if (kind === "pay") track("payout_marked_paid", { payment_mode: mode, pay_type: String(row!.payType ?? "unknown") });
     toast.success(kind === "pay" ? `${formatINR(res.netAmount)} paid to ${row!.name}` : "Saved");
     onDone();
   }
@@ -495,6 +497,7 @@ function ExpenseDialog({
     const res = await addExpense({ date, category, amount, note, paymentMode: mode });
     setSaving(false);
     if (!res.ok) return toast.error(res.error);
+    track("expense_added", { category, payment_mode: mode });
     toast.success("Expense added");
     onDone();
   }

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Loader2, LogIn, LogOut } from "lucide-react";
 import { selfCheckIn, selfCheckOut, type getMyAttendance } from "@/app/actions/team";
 import { unwrap } from "@/lib/action-result";
+import { track } from "@/lib/analytics";
 import { ATTENDANCE_LABELS, isStaffAttendanceStatus, roleLabel } from "@/lib/team";
 import { AcademySwitcher } from "@/components/team/AcademySwitcher";
 
@@ -29,6 +30,7 @@ export function StaffHome({ name, data, logoutAction }: { name: string; data: Da
     setBusy(true);
     try {
       const res = unwrap(await selfCheckIn());
+      track("staff_checked_in", { surface: "staff_home" });
       setToday({ status: "PRESENT", checkInAt: res.checkInAt ?? new Date().toISOString(), checkOutAt: null });
       if ("vibrate" in navigator) navigator.vibrate?.(15);
       toast.success(`Checked in at ${time(res.checkInAt ?? null)}. Have a great day, ${firstName}!`);
