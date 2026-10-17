@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { getAppUrl } from "@/lib/app-url";
 import { createReferral, getReferralsCount } from "@/app/actions/referral"
 
 export function ReferralWidget({ userId }: { userId: string }) {
@@ -12,7 +13,7 @@ export function ReferralWidget({ userId }: { userId: string }) {
   const [convertedCount, setConvertedCount] = useState(0)
 
   const referralCode = userId.substring(0, 6).toUpperCase()
-  const referralLink = `https://triqsports.vercel.app/join?ref=${referralCode}`
+  const referralLink = `${getAppUrl()}/join?ref=${referralCode}`
 
   useEffect(() => {
     getReferralsCount(userId).then(setConvertedCount)

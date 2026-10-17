@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Share2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { getAppHost } from "@/lib/app-url";
 
 export interface RecapShareData {
   batchName: string;
@@ -229,7 +230,7 @@ function drawCard(data: RecapShareData, brand: string): HTMLCanvasElement {
 
     const left = "Powered by ";
     const brandWord = "Triq";
-    const right = "  ·  triqsports.vercel.app";
+    const right = `  ·  ${getAppHost()}`;
     ctx.font = `600 30px ${FONT}`;
     const leftW = ctx.measureText(left).width;
     const rightW = ctx.measureText(right).width;
@@ -268,7 +269,7 @@ function textVersion(d: RecapShareData) {
     "",
     `— ${d.coachName}`,
   ];
-  if (d.showPoweredBy) lines.push("", "Sent via Triq · triqsports.vercel.app");
+  if (d.showPoweredBy) lines.push("", `Sent via Triq · ${getAppHost()}`);
   return lines.join("\n");
 }
 

@@ -12,7 +12,7 @@ import {
 } from "@/lib/gateways/razorpay";
 import { getOrgRazorpay } from "@/lib/razorpay-org";
 import {
-  stripeConfigured,
+  stripeFeeCheckoutEnabled,
   createStripeCheckoutSession,
   retrieveStripeCheckoutSession,
 } from "@/lib/gateways/stripe";
@@ -20,14 +20,18 @@ import {
 /**
  * Online fee payments for parents.
  *
- * Provider choice: Razorpay (INR) when the academy has connected their Razorpay account,
- * otherwise Stripe if configured.
+ * Provider choice: Razorpay (INR) when the academy has connected their own Razorpay account
+ * (the primary path). Stripe checkout would collect into Triq's platform account, so it is only
+ * offered when PLATFORM_COLLECTS_FEES is explicitly on (default off; see gateways/stripe.ts).
  *
  * Money safety: the amount is ALWAYS read from the FeeRecord on the server. The client never sends one,
  * and finalisation re-checks what the gateway reports against what we stored (see payment-service.ts).
  *
  * Fee money settles directly into the academy's own Razorpay account.
  */
+
+// Not exported: "use server" files may only export async functions.
+const NOT_SET_UP_MESSAGE = "Online payment isn't set up for this academy yet — please pay the academy directly.";
 
 export type StartPaymentResult =
   | { success: false; error: string }
@@ -69,7 +73,7 @@ export async function getOnlinePaymentOptions(feeRecordId?: string): Promise<{ r
       rzp = Boolean(creds);
     }
   }
-  return { razorpay: rzp, stripe: stripeConfigured() };
+  return { razorpay: rzp, stripe: stripeFeeCheckoutEnabled() };
 }
 
 async function appOrigin(): Promise<string> {
@@ -110,9 +114,9 @@ export async function startOnlineFeePayment(feeRecordId: string): Promise<StartP
     if (!orgId) return { success: false, error: "This fee isn't linked to an academy yet." };
 
     const creds = await getOrgRazorpay(orgId);
-    const hasStripe = stripeConfigured();
-    if (!creds && !hasStripe) {
-      return { success: false, error: "Online payments aren't enabled for this academy yet. Please pay by UPI and tap \"I've paid\"." };
+    // Never fall through to the platform's own account unless explicitly allowed.
+    if (!creds && !stripeFeeCheckoutEnabled()) {
+      return { success: false, error: NOT_SET_UP_MESSAGE };
     }
 
     if (fee.status === "PAID") return { success: false, error: "This fee is already paid." };
@@ -162,7 +166,9 @@ export async function startOnlineFeePayment(feeRecordId: string): Promise<StartP
       };
     }
 
-    // Stripe: create our row first (its id travels to Stripe as client_reference_id), then attach the session id.
+    // Stripe (platform account; only reachable with PLATFORM_COLLECTS_FEES on — re-checked here on purpose).
+    if (!stripeFeeCheckoutEnabled()) return { success: false, error: NOT_SET_UP_MESSAGE };
+    // Create our row first (its id travels to Stripe as client_reference_id), then attach the session id.
     const currency = (process.env.STRIPE_CURRENCY || "INR").toUpperCase();
     const payment = await db.payment.create({
       data: {

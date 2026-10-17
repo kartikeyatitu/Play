@@ -101,7 +101,7 @@ export default function LoginPage() {
           const res = await sendOtp(phone);
           if (res?.error) setError(res.error);
           else if (res?.smsSent) {
-            setMessage("OTP sent via SMS!");
+            setMessage(res.channel === "whatsapp" ? "OTP sent on WhatsApp!" : "OTP sent via SMS!");
             setStep(2);
           }
         }

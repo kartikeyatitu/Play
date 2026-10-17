@@ -6,6 +6,7 @@ import { cache } from "react";
 import { db } from "@/lib/db";
 import { shortStart } from "@/lib/coach";
 import { scheduleRunsOn } from "@/lib/fees";
+import { getAppUrl } from "@/lib/app-url";
 import { BadgeCheck, MapPin, CalendarDays, Clock, Users, ChevronRight, Sparkles } from "lucide-react";
 
 // PUBLIC (no auth). Only public-safe fields are selected: no phones, emails,
@@ -252,7 +253,7 @@ export default async function PublicCoachProfilePage({ params }: { params: Promi
         {!org.hidePoweredBy && (
           <p className="text-center text-[11px] text-zinc-600 pt-4">
             Powered by{" "}
-            <a href="https://triqsports.vercel.app" className="font-black text-zinc-400 hover:text-white">
+            <a href={getAppUrl()} className="font-black text-zinc-400 hover:text-white">
               Triq
             </a>
           </p>

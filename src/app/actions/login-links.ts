@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { setSessionCookie, homePathForRole } from "@/lib/auth";
 import { checkPermission, hasPermission } from "@/lib/membership";
+import { getAppUrl } from "@/lib/app-url";
 
 const LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -24,7 +25,7 @@ async function appOrigin() {
   } catch {
     // headers() unavailable — fall through
   }
-  return process.env.NEXT_PUBLIC_APP_URL || "https://triqsports.vercel.app";
+  return getAppUrl();
 }
 
 /**

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Copy, Share2, Star, MessageSquareQuote } from "lucide-react";
 import { addTestimonial } from "@/app/actions/testimonials";
+import { getAppUrl } from "@/lib/app-url";
 
 interface TestimonialCollectorProps {
   academyName: string;
@@ -20,7 +21,7 @@ export function TestimonialCollector({ academyName, testimonials, parents }: Tes
 
   const [form, setForm] = useState({ parentId: '', rating: 5, comment: '' });
 
-  const shareLink = `https://triqsports.vercel.app/${academyName.toLowerCase().replace(/\s+/g, '')}/review`;
+  const shareLink = `${getAppUrl()}/${academyName.toLowerCase().replace(/\s+/g, '')}/review`;
   const whatsappMsg = `Hi! We'd love your feedback on ${academyName}. Please share a quick testimonial: ${shareLink}`;
 
   const copyLink = () => {

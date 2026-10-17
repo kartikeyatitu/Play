@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CalendarCheck2, HeartPulse, LineChart, MessageCircle, Search, Wallet } from "lucide-react";
 import { MarketingShell, SectionHeading, primaryCta, secondaryCta } from "@/components/marketing/shell";
+import { getAppUrl } from "@/lib/app-url";
 
 const title = "Triq for parents — know how your child is really doing";
 const description =
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title, description },
 };
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://triqsports.vercel.app";
+const SITE = getAppUrl();
 
 // Message a parent forwards to their academy owner / coach (parent-led acquisition loop).
 const ASK_ACADEMY_TEXT = `Hi Coach, could our academy use Triq? Parents get attendance, session recaps and progress reports on WhatsApp, and fees can be paid online. It's free for up to 30 students: ${SITE}/?ref=parent`;

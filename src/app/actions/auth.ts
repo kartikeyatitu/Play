@@ -9,16 +9,29 @@ import { OAuth2Client } from "google-auth-library";
 import { rateLimitDb } from "@/lib/rate-limit";
 import crypto from "crypto";
 import { setSessionCookie, getSession, revokeAllSessions } from "@/lib/auth";
+import { parsePhone, phoneLookupKeys, toMsg91Mobile } from "@/lib/phone";
+import { buildMsg91OtpRequest, describeMsg91Failure, isMsg91Success } from "@/lib/msg91";
+import { sendWhatsAppTemplate } from "@/lib/whatsapp";
 
 // Not exported: "use server" files may only export async functions.
 const SMS_UNAVAILABLE_MESSAGE = "SMS login isn't available yet. Ask your academy admin for your one-tap login link.";
+const INVALID_PHONE_MESSAGE = "Please enter a valid 10-digit mobile number (or +country code for numbers outside India).";
 
 // ==========================================
 // 1. PHONE OTP FLOW
-// Providers (first configured wins): MSG91 → Twilio → allowlisted test numbers.
-// Without any of them we say so honestly instead of pretending an SMS went out.
+// Channels, in order:
+//   1. WhatsApp authentication template (copy-code button), when WHATSAPP_* auth env is configured.
+//   2. SMS fallback: MSG91 for +91 numbers (DLT-registered template), Twilio for non-Indian numbers only
+//      (raw Twilio SMS to India needs DLT and its international route randomises the sender).
+//   Allowlisted test numbers skip sending entirely.
+// Without any usable channel we say so honestly instead of pretending a code went out.
+//
+// Users stay stored/matched by today's keys (10 digits for Indian numbers, see src/lib/phone.ts);
+// only the *sending* format is E.164 / "91XXXXXXXXXX".
 // ==========================================
 const hashOtp = (otp: string) => crypto.createHash("sha256").update(otp).digest("hex");
+
+type OtpChannel = "whatsapp" | "sms";
 
 /** Test numbers (demo / QA only): OTP_TEST_PHONES="9000000001,9000000002" + OTP_TEST_CODE="123456". Both must be set. */
 function isTestPhone(cleanPhone: string): boolean {
@@ -27,47 +40,96 @@ function isTestPhone(cleanPhone: string): boolean {
   return !!code && /^\d{4,8}$/.test(code) && list.includes(cleanPhone.slice(-10));
 }
 
-async function sendViaMsg91(cleanPhone: string, otp: string): Promise<boolean> {
+const msg91Configured = () => !!(process.env.MSG91_AUTH_KEY && process.env.MSG91_TEMPLATE_ID);
+const twilioConfigured = () =>
+  !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER);
+const whatsAppAuthConfigured = () =>
+  !!(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_AUTH_TEMPLATE_NAME);
+/** The SMS provider allowed for this number: MSG91 for India, Twilio for everyone else. */
+const smsProviderFor = (isIndian: boolean): "msg91" | "twilio" | null =>
+  isIndian ? (msg91Configured() ? "msg91" : null) : twilioConfigured() ? "twilio" : null;
+
+/** Throws on failure (message is secret-free). */
+async function sendViaMsg91(e164: string, otp: string): Promise<void> {
   const authKey = process.env.MSG91_AUTH_KEY;
   const templateId = process.env.MSG91_TEMPLATE_ID;
-  if (!authKey || !templateId) return false;
-  const mobile = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-  const url = `https://control.msg91.com/api/v5/otp?template_id=${encodeURIComponent(templateId)}&mobile=${mobile}&authkey=${encodeURIComponent(authKey)}&otp=${otp}&otp_expiry=5`;
-  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
-  const body: any = await res.json().catch(() => ({}));
-  if (!res.ok || body?.type === "error") throw new Error(`MSG91 error: ${JSON.stringify(body)}`);
-  return true;
+  if (!authKey || !templateId) throw new Error("MSG91 is not configured");
+  const req = buildMsg91OtpRequest({ authKey, templateId, mobile: toMsg91Mobile(e164), otp, expiryMinutes: 5 });
+  let res: Response;
+  try {
+    res = await fetch(req.url, { ...req.init, cache: "no-store", signal: AbortSignal.timeout(10_000) });
+  } catch {
+    throw new Error("Could not reach MSG91");
+  }
+  const body: unknown = await res.json().catch(() => ({}));
+  if (!isMsg91Success(res.status, body)) throw new Error(describeMsg91Failure(res.status, body, authKey));
 }
 
-async function sendViaTwilio(cleanPhone: string, otp: string): Promise<boolean> {
+/** Non-Indian numbers only. Throws on failure. */
+async function sendViaTwilio(e164: string, otp: string): Promise<void> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
-  if (!(accountSid && authToken && twilioPhone)) return false;
+  if (!(accountSid && authToken && twilioPhone)) throw new Error("Twilio is not configured");
   const client = twilio(accountSid, authToken);
-  const formattedPhone = cleanPhone.length === 10 ? `+91${cleanPhone}` : `+${cleanPhone}`;
-  await client.messages.create({ body: `Your Triq login code is: ${otp}. Valid for 5 minutes.`, from: twilioPhone, to: formattedPhone });
-  return true;
+  try {
+    await client.messages.create({ body: `Your Triq login code is: ${otp}. Valid for 5 minutes.`, from: twilioPhone, to: e164 });
+  } catch (e: any) {
+    throw new Error(`Twilio send failed${e?.code ? ` (code ${e.code})` : ""}`);
+  }
+}
+
+/**
+ * WhatsApp authentication template with a copy-code button. Meta's format: the code goes in the
+ * body parameter AND as the url-button (index 0) parameter.
+ */
+async function sendViaWhatsAppAuth(e164: string, otp: string): Promise<{ ok: boolean; error?: string }> {
+  const template = process.env.WHATSAPP_AUTH_TEMPLATE_NAME;
+  if (!template) return { ok: false, error: "WhatsApp auth template not configured" };
+  return sendWhatsAppTemplate({
+    to: e164,
+    template,
+    language: "en",
+    bodyParams: [otp],
+    buttonParams: [{ subType: "url", index: 0, params: [otp] }],
+  });
+}
+
+async function sendViaSms(e164: string, isIndian: boolean, otp: string): Promise<void> {
+  const provider = smsProviderFor(isIndian);
+  if (provider === "msg91") return sendViaMsg91(e164, otp);
+  if (provider === "twilio") return sendViaTwilio(e164, otp);
+  throw new Error("No SMS provider for this number");
+}
+
+/** Matches today's storage: canonical key first, then the legacy "all digits typed" key. */
+async function findUserByPhoneInput(phone: string) {
+  for (const key of phoneLookupKeys(phone)) {
+    const user = await db.user.findUnique({ where: { phone: key } });
+    if (user) return user;
+  }
+  return null;
 }
 
 export async function sendOtp(phone: string) {
-  if (!phone || phone.replace(/\D/g, '').length < 10) return { error: "Please enter a valid 10-digit phone number." };
-  const cleanPhone = phone.replace(/\D/g, '');
+  const parsed = parsePhone(phone);
+  const lookupKey = phoneLookupKeys(phone)[0];
+  if (!parsed || !lookupKey) return { error: INVALID_PHONE_MESSAGE };
 
   // Per-phone throttle (persistent across serverless instances)
-  const { allowed } = await rateLimitDb(`otp:${cleanPhone}`, 3, 60_000);
+  const { allowed } = await rateLimitDb(`otp:${lookupKey}`, 3, 60_000);
   if (!allowed) return { error: "Too many OTP requests. Please wait 1 minute." };
 
-  const user = await db.user.findUnique({ where: { phone: cleanPhone } });
-  if (!user) return { error: "Account not found. Ask your Academy Admin to add you first!" };
+  const user = await findUserByPhoneInput(phone);
+  if (!user?.phone) return { error: "Account not found. Ask your Academy Admin to add you first!" };
+  // Codes are stored under the user's stored phone so verification matches the same account.
+  const cleanPhone = user.phone;
 
   const testMode = isTestPhone(cleanPhone);
-  const smsConfigured = !!(
-    (process.env.MSG91_AUTH_KEY && process.env.MSG91_TEMPLATE_ID) ||
-    (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER)
-  );
-  if (!testMode && !smsConfigured) {
-    console.log(`\n⚠️ No SMS provider configured. SMS login unavailable for ${cleanPhone}.\n`);
+  const whatsApp = whatsAppAuthConfigured();
+  const smsProvider = smsProviderFor(parsed.isIndian);
+  if (!testMode && !whatsApp && !smsProvider) {
+    console.log(`\n⚠️ No OTP channel configured for ${parsed.isIndian ? "Indian" : "international"} numbers. Phone login unavailable.\n`);
     return { error: SMS_UNAVAILABLE_MESSAGE, smsUnavailable: true };
   }
 
@@ -79,28 +141,43 @@ export async function sendOtp(phone: string) {
 
   if (testMode) return { success: true, smsSent: true, testMode: true };
 
-  try {
-    const sent = (await sendViaMsg91(cleanPhone, otp)) || (await sendViaTwilio(cleanPhone, otp));
-    if (!sent) return { error: SMS_UNAVAILABLE_MESSAGE, smsUnavailable: true };
-  } catch (error) {
-    console.error("OTP SMS failed:", error);
-    return { error: "Failed to send SMS. Please try again in a minute." };
+  let channel: OtpChannel | null = null;
+  if (whatsApp) {
+    const wa = await sendViaWhatsAppAuth(parsed.e164, otp);
+    if (wa.ok) channel = "whatsapp";
+    else console.warn("OTP WhatsApp failed, falling back to SMS:", wa.error);
+  }
+  if (!channel) {
+    if (!smsProvider) return { error: "Couldn't send the code on WhatsApp. Please try again in a minute." };
+    try {
+      await sendViaSms(parsed.e164, parsed.isIndian, otp);
+      channel = "sms";
+    } catch (error) {
+      console.error("OTP SMS failed:", error instanceof Error ? error.message : "unknown error");
+      return { error: "Failed to send SMS. Please try again in a minute." };
+    }
   }
 
-  return { success: true, smsSent: true };
+  // smsSent is kept for existing callers: it means "a code was sent" on either channel.
+  return { success: true, smsSent: true, channel };
 }
 
 const MAX_OTP_ATTEMPTS = 5;
 
 export async function verifyOtpAndLogin(phone: string, otp: string) {
   if (!phone || !otp) return { error: "Missing fields" };
-  const cleanPhone = phone.replace(/\D/g, '');
+  const lookupKey = phoneLookupKeys(phone)[0];
+  if (!lookupKey) return { error: "Invalid or expired OTP." };
   const guess = String(otp).trim();
 
   // A 6-digit code has only 1M values, so unlimited guessing is feasible: limit per phone (persistent)
   // and cap wrong attempts per code below.
-  const phoneLimit = await rateLimitDb(`otp-verify:${cleanPhone}`, 10, 5 * 60_000);
+  const phoneLimit = await rateLimitDb(`otp-verify:${lookupKey}`, 10, 5 * 60_000);
   if (!phoneLimit.allowed) return { error: "Too many attempts. Please wait a few minutes and request a new code." };
+
+  // sendOtp stores the code under the matched user's stored phone; resolve it the same way.
+  const user = await findUserByPhoneInput(phone);
+  const cleanPhone = user?.phone || lookupKey;
 
   const latest = await db.verificationToken.findFirst({
     where: { phone: cleanPhone, expiresAt: { gt: new Date() } },
@@ -124,7 +201,6 @@ export async function verifyOtpAndLogin(phone: string, otp: string) {
   // One-time use: delete every code for this phone before logging in.
   await db.verificationToken.deleteMany({ where: { phone: cleanPhone } });
 
-  const user = await db.user.findUnique({ where: { phone: cleanPhone } });
   if (!user) return { error: "Account not found. Please ask your academy admin to add you as a coach first." };
 
   await setSession(user.id, user.role);

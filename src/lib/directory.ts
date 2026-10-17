@@ -2,7 +2,9 @@
 // IMPORTANT: no DB / server-only imports here — this module is shared with client components.
 // (Tailwind does not scan src/lib, so no class names live here either.)
 
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://triqsports.vercel.app").replace(/\/$/, "");
+import { getAppUrl } from "@/lib/app-url";
+
+export const SITE_URL = getAppUrl();
 
 export type DirectoryCity = {
   slug: string;

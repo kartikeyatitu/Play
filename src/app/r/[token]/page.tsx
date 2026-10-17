@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
+import { getAppUrl } from "@/lib/app-url";
 
 export async function generateMetadata(props: {
   params: Promise<{ token: string }>;
@@ -41,7 +42,7 @@ export default async function ReceiptPage(props: {
   const formattedMonth = formatMonthHuman(receipt.month);
 
   // Generate QR code as SVG/data URI for live receipt verification
-  const verificationUrl = `https://triqsports.vercel.app/r/${token}`;
+  const verificationUrl = `${getAppUrl()}/r/${token}`;
   let qrDataUri = "";
   try {
     qrDataUri = await QRCode.toDataURL(verificationUrl, {

@@ -8,14 +8,24 @@ export const dynamic = "force-dynamic";
 
 /**
  * Webhook handler for Triq's platform SaaS subscriptions & billing invoices.
- * Events handled:
- *  - subscription.charged
- *  - subscription.activated
- *  - subscription.halted
- *  - subscription.cancelled
+ * Signed with RAZORPAY_BILLING_WEBHOOK_SECRET only (fails closed with 503 when unset). It deliberately
+ * does NOT fall back to RAZORPAY_WEBHOOK_SECRET: that secret belongs to the legacy fee webhook, and
+ * sharing it would let a fee-webhook signer forge plan upgrades.
+ *
+ * Event → Subscription.status (existing values: ACTIVE, TRIALING, PAST_DUE, CANCELED):
+ *  - subscription.authenticated  mandate approved, no charge yet → link the Razorpay id only
+ *  - subscription.charged        ACTIVE + period + BillingInvoice (renewal or first payment)
+ *  - subscription.activated      ACTIVE (+ plan from notes)
+ *  - subscription.resumed        ACTIVE
+ *  - subscription.pending        no change (Razorpay is retrying the charge; "halted" follows if it gives up)
+ *  - subscription.halted         PAST_DUE
+ *  - subscription.paused         PAST_DUE (not billing → paid-plan limits stop applying)
+ *  - subscription.cancelled      CANCELED
+ *  - subscription.completed      CANCELED (all billing cycles done)
+ *  Anything else is logged and acknowledged with 200.
  */
 export async function POST(req: NextRequest) {
-  const webhookSecret = process.env.RAZORPAY_BILLING_WEBHOOK_SECRET || process.env.RAZORPAY_WEBHOOK_SECRET;
+  const webhookSecret = process.env.RAZORPAY_BILLING_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
     return NextResponse.json({ error: "Billing webhook secret not configured" }, { status: 503 });
@@ -110,19 +120,67 @@ export async function POST(req: NextRequest) {
         });
       }
     }
-    // 2. Subscription halted or past due
-    else if (event === "subscription.halted") {
+    // 2. Activated / resumed: paid plan is live again
+    else if (event === "subscription.activated" || event === "subscription.resumed") {
+      const notedPlan = notes.plan ? String(notes.plan).toUpperCase() : null;
+      const sub = await db.subscription.findFirst({
+        where: { OR: [{ razorpaySubscriptionId: razorpaySubId }, ...(orgId ? [{ orgId }] : [])] },
+      });
+      const period = {
+        ...(subEntity.current_start ? { currentPeriodStart: new Date(subEntity.current_start * 1000) } : {}),
+        ...(subEntity.current_end ? { currentPeriodEnd: new Date(subEntity.current_end * 1000) } : {}),
+      };
+      if (sub) {
+        const plan = notedPlan || sub.plan;
+        await db.subscription.update({
+          where: { id: sub.id },
+          data: {
+            status: "ACTIVE",
+            plan,
+            ...(notedPlan ? { maxStudents: notedPlan === "PRO" ? 500 : 150 } : {}),
+            ...period,
+            gracePeriodEndsAt: null,
+            cancelAtPeriodEnd: false,
+            razorpaySubscriptionId: razorpaySubId,
+          },
+        });
+      } else if (orgId && event === "subscription.activated") {
+        const plan = notedPlan || "STARTER";
+        await db.subscription.create({
+          data: { orgId, plan, status: "ACTIVE", maxStudents: plan === "PRO" ? 500 : 150, ...period, razorpaySubscriptionId: razorpaySubId },
+        });
+      } else {
+        console.warn(`Razorpay billing webhook: ${event} for unknown subscription`);
+      }
+    }
+    // 3. Authenticated: customer approved the mandate; nothing is paid yet, so only link the id
+    else if (event === "subscription.authenticated") {
+      if (orgId) {
+        await db.subscription.updateMany({
+          where: { orgId, OR: [{ razorpaySubscriptionId: null }, { razorpaySubscriptionId: razorpaySubId }] },
+          data: { razorpaySubscriptionId: razorpaySubId },
+        });
+      }
+    }
+    // 4. Halted (retries exhausted) or paused: no longer billing
+    else if (event === "subscription.halted" || event === "subscription.paused") {
       await db.subscription.updateMany({
         where: { razorpaySubscriptionId: razorpaySubId },
         data: { status: "PAST_DUE" },
       });
     }
-    // 3. Subscription cancelled
-    else if (event === "subscription.cancelled") {
+    // 5. Cancelled, or completed (all cycles billed)
+    else if (event === "subscription.cancelled" || event === "subscription.completed") {
       await db.subscription.updateMany({
         where: { razorpaySubscriptionId: razorpaySubId },
         data: { status: "CANCELED" },
       });
+    }
+    // 6. Pending: a charge failed and Razorpay is retrying. Keep access; "halted" follows if it gives up.
+    else if (event === "subscription.pending") {
+      console.warn("Razorpay billing webhook: subscription payment pending (Razorpay retrying)");
+    } else {
+      console.log(`Razorpay billing webhook: ignoring ${String(event).slice(0, 60)}`);
     }
 
     return NextResponse.json({ status: "ok" });

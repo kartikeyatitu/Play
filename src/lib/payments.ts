@@ -1,10 +1,21 @@
 // Unified Payment Gateway Configuration
 // Supports both Razorpay (India) and Stripe (International)
+//
+// IMPORTANT: the RAZORPAY_* / STRIPE_* keys below are Triq's OWN platform accounts. They are for
+// Triq's SaaS billing, never for academy fees: collecting academy money into the platform account
+// makes Triq a payment aggregator under RBI rules. Academy fees go through each academy's own
+// connected Razorpay (src/lib/razorpay-org.ts, src/app/actions/razorpay-connect.ts); platform-account
+// fee collection is only possible with PLATFORM_COLLECTS_FEES explicitly on (default off).
 
 // ─── Provider Detection ───
 export type PaymentProvider = "razorpay" | "stripe" | "manual";
 
+/** Mirrors platformCollectsFees() in gateways/stripe.ts (kept inline so this module stays import-free). */
+const PLATFORM_COLLECTS_FEES = /^(1|true|yes)$/i.test((process.env.PLATFORM_COLLECTS_FEES || "").trim());
+
+/** Provider for collecting a FEE with platform keys. "manual" (UPI / payment links) unless explicitly allowed. */
 export function getPaymentProvider(country: string = "IN"): PaymentProvider {
+  if (!PLATFORM_COLLECTS_FEES) return "manual";
   if (country === "IN" && RAZORPAY_CONFIG.isConfigured) return "razorpay";
   if (country !== "IN" && STRIPE_CONFIG.isConfigured) return "stripe";
   if (RAZORPAY_CONFIG.isConfigured) return "razorpay";
@@ -12,7 +23,7 @@ export function getPaymentProvider(country: string = "IN"): PaymentProvider {
   return "manual"; // Fallback: WhatsApp payment links
 }
 
-// ─── Razorpay (India) ───
+// ─── Razorpay (India) — Triq platform account ───
 export const RAZORPAY_CONFIG = {
   key_id: process.env.RAZORPAY_KEY_ID || "",
   key_secret: process.env.RAZORPAY_KEY_SECRET || "",

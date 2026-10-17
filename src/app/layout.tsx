@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Geist, Barlow_Condensed } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { getAppUrl } from "@/lib/app-url";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const barlowCondensed = Barlow_Condensed({
@@ -23,7 +24,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://triqsports.vercel.app"),
+  metadataBase: new URL(getAppUrl()),
   title: "Triq | Sports Academy Platform",
   description: "Complete sports academy management — batches, fees, attendance, student progress, coach verification, and parent engagement. Built for cricket, football, tennis, and multi-sport academies.",
   keywords: ["sports academy", "academy management", "cricket academy", "football academy", "student management", "fee management", "attendance tracking", "coach management", "Triq", "Triq Sports"],
@@ -31,7 +32,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Triq — Modern Sports Academy Platform",
     description: "Run your sports academy like a pro. Manage batches, fees, attendance, athlete progress & parent communication — all in one place.",
-    url: "https://triqsports.vercel.app",
+    url: getAppUrl(),
     siteName: "Triq",
     type: "website",
     locale: "en_IN",

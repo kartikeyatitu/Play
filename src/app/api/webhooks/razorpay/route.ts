@@ -6,9 +6,16 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Razorpay webhook receiver. Verifies the HMAC over the RAW body, then finalises/fails the
- * matching Payment via payment-service (idempotent). Returns 5xx only for transient failures
- * so Razorpay retries; unknown orders return 200 to avoid endless retries.
+ * LEGACY platform-level Razorpay fee webhook (from when fees were collected with Triq's own
+ * RAZORPAY_KEY_ID). Academy fees now go to each academy's own Razorpay account and are reconciled
+ * by /api/webhooks/razorpay/[orgId] (per-academy secret, set up in Settings → Razorpay). Platform
+ * subscription billing uses /api/webhooks/razorpay/billing. Kept so any old orders still settle;
+ * do not point new dashboards here.
+ *
+ * Verifies the HMAC over the RAW body with RAZORPAY_WEBHOOK_SECRET (fails closed: 503 without it,
+ * 401 on a bad signature), then finalises/fails the matching Payment via payment-service
+ * (idempotent). Returns 5xx only for transient failures so Razorpay retries; unknown orders return
+ * 200 to avoid endless retries.
  */
 export async function POST(req: NextRequest) {
   if (!process.env.RAZORPAY_WEBHOOK_SECRET) {

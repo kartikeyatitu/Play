@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { getAppHost } from "@/lib/app-url";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Triq",
@@ -57,7 +58,7 @@ export default function PrivacyPolicyPage() {
           <h2 className="text-lg font-semibold text-zinc-100">5. Account & Data Deletion Rights</h2>
           <p>
             Users have the full right to review, update, or permanently delete their personal information at any time. To request complete deletion of your account and related records, visit our dedicated self-serve portal at{" "}
-            <a href="/delete-account" className="text-emerald-400 hover:underline">triqsports.vercel.app/delete-account</a> or email <span className="text-zinc-200">privacy@triq.app</span>.
+            <a href="/delete-account" className="text-emerald-400 hover:underline">{getAppHost()}/delete-account</a> or email <span className="text-zinc-200">privacy@triq.app</span>.
           </p>
         </section>
 

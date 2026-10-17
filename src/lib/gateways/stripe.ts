@@ -8,6 +8,21 @@ export function stripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY);
 }
 
+/**
+ * Whether Triq's OWN payment account may collect academy fees. Off unless PLATFORM_COLLECTS_FEES is
+ * explicitly "true"/"1". Holding academy money in the platform's account makes Triq a payment
+ * aggregator under RBI rules, so academy fees must go to the academy's own connected gateway
+ * (Razorpay keys pasted in Settings). Keep this off unless that licensing question is resolved.
+ */
+export function platformCollectsFees(): boolean {
+  return /^(1|true|yes)$/i.test((process.env.PLATFORM_COLLECTS_FEES || "").trim());
+}
+
+/** Stripe fee checkout (money lands in Triq's Stripe account) — only behind PLATFORM_COLLECTS_FEES. */
+export function stripeFeeCheckoutEnabled(): boolean {
+  return stripeConfigured() && platformCollectsFees();
+}
+
 async function stripeFetch(path: string, init: RequestInit & { headers?: Record<string, string> }) {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("Stripe is not configured");
