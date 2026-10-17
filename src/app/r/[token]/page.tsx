@@ -190,7 +190,7 @@ export default async function ReceiptPage(props: {
           {/* QR Code Verification */}
           {qrDataUri && (
             <div className="flex flex-col items-center">
-              <div className="p-1.5 bg-white rounded-lg shadow-sm">
+              <div className="p-1.5 bg-[#fff] rounded-lg shadow-sm">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={qrDataUri} alt="Verification QR Code" width={84} height={84} className="rounded" />
               </div>

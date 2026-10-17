@@ -262,7 +262,7 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
             <p className="text-3xl font-bold mt-1">{rupees(upi.amount)}</p>
             <p className="text-xs text-zinc-500 mt-1">{upi.description} · {formatDateLabel(date)}</p>
           </div>
-          {qr && <img src={qr} alt="UPI QR code" className="mx-auto rounded-lg bg-white p-2 w-48 h-48" />}
+          {qr && <img src={qr} alt="UPI QR code" className="mx-auto rounded-lg bg-[#fff] p-2 w-48 h-48" />}
           <a href={upi.upiLink} className="flex items-center justify-center w-full h-12 rounded-xl bg-lime-400 text-zinc-950 font-bold">
             Open UPI app to pay
           </a>

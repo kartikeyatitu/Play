@@ -57,7 +57,7 @@ export function CertificateGenerator({ students = [], academyName = 'Triq Academ
       
       <div className="w-full md:w-2/3 flex justify-center items-center bg-zinc-950 p-8 rounded border border-zinc-800 overflow-x-auto">
         {/* Printable area */}
-        <div id="certificate-preview" className="bg-white text-black p-12 border-8 border-double border-zinc-800 w-[800px] h-[600px] flex flex-col items-center justify-center text-center shadow-lg font-serif">
+        <div id="certificate-preview" className="bg-[#fff] text-[#000] p-12 border-8 border-double border-zinc-800 w-[800px] h-[600px] flex flex-col items-center justify-center text-center shadow-lg font-serif">
           <h1 className="text-4xl font-bold mb-2 uppercase text-zinc-800">Certificate of {typeLabels[type]}</h1>
           <p className="text-xl italic text-zinc-600 mb-8">This is to certify that</p>
           <h2 className="text-5xl font-bold mb-8 text-sky-900 border-b-2 border-zinc-300 pb-2 px-8 min-w-[300px]">{selectedStudent || '[STUDENT NAME]'}</h2>

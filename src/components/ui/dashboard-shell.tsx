@@ -90,11 +90,11 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
           small ? "min-h-[36px] text-[13px]" : "min-h-[40px] text-sm"
         } ${
           isActive
-            ? "bg-white/[0.06] text-zinc-50 font-medium"
-            : "text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.03]"
+            ? "bg-white/[0.06] text-ink font-medium"
+            : "text-ink-muted hover:text-zinc-100 hover:bg-white/[0.03]"
         }`}
       >
-        <span className={`shrink-0 ${isActive ? "brand-text" : "text-zinc-500"}`}>{item.icon}</span>
+        <span className={`shrink-0 ${isActive ? "brand-text" : "text-ink-subtle"}`}>{item.icon}</span>
         <span className="truncate">{item.label}</span>
       </button>
     );
@@ -104,12 +104,12 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
     <>
       <div className="px-4 pt-4 pb-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg brand-bg flex items-center justify-center font-bold text-sm shrink-0">
+          <div className="w-8 h-8 rounded-lg brand-bg flex items-center justify-center font-heading font-extrabold text-lg shrink-0">
             {initial}
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-zinc-100 truncate leading-tight">{title}</p>
-            <p className="text-[10px] text-zinc-500 leading-tight">Powered by Triq</p>
+            <p className="text-[10px] text-ink-subtle leading-tight">Powered by Triq</p>
           </div>
         </div>
         {mobileMenuOpen && (
@@ -117,7 +117,7 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
             type="button"
             onClick={() => setMobileMenuOpen(false)}
             aria-label="Close menu"
-            className="p-2.5 rounded-lg border border-zinc-800 text-zinc-400 hover:text-white"
+            className="p-2.5 rounded-lg border border-line text-ink-muted hover:text-ink"
           >
             <X className="w-5 h-5" />
           </button>
@@ -155,9 +155,9 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
   const barActiveId = navItems.some((n) => n.id === activeTab) ? activeTab : moreIds.has(activeTab) ? "more" : "";
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex relative" style={brandStyle}>
+    <div className="min-h-screen bg-canvas flex relative" style={brandStyle}>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-60 border-r border-zinc-800/60 bg-zinc-950 flex-col sticky top-0 h-screen z-30">
+      <aside className="hidden lg:flex w-60 border-r border-line/60 bg-canvas flex-col sticky top-0 h-screen z-30">
         {renderSidebarContent()}
       </aside>
 
@@ -165,7 +165,7 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
       {!grouped && mobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setMobileMenuOpen(false)} />
-          <aside className="w-72 max-w-[85vw] border-r border-zinc-800/80 bg-zinc-950 flex flex-col h-screen relative shadow-2xl animate-in slide-in-from-left duration-200">
+          <aside className="w-72 max-w-[85vw] border-r border-line/80 bg-canvas flex flex-col h-screen relative shadow-2xl animate-in slide-in-from-left duration-200">
             {renderSidebarContent()}
           </aside>
         </div>
@@ -173,13 +173,13 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
 
       {/* Main */}
       <main className="flex-1 min-w-0 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] lg:pb-10 shell-glow">
-        <header className="sticky top-0 z-20 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-800/60 px-4 sm:px-8 py-2.5 sm:py-3.5">
+        <header className="sticky top-0 z-20 bg-canvas/90 backdrop-blur-md border-b border-line/60 px-4 sm:px-8 py-2.5 sm:py-3.5">
           <div className="flex justify-between items-center gap-3 min-h-[44px]">
             <div className="flex items-center gap-2.5 min-w-0">
               {!grouped && (
                 <button
                   type="button"
-                  className="lg:hidden w-11 h-11 -ml-1 flex items-center justify-center rounded-xl border border-zinc-800 text-zinc-300 hover:text-white"
+                  className="lg:hidden w-11 h-11 -ml-1 flex items-center justify-center rounded-xl border border-line text-zinc-300 hover:text-ink"
                   onClick={() => setMobileMenuOpen(true)}
                   aria-label="Open navigation menu"
                 >
@@ -187,20 +187,20 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
                 </button>
               )}
               {grouped && (
-                <div className="lg:hidden w-8 h-8 rounded-lg brand-bg flex items-center justify-center font-bold text-sm shrink-0">
+                <div className="lg:hidden w-8 h-8 rounded-lg brand-bg flex items-center justify-center font-heading font-extrabold text-lg shrink-0">
                   {initial}
                 </div>
               )}
               <div className="min-w-0">
                 <h1 className="text-[15px] sm:text-lg font-semibold text-zinc-100 truncate tracking-tight">{title}</h1>
-                {subtitle && <p className="text-xs text-zinc-500 truncate tabular-nums">{subtitle}</p>}
+                {subtitle && <p className="text-xs text-ink-subtle truncate tabular-nums">{subtitle}</p>}
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">{headerActions}</div>
           </div>
         </header>
 
-        <div className="px-4 py-5 sm:px-8 sm:py-8 max-w-6xl mx-auto min-w-0 overflow-x-hidden">
+        <div key={activeTab} className="tab-in px-4 py-5 sm:px-8 sm:py-8 max-w-6xl mx-auto min-w-0 overflow-x-hidden">
           {children(activeTab, setActiveTab)}
         </div>
       </main>
@@ -208,7 +208,7 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
       {/* Mobile bottom bar */}
       <nav
         aria-label="Primary"
-        className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-zinc-950/95 backdrop-blur-2xl border-t border-zinc-800/80 pb-safe"
+        className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-canvas/[0.97] border-t border-line/80 pb-safe"
       >
         <div className="flex items-stretch px-1">
           {(grouped ? navItems : primaryMobileTabs).map((tab) => {
@@ -219,12 +219,12 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 aria-current={isActive ? "page" : undefined}
-                className={`relative flex-1 min-h-[56px] min-w-0 flex flex-col items-center justify-center gap-0.5 transition-colors ${
-                  isActive ? "brand-text" : "text-zinc-500 hover:text-zinc-300"
+                className={`press relative flex-1 min-h-[56px] min-w-0 flex flex-col items-center justify-center gap-0.5 ${
+                  isActive ? "brand-text" : "text-ink-subtle hover:text-zinc-300"
                 }`}
               >
-                {isActive && <span className="absolute top-0 inset-x-4 h-0.5 rounded-full brand-bar" />}
-                <span className="[&>svg]:w-5 [&>svg]:h-5">{tab.icon}</span>
+                {isActive && <span className="tab-ink absolute top-0 inset-x-4 h-0.5 rounded-full brand-bar" />}
+                <span className={`[&>svg]:w-5 [&>svg]:h-5 ${isActive ? "tab-icon-on" : ""}`}>{tab.icon}</span>
                 <span className="text-[10px] font-medium tracking-tight truncate max-w-full px-1">{tab.label}</span>
               </button>
             );
@@ -234,7 +234,7 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
               type="button"
               onClick={() => setMobileMenuOpen(true)}
               className={`relative flex-1 min-h-[56px] flex flex-col items-center justify-center gap-0.5 transition-colors ${
-                !isPrimaryActive ? "brand-text" : "text-zinc-500 hover:text-zinc-300"
+                !isPrimaryActive ? "brand-text" : "text-ink-subtle hover:text-zinc-300"
               }`}
             >
               {!isPrimaryActive && <span className="absolute top-0 inset-x-4 h-0.5 rounded-full brand-bar" />}
@@ -259,10 +259,10 @@ interface StatCardProps {
 
 export function StatCard({ label, value, icon, gradient, textColor }: StatCardProps) {
   return (
-    <div className={`rounded-xl border border-zinc-800/60 bg-gradient-to-br ${gradient} p-4 sm:p-5`}>
+    <div className={`rounded-xl border border-line/60 bg-gradient-to-br ${gradient} p-4 sm:p-5`}>
       <div className="flex justify-between items-start">
         <div>
-          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">{label}</p>
+          <p className="text-[11px] font-semibold text-ink-subtle uppercase tracking-wider">{label}</p>
           <p className={`text-xl sm:text-2xl font-semibold mt-1.5 tabular-nums ${textColor}`}>{value}</p>
         </div>
         <div className={`${textColor} opacity-60`}>{icon}</div>

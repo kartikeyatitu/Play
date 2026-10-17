@@ -62,7 +62,7 @@ export function StudentQRCode({ studentId, studentName }: StudentQRCodeProps) {
 
   return (
     <Card className="flex flex-col items-center p-6 bg-zinc-900/50 border-zinc-800/50 max-w-sm mx-auto">
-      <div className="mb-4 bg-white p-2 rounded-lg print:border-none print:shadow-none shadow-sm">
+      <div className="mb-4 bg-[#fff] p-2 rounded-lg print:border-none print:shadow-none shadow-sm">
         <canvas ref={canvasRef} className="rounded" />
       </div>
       <h3 className="text-lg font-semibold text-zinc-100 mb-6">{studentName}</h3>

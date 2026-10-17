@@ -121,7 +121,7 @@ export function CheckoutModal({
                 <div className="flex flex-col items-center gap-2">
                   {qr ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={qr} alt={`UPI QR for ${payee}`} className="w-44 h-44 rounded-lg bg-white p-2" />
+                    <img src={qr} alt={`UPI QR for ${payee}`} className="w-44 h-44 rounded-lg bg-[#fff] p-2" />
                   ) : (
                     <div className="w-44 h-44 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center">
                       <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />
