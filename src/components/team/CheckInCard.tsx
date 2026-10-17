@@ -6,6 +6,8 @@ import { CheckCircle2, Loader2, LogIn } from "lucide-react";
 import { selfCheckIn, selfCheckOut, type getMyAttendance } from "@/app/actions/team";
 import { unwrap } from "@/lib/action-result";
 import { track } from "@/lib/analytics";
+import { haptic } from "@/lib/motion";
+import { SuccessMark } from "@/components/sport/Celebrate";
 
 type Today = Awaited<ReturnType<typeof getMyAttendance>>["today"];
 
@@ -16,6 +18,7 @@ const time = (iso: string | null | undefined) =>
 export function CheckInCard({ initial }: { initial: Today }) {
   const [today, setToday] = React.useState<Today>(initial);
   const [busy, setBusy] = React.useState(false);
+  const [justCheckedIn, setJustCheckedIn] = React.useState(false);
 
   if (!today?.checkInAt) {
     return (
@@ -28,7 +31,8 @@ export function CheckInCard({ initial }: { initial: Today }) {
             const res = unwrap(await selfCheckIn());
             track("staff_checked_in", { surface: "coach_card" });
             setToday({ status: "PRESENT", checkInAt: res.checkInAt ?? new Date().toISOString(), checkOutAt: null });
-            if ("vibrate" in navigator) navigator.vibrate?.(15);
+            setJustCheckedIn(true);
+            haptic([15, 40, 25]);
             toast.success(`Checked in at ${time(res.checkInAt)}`);
           } catch (e: any) {
             toast.error(e?.message || "Couldn't check in");
@@ -36,7 +40,7 @@ export function CheckInCard({ initial }: { initial: Today }) {
             setBusy(false);
           }
         }}
-        className="w-full h-12 rounded-xl border border-lime-400/40 bg-lime-400/10 text-lime-300 font-semibold inline-flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+        className="press w-full h-12 rounded-xl border border-volt/40 bg-volt/10 text-volt-ink font-semibold inline-flex items-center justify-center gap-2"
       >
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />} Check in for today
       </button>
@@ -44,9 +48,9 @@ export function CheckInCard({ initial }: { initial: Today }) {
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/40 px-4 h-12 text-sm">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface/40 px-4 h-12 text-sm">
       <span className="inline-flex items-center gap-2 text-zinc-300">
-        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        {justCheckedIn ? <SuccessMark size={22} burst={false} /> : <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
         In at {time(today.checkInAt)}
         {today.checkOutAt ? ` · Out at ${time(today.checkOutAt)}` : ""}
       </span>
@@ -66,7 +70,7 @@ export function CheckInCard({ initial }: { initial: Today }) {
               setBusy(false);
             }
           }}
-          className="text-zinc-400 hover:text-white font-medium"
+          className="text-ink-muted hover:text-ink font-medium"
         >
           Check out
         </button>

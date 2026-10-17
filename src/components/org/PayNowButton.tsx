@@ -299,7 +299,7 @@ export function PayNowButton({
                   <div className="flex flex-col items-center justify-center p-4 border border-dashed border-zinc-800 rounded-xl bg-zinc-900/40">
                     {upiLink && qr ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={qr} alt="UPI QR" className="w-32 h-32 rounded-lg bg-white p-2 mb-2" />
+                      <img src={qr} alt="UPI QR" className="w-32 h-32 rounded-lg bg-[#fff] p-2 mb-2" />
                     ) : (
                       <QrCode className="w-20 h-20 text-zinc-500 mb-2" />
                     )}

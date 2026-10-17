@@ -22,8 +22,8 @@ export function AcademySwitcher({ className = "" }: { className?: string }) {
   const active = academies.find((a) => a.active);
 
   return (
-    <label className={`inline-flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 h-11 text-sm ${className}`}>
-      <ArrowLeftRight className="w-4 h-4 text-lime-300 shrink-0" aria-hidden />
+    <label className={`inline-flex items-center gap-2 rounded-xl border border-line bg-surface/60 px-3 h-11 text-sm ${className}`}>
+      <ArrowLeftRight className="w-4 h-4 text-volt-ink shrink-0" aria-hidden />
       <span className="sr-only">Switch academy</span>
       <select
         value={active?.orgId}
@@ -38,10 +38,10 @@ export function AcademySwitcher({ className = "" }: { className?: string }) {
             setSwitching(false);
           }
         }}
-        className="bg-transparent text-white font-medium focus:outline-none max-w-[14rem] truncate"
+        className="bg-transparent text-ink font-medium focus:outline-none max-w-[14rem] truncate"
       >
         {academies.map((a) => (
-          <option key={a.orgId} value={a.orgId} className="bg-zinc-900">
+          <option key={a.orgId} value={a.orgId} className="bg-surface">
             {a.name} · {roleLabel(a.role, a.staffRole)}
           </option>
         ))}

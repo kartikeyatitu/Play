@@ -1,4 +1,5 @@
 "use client";
+import { ThemePicker } from "@/components/ui/theme-picker";
 import React from "react";
 import { DashboardShell, SectionHeader, NAV_ICONS, type NavGroup, type NavItem } from "@/components/ui/dashboard-shell";
 import { TodayScreen, type TodayInsights } from "@/components/shell/TodayScreen";
@@ -293,6 +294,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
               currentMonth={currentMonth}
               pendingDues={stats.pendingDues}
               onNavigate={go}
+              sport={org?.sport}
               top={<OnboardingWizard session={session} hasBatches={batches.length > 0} hasCoaches={coaches.length > 0} hasStudents={students.length > 0} coaches={coaches} batches={batches} />}
             />
           )}
@@ -749,6 +751,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
             <div className="space-y-6">
               <SectionHeader title="Academy Settings" description="Manage your academy profile" />
               {org && <AcademySettings org={org} />}
+              <ThemePicker />
               <div>
                 <SectionHeader title="Import Data" description="Import students from WhatsApp, Excel or CSV" />
                 <div className="mb-4">

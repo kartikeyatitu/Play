@@ -1,0 +1,309 @@
+/*
+ * Triq colour themes.
+ *
+ * Every theme defines three ramps as space-separated RGB triplets:
+ *   --n-*   neutral ramp. Tailwind's `zinc`, `white` and `black` read from it, so the
+ *           ~3,700 existing zinc-* classes theme automatically. 950 = page, 900 = surface,
+ *           800 = border, 500/400 = muted text, 50/0 = primary text. Light themes invert it.
+ *   --a-*   accent ramp. Tailwind's `lime` reads from it (lime-400 = accent fill,
+ *           lime-300 = accent text / hover).
+ *   status  emerald / amber / rose / sky 100–400 (the shades used as text) are remapped
+ *           so status text keeps AA contrast on light surfaces.
+ * On top sit the semantic tokens (--c-bg, --c-surface, --c-accent, …) that new code should
+ * use through Tailwind: bg-canvas, bg-surface, bg-surface-2, border-line, text-ink,
+ * text-ink-muted, text-ink-subtle, bg-volt / text-volt-fg / text-volt-ink, text-volt-2,
+ * text-success / warn / danger, text-sport-cricket … (see tailwind.config.ts).
+ *
+ * Switch with <html data-theme="night|indigo|stadium|daylight|arena">. Default = night.
+ */
+
+/* ── Night + Lime (default, the original look) ─────────────────────────────── */
+:root,
+[data-theme="night"] {
+  color-scheme: dark;
+  --n-0: 255 255 255;
+  --n-50: 250 250 250;
+  --n-100: 244 244 245;
+  --n-200: 228 228 231;
+  --n-300: 212 212 216;
+  --n-400: 161 161 170;
+  --n-500: 113 113 122;
+  --n-600: 82 82 91;
+  --n-700: 63 63 70;
+  --n-750: 52 52 58;
+  --n-800: 39 39 42;
+  --n-850: 31 31 34;
+  --n-900: 24 24 27;
+  --n-950: 9 9 11;
+  --n-1000: 0 0 0;
+
+  --a-50: 247 254 231;
+  --a-100: 236 252 203;
+  --a-200: 217 249 157;
+  --a-300: 190 242 100;
+  --a-400: 163 230 53;
+  --a-500: 132 204 22;
+  --a-600: 101 163 13;
+  --a-700: 77 124 15;
+  --a-800: 63 98 18;
+  --a-900: 54 83 20;
+  --a-950: 26 46 5;
+
+  --em-100: 209 250 229;
+  --em-200: 167 243 208;
+  --em-300: 110 231 183;
+  --em-400: 52 211 153;
+  --am-100: 254 243 199;
+  --am-200: 253 230 138;
+  --am-300: 252 211 77;
+  --am-400: 251 191 36;
+  --ro-100: 255 228 230;
+  --ro-200: 254 205 211;
+  --ro-300: 253 164 175;
+  --ro-400: 251 113 133;
+  --sk-100: 224 242 254;
+  --sk-200: 186 230 253;
+  --sk-300: 125 211 252;
+  --sk-400: 56 189 248;
+
+  --accent-2: 56 189 248;
+
+  /* Per-sport accents (batch chips, illustrations, session rows) */
+  --sport-badminton: 45 212 191;
+  --sport-cricket: 248 113 113;
+  --sport-football: 74 222 128;
+  --sport-tennis: 253 224 71;
+  --sport-swimming: 96 165 250;
+  --sport-basketball: 251 146 60;
+  --sport-other: var(--a-400);
+
+  /* Ball colours for illustrations: real-object colours, deliberately the same in every theme */
+  --ball-badminton: 45 212 191;
+  --ball-cricket: 220 38 38;
+  --ball-football: 248 250 252;
+  --ball-tennis: 214 230 54;
+  --ball-swimming: 59 130 246;
+  --ball-basketball: 234 108 30;
+  --ball-other: var(--a-400);
+
+  /* Texture strokes (court lines, pitch stripes) */
+  --texture: 255 255 255;
+  --texture-alpha: 0.035;
+  --glow-alpha: 0.18;
+  --shadow-rgb: 0 0 0;
+  --theme-color: #09090b;
+}
+
+/* ── Indigo + Saffron: floodlit night match ───────────────────────────────── */
+[data-theme="indigo"] {
+  color-scheme: dark;
+  --n-0: 255 255 255;
+  --n-50: 246 247 251;
+  --n-100: 234 237 246;
+  --n-200: 214 219 234;
+  --n-300: 193 200 222;
+  --n-400: 160 170 202;
+  --n-500: 128 139 176;
+  --n-600: 86 98 138;
+  --n-700: 56 68 110;
+  --n-750: 46 57 97;
+  --n-800: 36 46 84;
+  --n-850: 28 37 72;
+  --n-900: 21 29 60;
+  --n-950: 11 17 40;
+  --n-1000: 3 6 18;
+
+  --a-50: 255 248 235;
+  --a-100: 255 239 204;
+  --a-200: 255 222 153;
+  --a-300: 255 204 102;
+  --a-400: 255 176 32;
+  --a-500: 245 150 10;
+  --a-600: 217 119 6;
+  --a-700: 180 83 9;
+  --a-800: 146 64 14;
+  --a-900: 120 53 15;
+  --a-950: 69 26 3;
+
+  --accent-2: 255 128 102;
+  --sport-other: var(--a-400);
+  --texture-alpha: 0.045;
+  --glow-alpha: 0.2;
+  --theme-color: #0b1128;
+}
+
+/* ── Stadium: turf, floodlight white and trophy gold ─────────────────────── */
+[data-theme="stadium"] {
+  color-scheme: dark;
+  --n-0: 255 255 255;
+  --n-50: 246 250 247;
+  --n-100: 236 243 239;
+  --n-200: 218 230 223;
+  --n-300: 196 214 204;
+  --n-400: 158 184 170;
+  --n-500: 124 153 138;
+  --n-600: 82 110 96;
+  --n-700: 54 81 68;
+  --n-750: 45 70 58;
+  --n-800: 35 58 47;
+  --n-850: 27 49 39;
+  --n-900: 20 40 31;
+  --n-950: 9 26 19;
+  --n-1000: 3 12 8;
+
+  --a-50: 254 251 235;
+  --a-100: 252 243 205;
+  --a-200: 248 228 160;
+  --a-300: 242 210 115;
+  --a-400: 230 184 66;
+  --a-500: 204 155 36;
+  --a-600: 168 121 20;
+  --a-700: 133 92 17;
+  --a-800: 108 74 19;
+  --a-900: 90 62 20;
+  --a-950: 52 34 8;
+
+  --accent-2: 255 255 255;
+  --sport-football: 134 239 172;
+  --sport-other: var(--a-400);
+  --texture-alpha: 0.05;
+  --glow-alpha: 0.16;
+  --theme-color: #091a13;
+}
+
+/* ── Light themes share the inverted ramp shape and dark status text ─────── */
+[data-theme="daylight"],
+[data-theme="arena"] {
+  color-scheme: light;
+  --em-100: 6 78 59;
+  --em-200: 6 95 70;
+  --em-300: 4 120 87;
+  --em-400: 4 120 87;
+  --am-100: 120 53 15;
+  --am-200: 146 64 14;
+  --am-300: 161 72 8;
+  --am-400: 161 72 8;
+  --ro-100: 136 19 55;
+  --ro-200: 159 18 57;
+  --ro-300: 190 18 60;
+  --ro-400: 190 18 60;
+  --sk-100: 12 74 110;
+  --sk-200: 7 89 133;
+  --sk-300: 3 105 161;
+  --sk-400: 3 105 161;
+
+  --sport-badminton: 15 118 110;
+  --sport-cricket: 185 28 28;
+  --sport-football: 21 128 61;
+  --sport-tennis: 133 77 14;
+  --sport-swimming: 29 78 216;
+  --sport-basketball: 194 65 12;
+
+  --texture: 15 27 45;
+  --texture-alpha: 0.03;
+  --glow-alpha: 0.12;
+  --shadow-rgb: 15 27 45;
+}
+
+/* ── Daylight: warm off-white, navy ink, clay-court orange ───────────────── */
+[data-theme="daylight"] {
+  --n-0: 15 27 45;
+  --n-50: 17 29 48;
+  --n-100: 24 35 56;
+  --n-200: 34 45 66;
+  --n-300: 46 56 78;
+  --n-400: 64 73 94;
+  --n-500: 86 93 112;
+  --n-600: 112 116 128;
+  --n-700: 196 189 179;
+  --n-750: 210 204 195;
+  --n-800: 226 221 213;
+  --n-850: 241 238 233;
+  --n-900: 255 255 255;
+  --n-950: 247 245 242;
+  --n-1000: 255 255 255;
+
+  --a-50: 255 247 237;
+  --a-100: 255 237 213;
+  --a-200: 154 52 18;
+  --a-300: 172 56 12;
+  --a-400: 194 65 12;
+  --a-500: 160 52 14;
+  --a-600: 124 45 18;
+  --a-700: 253 186 116;
+  --a-800: 254 215 170;
+  --a-900: 255 237 213;
+  --a-950: 255 247 237;
+
+  --accent-2: 30 58 138;
+  --sport-other: var(--a-400);
+  --theme-color: #f7f5f2;
+}
+
+/* ── Arena: cool daylight, electric blue, every sport in its own colour ─── */
+[data-theme="arena"] {
+  --n-0: 10 18 34;
+  --n-50: 16 24 40;
+  --n-100: 24 32 50;
+  --n-200: 33 43 62;
+  --n-300: 46 57 77;
+  --n-400: 62 74 94;
+  --n-500: 82 94 114;
+  --n-600: 108 120 139;
+  --n-700: 183 194 210;
+  --n-750: 200 209 222;
+  --n-800: 217 224 234;
+  --n-850: 244 246 250;
+  --n-900: 255 255 255;
+  --n-950: 236 241 247;
+  --n-1000: 255 255 255;
+
+  --a-50: 239 246 255;
+  --a-100: 219 234 254;
+  --a-200: 30 58 138;
+  --a-300: 30 64 175;
+  --a-400: 37 99 235;
+  --a-500: 29 78 216;
+  --a-600: 30 64 175;
+  --a-700: 147 197 253;
+  --a-800: 191 219 254;
+  --a-900: 219 234 254;
+  --a-950: 239 246 255;
+
+  --accent-2: 234 88 12;
+  --sport-other: var(--a-400);
+  --theme-color: #ecf1f7;
+}
+
+/* ── Semantic tokens (all themes) ────────────────────────────────────────
+   Prefixed --c-* because shadcn/ui already owns --accent, --border, --background … */
+:root,
+[data-theme] {
+  --c-bg: var(--n-950);
+  --c-surface: var(--n-900);
+  --c-surface-2: var(--n-850);
+  --c-line: var(--n-800);
+  --c-text: var(--n-50);
+  --c-text-muted: var(--n-400);
+  --c-text-subtle: var(--n-500);
+  --c-accent: var(--a-400);
+  --c-accent-ink: var(--a-300);
+  --c-accent-fg: var(--n-950);
+  --c-accent-2: var(--accent-2);
+  --c-success: var(--em-400);
+  --c-warn: var(--am-400);
+  --c-danger: var(--ro-400);
+
+  /* White-label brand colour (per-org override on the app shell keeps working) */
+  --brand: rgb(var(--a-400));
+  --brand-foreground: rgb(var(--n-950));
+}
+
+/* Print always uses black on white, whatever the screen theme */
+@media print {
+  :root,
+  [data-theme] {
+    --n-0: 255 255 255;
+    --n-1000: 0 0 0;
+  }
+}

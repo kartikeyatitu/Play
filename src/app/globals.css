@@ -1,5 +1,6 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "./themes.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,18 +8,14 @@
 html, body {
   color: var(--foreground);
   background-color: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   margin: 0;
   padding: 0;
 }
 
-/* White-label brand tokens. Default = Triq lime. Overridden per org via inline style
-   (style={{ "--brand": org.brandColor }}) on the app shell. */
-:root {
-  --brand: #a3e635;
-  --brand-foreground: #09090b;
-}
+/* White-label brand tokens live in themes.css (--brand follows the theme accent).
+   Overridden per org via inline style (style={{ "--brand": org.brandColor }}) on the app shell. */
 
 /* Hide horizontal scrollbars on swipe rows (batch switcher, filter chips). */
 .no-scrollbar { scrollbar-width: none; }
@@ -31,16 +28,16 @@ html, body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: rgb(var(--n-950));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: rgb(var(--n-800));
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: rgb(var(--n-700));
 }
 
 @layer base {
@@ -82,38 +79,39 @@ html, body {
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
   }
+  /* html always carries .dark; the actual palette comes from [data-theme] (themes.css) */
   .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --background: rgb(var(--n-950));
+    --foreground: rgb(var(--n-50));
+    --card: rgb(var(--n-900));
+    --card-foreground: rgb(var(--n-50));
+    --popover: rgb(var(--n-900));
+    --popover-foreground: rgb(var(--n-50));
+    --primary: rgb(var(--n-100));
+    --primary-foreground: rgb(var(--n-900));
+    --secondary: rgb(var(--n-800));
+    --secondary-foreground: rgb(var(--n-50));
+    --muted: rgb(var(--n-800));
+    --muted-foreground: rgb(var(--n-400));
+    --accent: rgb(var(--n-800));
+    --accent-foreground: rgb(var(--n-50));
+    --destructive: rgb(var(--ro-400));
+    --border: rgb(var(--n-0) / 10%);
+    --input: rgb(var(--n-0) / 15%);
+    --ring: rgb(var(--n-500));
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar: rgb(var(--n-900));
+    --sidebar-foreground: rgb(var(--n-50));
     --sidebar-primary: oklch(0.488 0.243 264.376);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar-accent: rgb(var(--n-800));
+    --sidebar-accent-foreground: rgb(var(--n-50));
+    --sidebar-border: rgb(var(--n-0) / 10%);
+    --sidebar-ring: rgb(var(--n-500));
   }
 
   body {
@@ -216,4 +214,203 @@ input:focus, textarea:focus {
     radial-gradient(ellipse at 20% 50%, rgba(16, 185, 129, 0.06), transparent 50%),
     radial-gradient(ellipse at 80% 20%, rgba(6, 182, 212, 0.06), transparent 50%),
     radial-gradient(ellipse at 50% 80%, rgba(139, 92, 246, 0.04), transparent 50%);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Motion system (tokens mirrored in src/lib/motion.ts)
+   Only transform/opacity are animated. Everything collapses under reduced motion.
+   ════════════════════════════════════════════════════════════════════════════ */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-tap: 120ms;
+  --dur-quick: 200ms;
+  --dur-base: 320ms;
+  --dur-slow: 560ms;
+  --stagger: 40ms;
+}
+
+/* Stagger-in for the first ~10 cards of a list (see stagger() in src/lib/motion.ts) */
+@keyframes triq-rise {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: none; }
+}
+.rise-in {
+  animation: triq-rise var(--dur-base) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+
+/* Tactile press for primary actions */
+.press {
+  transition: transform var(--dur-tap) var(--ease-out), background-color var(--dur-quick), opacity var(--dur-quick), border-color var(--dur-quick), box-shadow var(--dur-quick);
+  -webkit-tap-highlight-color: transparent;
+}
+.press:active:not(:disabled) { transform: scale(0.96); }
+
+/* Pop for a value or icon that just changed */
+@keyframes triq-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.pop-in { animation: triq-pop var(--dur-slow) var(--ease-spring) both; }
+
+/* "Paid" rubber stamp */
+@keyframes triq-stamp {
+  0% { transform: rotate(-14deg) scale(2.2); opacity: 0; }
+  55% { transform: rotate(-8deg) scale(0.92); opacity: 1; }
+  75% { transform: rotate(-8deg) scale(1.04); }
+  100% { transform: rotate(-8deg) scale(1); opacity: 1; }
+}
+.stamp-in { animation: triq-stamp 520ms var(--ease-out) both; }
+
+/* Ring + tick drawn on success (check-in, session complete) */
+@keyframes triq-draw { from { stroke-dashoffset: var(--len, 100); } to { stroke-dashoffset: 0; } }
+.draw { stroke-dasharray: var(--len, 100); animation: triq-draw var(--dur-slow) var(--ease-out) both; animation-delay: var(--delay, 0ms); }
+
+/* Short particle burst (CSS only) */
+@keyframes triq-burst {
+  0% { transform: rotate(var(--a)) translateY(0) scale(1); opacity: 1; }
+  100% { transform: rotate(var(--a)) translateY(calc(var(--r, 34px) * -1)) scale(0.2); opacity: 0; }
+}
+.burst-dot { animation: triq-burst 640ms var(--ease-out) both; animation-delay: 140ms; }
+
+/* Tab switch: content fades in; the active bottom-bar marker slides open, its icon hops */
+@keyframes triq-fade { from { opacity: 0; } }
+.tab-in { animation: triq-fade var(--dur-quick) ease-out backwards; }
+@keyframes triq-tab-ink { from { transform: scaleX(0.2); opacity: 0; } }
+.tab-ink { animation: triq-tab-ink var(--dur-base) var(--ease-out) both; }
+@keyframes triq-hop { 40% { transform: translateY(-3px); } }
+.tab-icon-on { display: inline-block; animation: triq-hop var(--dur-base) var(--ease-spring); }
+
+/* Soft glow behind a hero number */
+.num-glow { text-shadow: 0 0 22px rgb(var(--c-accent) / var(--glow-alpha)); }
+
+/* Loading skeleton shimmer, shared by Today / Team / Payroll */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: rgb(var(--n-800) / 0.55);
+  border-radius: 0.5rem;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(var(--n-0) / 0.06), transparent);
+  animation: triq-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes triq-shimmer { 100% { transform: translateX(100%); } }
+
+/* Sport textures at very low opacity. The court is an inline SVG used as a mask, so its
+   colour follows the theme (--texture) without any image request. */
+.texture-court {
+  background-color: rgb(var(--texture) / calc(var(--texture-alpha) * 1.6));
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' fill='none' stroke='%23000' stroke-width='1.2'%3E%3Crect x='1' y='1' width='198' height='98'/%3E%3Cpath d='M100 1V99M1 12H199M1 88H199M48 12V88M152 12V88M48 50H152'/%3E%3C/svg%3E") right -16% center / auto 86% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' fill='none' stroke='%23000' stroke-width='1.2'%3E%3Crect x='1' y='1' width='198' height='98'/%3E%3Cpath d='M100 1V99M1 12H199M1 88H199M48 12V88M152 12V88M48 50H152'/%3E%3C/svg%3E") right -16% center / auto 86% no-repeat;
+}
+.texture-pitch {
+  background-image: repeating-linear-gradient(90deg, rgb(var(--texture) / var(--texture-alpha)) 0 22px, transparent 22px 44px);
+}
+
+/* ── Sport motifs (src/components/sport/SportMotif.tsx) ─────────────────── */
+.sport-motif { overflow: hidden; }
+.sport-motif [class^="sm-"], .sport-motif [class*=" sm-"] { transform-box: fill-box; }
+.sm-line { stroke: rgb(var(--n-300)); }
+.sm-line-faint { stroke: rgb(var(--n-600) / 0.7); }
+.sm-line-dark { stroke: rgb(17 24 39 / 0.75); }
+.sm-fill-line { fill: rgb(var(--n-300)); }
+.sm-ball { fill: rgb(var(--sport)); }
+.sm-ball-light { fill: #f8fafc; stroke: rgb(var(--n-500)); stroke-width: 0.8; }
+.sm-patch { fill: rgb(17 24 39 / 0.88); }
+.sm-seam { stroke: rgb(255 255 255 / 0.85); }
+.sm-shine { fill: rgb(255 255 255 / 0.18); }
+.sm-skirt { fill: rgb(var(--n-50) / 0.12); stroke: rgb(var(--n-300)); }
+.sm-skin { fill: #d9a77c; }
+.sm-rim { stroke: rgb(var(--sport)); }
+.sm-shadow { fill: rgb(var(--shadow-rgb) / 0.28); }
+.sm-water-back { fill: rgb(var(--ball-swimming) / 0.16); }
+.sm-water-front { fill: rgb(var(--ball-swimming) / 0.28); }
+
+.sport-motif [class^="sm-"] { animation-iteration-count: var(--loops, 2); animation-fill-mode: both; }
+
+/* badminton: a rally over the net, ends mid-flight at the top of the arc */
+.sport-motif .sm-rally { transform-box: view-box; transform-origin: 60px 100px; animation: sm-rally 2.6s var(--ease-in-out) both; animation-iteration-count: var(--loops-q, 2.25) !important; }
+.sm-flip { transform-origin: 50% 50%; animation: sm-flip 2.6s step-end both; animation-iteration-count: var(--loops-q, 2.25) !important; }
+@keyframes sm-rally { 0% { transform: rotate(-32deg); } 50% { transform: rotate(32deg); } 100% { transform: rotate(-32deg); } }
+@keyframes sm-flip { 0% { transform: scaleX(1); } 50% { transform: scaleX(-1); } 100% { transform: scaleX(-1); } }
+
+/* cricket: the ball spins toward the stumps */
+.sm-spin { transform-origin: 50% 50%; animation: sm-spin 1.3s linear both; }
+.sm-spin-fast { transform-origin: 50% 50%; animation: sm-spin 0.9s linear both; animation-iteration-count: var(--loops-x3, 6) !important; }
+@keyframes sm-spin { to { transform: rotate(360deg); } }
+.sm-streaks { animation: sm-streaks 1.3s ease-in-out both; }
+@keyframes sm-streaks { 0%, 100% { opacity: 1; transform: none; } 50% { opacity: 0.35; transform: translateX(-6px); } }
+
+/* football: bounce with squash and stretch, shadow breathes */
+.sm-bounce { transform-origin: 50% 100%; animation: sm-bounce 1.15s cubic-bezier(0.33, 0, 0.67, 1) both; animation-iteration-count: var(--loops-x2, 4) !important; }
+.sm-roll { transform-origin: 50% 50%; animation: sm-roll 1.15s linear both; animation-iteration-count: var(--loops-x2, 4) !important; }
+.sm-shadow-bounce { animation: sm-shadow 1.15s cubic-bezier(0.33, 0, 0.67, 1) both; transform-origin: 50% 50%; animation-iteration-count: var(--loops-x2, 4) !important; }
+@keyframes sm-bounce {
+  0%, 100% { transform: none; }
+  6% { transform: scale(1.1, 0.88); }
+  16% { transform: translateY(-12px) scale(0.95, 1.05); }
+  50% { transform: translateY(-30px); }
+  86% { transform: translateY(-6px) scale(0.97, 1.03); }
+}
+@keyframes sm-roll { to { transform: rotate(144deg); } }
+@keyframes sm-shadow { 0%, 100% { transform: none; opacity: 1; } 50% { transform: scale(0.55); opacity: 0.45; } }
+
+/* tennis: ball floats with motion lines */
+.sm-swing { animation: sm-swing 1.6s var(--ease-in-out) both; }
+@keyframes sm-swing { 0%, 100% { transform: none; } 50% { transform: translate(6px, -3px); } }
+
+/* swimming: water rolls, arms windmill, swimmer bobs */
+.sm-wave-back { animation: sm-wave 3.2s linear both; animation-iteration-count: var(--loops-x2, 4) !important; }
+.sm-wave-front { animation: sm-wave 2.2s linear both; animation-iteration-count: var(--loops-x3, 6) !important; }
+@keyframes sm-wave { to { transform: translateX(-30px); } }
+.sport-motif .sm-arm { transform-box: view-box; transform-origin: 60px 47px; animation: sm-arm 1.6s linear both; animation-iteration-count: var(--loops-x2, 4) !important; }
+.sm-arm-2 { animation-delay: -0.8s; }
+@keyframes sm-arm { to { transform: rotate(-360deg); } }
+.sm-bob { animation: sm-bob 1.6s var(--ease-in-out) both; animation-iteration-count: var(--loops-x2, 4) !important; }
+@keyframes sm-bob { 0%, 100% { transform: none; } 50% { transform: translateY(1.5px); } }
+
+/* basketball: shot from the left, swish through the net, lands under the hoop */
+.sm-shot { animation: sm-shot 2.8s var(--ease-out) both; }
+@keyframes sm-shot {
+  0% { transform: none; opacity: 1; }
+  10% { transform: none; opacity: 0; }
+  11% { transform: translate(-66px, -14px); opacity: 0; }
+  18% { transform: translate(-66px, -14px); opacity: 1; animation-timing-function: cubic-bezier(0.3, 0, 0.6, 1); }
+  44% { transform: translate(-30px, -56px); animation-timing-function: cubic-bezier(0.4, 0, 0.9, 0.6); }
+  62% { transform: translate(0, -44px); animation-timing-function: linear; }
+  74% { transform: translate(0, -24px); animation-timing-function: cubic-bezier(0.5, 0, 1, 1); }
+  90% { transform: none; }
+  95% { transform: translateY(-5px); }
+  100% { transform: none; opacity: 1; }
+}
+.sm-net { transform-origin: 50% 0%; animation: sm-net 2.8s var(--ease-out) both; }
+@keyframes sm-net { 0%, 64%, 86%, 100% { transform: none; } 72% { transform: scale(0.92, 1.16); } }
+
+/* multi-sport: three balls hop in turn */
+.sm-hop { animation: sm-hop 1.2s var(--ease-in-out) both; animation-iteration-count: var(--loops-p1, 3) !important; }
+@keyframes sm-hop { 0%, 60%, 100% { transform: none; } 30% { transform: translateY(-14px); } }
+
+.sm-still [class^="sm-"], .sm-still [class*=" sm-"] { animation: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sport-motif [class^="sm-"], .sport-motif [class*=" sm-"] { animation: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .skeleton::after { display: none; }
 }

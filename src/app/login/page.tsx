@@ -7,6 +7,11 @@ import { sendOtp, verifyOtpAndLogin, registerWithEmail, loginWithEmail, loginWit
 import { useRouter } from "next/navigation";
 import { Loader2, ArrowLeft, Mail, Phone } from "lucide-react";
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { SportMotif } from "@/components/sport/SportMotif";
+import type { SportKind } from "@/components/sport/sport-kind";
+
+/** Login hero: six original sport scenes, each plays twice then rests. Phones show the first three. */
+const HERO_SPORTS: SportKind[] = ["badminton", "cricket", "football", "tennis", "swimming", "basketball"];
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"SIGN_IN" | "REGISTER">("SIGN_IN");
@@ -114,40 +119,70 @@ export default function LoginPage() {
   }
 
   const content = (
-    <div className="min-h-screen bg-zinc-950 bg-grid bg-orbs flex flex-col items-center justify-center p-4 text-zinc-50 font-sans page-transition">
-      <div className="w-full max-w-sm space-y-8 bg-zinc-900/40 backdrop-blur-xl p-8 rounded-3xl border border-zinc-800/50 shadow-2xl relative overflow-hidden glass">
-        
-        <div className="text-center space-y-2 relative z-10">
-          <h1 className="text-3xl font-black tracking-tight uppercase italic gradient-text">
-            TRIQ
+    <div className="min-h-screen bg-canvas text-ink font-sans flex flex-col lg:flex-row">
+      {/* Hero */}
+      <section className="relative overflow-hidden lg:w-[54%] lg:min-h-screen border-b lg:border-b-0 lg:border-r border-line/60 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4 lg:px-14 lg:py-14 flex flex-col lg:justify-between">
+        <span
+          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-3xl opacity-60"
+          style={{ background: "color-mix(in srgb, var(--brand) 16%, transparent)" }}
+          aria-hidden
+        />
+        <div className="relative rise-in">
+          <p className="font-heading text-[40px] lg:text-[88px] font-black leading-[0.85] tracking-tight">
+            TRIQ<span className="brand-text">.</span>
+          </p>
+          <p className="mt-1.5 lg:mt-5 max-w-md text-[13px] lg:text-lg text-ink-muted">
+            Attendance, fees, payroll and parent updates for your sports academy, in one place.
+          </p>
+        </div>
+        <div className="relative mt-3 lg:mt-0 grid grid-cols-3 gap-2 lg:gap-3" aria-hidden>
+          {HERO_SPORTS.map((s, i) => (
+            <div
+              key={s}
+              className={`rise-in rounded-2xl lg:border lg:border-line/60 lg:bg-surface/30 lg:p-3 ${i >= 3 ? "hidden lg:block" : ""}`}
+              style={{ "--i": i + 2 } as React.CSSProperties}
+            >
+              <SportMotif sport={s} loops={2} className="w-full h-auto max-h-12 lg:max-h-none" />
+            </div>
+          ))}
+        </div>
+        <p className="relative hidden lg:block text-xs text-ink-subtle">Built for badminton, cricket, football, tennis, swimming, basketball and more.</p>
+      </section>
+
+      <section className="flex-1 flex items-start lg:items-center justify-center p-4 lg:p-10">
+      <div className="w-full max-w-sm space-y-6 sm:space-y-7 bg-surface/50 p-5 sm:p-8 rounded-3xl border border-line/60 shadow-[0_24px_60px_-30px_rgb(var(--shadow-rgb)/0.6)] relative">
+
+        <div className="space-y-1 relative z-10">
+          <h1 className="font-heading text-3xl font-extrabold tracking-tight">
+            {mode === "SIGN_IN" ? "Welcome back" : "Start your academy"}
           </h1>
-          <p className="text-zinc-400 text-sm">
+          <p className="text-ink-muted text-sm">
             {mode === "SIGN_IN" ? "Sign in to your workspace" : "Create a new Academy Workspace"}
           </p>
         </div>
 
         {step === 1 && (
-          <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+          <div className="flex bg-canvas p-1 rounded-xl border border-line">
             <button type="button" onClick={() => { setMode("SIGN_IN"); resetState(); }}
-              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode === "SIGN_IN" ? "bg-zinc-800 text-white shadow" : "text-zinc-500 hover:text-zinc-300"}`}>
+              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode === "SIGN_IN" ? "bg-zinc-800 text-ink shadow" : "text-ink-subtle hover:text-zinc-300"}`}>
               Sign In
             </button>
             <button type="button" onClick={() => { setMode("REGISTER"); setMethod("EMAIL"); resetState(); }}
-              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode === "REGISTER" ? "bg-zinc-800 text-white shadow" : "text-zinc-500 hover:text-zinc-300"}`}>
+              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode === "REGISTER" ? "bg-zinc-800 text-ink shadow" : "text-ink-subtle hover:text-zinc-300"}`}>
               Register
             </button>
           </div>
         )}
 
         {error && <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-3 rounded-xl text-sm text-center font-medium">{error}</div>}
-        {message && <div className="bg-lime-500/10 border border-lime-500/20 text-lime-400 p-3 rounded-xl text-sm text-center font-medium">{message}</div>}
+        {message && <div className="bg-lime-500/10 border border-lime-500/20 text-volt p-3 rounded-xl text-sm text-center font-medium">{message}</div>}
 
         {step === 1 ? (
           <div className="space-y-6 animate-in fade-in duration-300">
             
             {/* GOOGLE SSO BUTTON */}
             {(method === "EMAIL" || mode === "REGISTER") && (
-              <div className="flex flex-col items-center justify-center border-b border-zinc-800/50 pb-6">
+              <div className="flex flex-col items-center justify-center border-b border-line/50 pb-6">
                 {googleClientId ? (
                   <GoogleLogin
                     onSuccess={handleGoogleSuccess}
@@ -162,7 +197,7 @@ export default function LoginPage() {
                     type="button" 
                     onClick={() => handleGoogleSuccess({})}
                     disabled={loading}
-                    className="w-full bg-white text-black hover:bg-gray-100 flex items-center justify-center py-2.5 rounded-full font-medium text-sm transition-colors"
+                    className="w-full bg-[#fff] text-[#000] hover:bg-gray-100 flex items-center justify-center py-2.5 rounded-full font-medium text-sm transition-colors"
                   >
                     <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -181,43 +216,43 @@ export default function LoginPage() {
               
               {mode === "REGISTER" && (
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-1">Your Name</label>
-                  <Input type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. John Doe" className="bg-zinc-900 border-zinc-800 text-white h-12" />
+                  <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider pl-1">Your Name</label>
+                  <Input type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. John Doe" className="bg-surface border-line text-ink h-12" />
                 </div>
               )}
 
               {method === "EMAIL" || mode === "REGISTER" ? (
                 <>
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-1">Email Address</label>
-                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="name@academy.com" className="bg-zinc-900 border-zinc-800 text-white h-12" />
+                    <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider pl-1">Email Address</label>
+                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="name@academy.com" className="bg-surface border-line text-ink h-12" />
                   </div>
                   {mode === "REGISTER" && (
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-1">Phone Number</label>
-                      <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required placeholder="e.g. 9999999999" className="bg-zinc-900 border-zinc-800 text-white h-12" />
+                      <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider pl-1">Phone Number</label>
+                      <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required placeholder="e.g. 9999999999" className="bg-surface border-line text-ink h-12" />
                     </div>
                   )}
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-1">Password</label>
-                    <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" minLength={6} className="bg-zinc-900 border-zinc-800 text-white h-12" />
+                    <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider pl-1">Password</label>
+                    <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" minLength={6} className="bg-surface border-line text-ink h-12" />
                   </div>
                 </>
               ) : (
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-1">Phone Number</label>
-                  <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required placeholder="e.g. 9999999999" className="bg-zinc-900 border-zinc-800 text-white h-12" />
-                  <p className="text-[11px] text-zinc-500 pl-1">Coach or parent? Your academy admin can send you a one-tap login link on WhatsApp.</p>
+                  <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider pl-1">Phone Number</label>
+                  <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required placeholder="e.g. 9999999999" className="bg-surface border-line text-ink h-12" />
+                  <p className="text-[11px] text-ink-subtle pl-1">Coach or parent? Your academy admin can send you a one-tap login link on WhatsApp.</p>
                 </div>
               )}
 
-              <Button type="submit" disabled={loading} className="w-full h-12 text-base bg-lime-400 text-zinc-950 hover:bg-lime-500 font-bold mt-4">
+              <Button type="submit" disabled={loading} className="press w-full h-12 text-base bg-volt text-volt-fg hover:bg-lime-500 font-bold mt-4">
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (mode === "REGISTER" ? "Create Account" : (method === "EMAIL" ? "Sign In" : "Send OTP"))}
               </Button>
 
               {mode === "SIGN_IN" && (
                 <div className="pt-4 flex items-center justify-center">
-                  <button type="button" onClick={() => { setMethod(method === "EMAIL" ? "PHONE" : "EMAIL"); resetState(); }} className="text-xs text-zinc-400 hover:text-white flex items-center transition-colors">
+                  <button type="button" onClick={() => { setMethod(method === "EMAIL" ? "PHONE" : "EMAIL"); resetState(); }} className="text-xs text-ink-muted hover:text-ink flex items-center transition-colors">
                     {method === "EMAIL" ? <><Phone className="w-3 h-3 mr-1.5" /> Sign in with Phone Number</> : <><Mail className="w-3 h-3 mr-1.5" /> Sign in with Email / Password</>}
                   </button>
                 </div>
@@ -227,18 +262,19 @@ export default function LoginPage() {
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-1">OTP Code</label>
-              <Input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="••••••" maxLength={6} required className="bg-zinc-900 border-zinc-800 text-white h-14 text-2xl tracking-[0.5em] text-center font-mono focus-visible:ring-lime-400" />
+              <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider pl-1">OTP Code</label>
+              <Input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="••••••" maxLength={6} required className="bg-surface border-line text-ink h-14 text-2xl tracking-[0.5em] text-center font-mono focus-visible:ring-volt" />
             </div>
-            <Button type="submit" disabled={loading || otp.length < 6} className="w-full h-12 text-base bg-lime-400 text-zinc-950 hover:bg-lime-500 font-bold mt-4">
+            <Button type="submit" disabled={loading || otp.length < 6} className="press w-full h-12 text-base bg-volt text-volt-fg hover:bg-lime-500 font-bold mt-4">
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Login"}
             </Button>
-            <button type="button" onClick={() => { setStep(1); setOtp(""); setError(null); setMessage(null); }} className="w-full flex items-center justify-center text-xs font-medium text-zinc-500 hover:text-zinc-300 py-2 mt-2 transition-colors">
+            <button type="button" onClick={() => { setStep(1); setOtp(""); setError(null); setMessage(null); }} className="w-full flex items-center justify-center text-xs font-medium text-ink-subtle hover:text-zinc-300 py-2 mt-2 transition-colors">
               <ArrowLeft className="w-3 h-3 mr-1.5" /> Change Phone Number
             </button>
           </form>
         )}
       </div>
+      </section>
     </div>
   );
 

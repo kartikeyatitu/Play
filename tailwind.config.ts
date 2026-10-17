@@ -1,5 +1,14 @@
 import type { Config } from "tailwindcss";
 
+/** rgb(var(--x) / alpha) so opacity modifiers (bg-zinc-900/40) keep working with themed colours. */
+const v = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+const ramp = (prefix: string, shades: (number | string)[]) =>
+  Object.fromEntries(shades.map((s) => [s, v(`${prefix}-${s}`)]));
+
+const NEUTRAL = [50, 100, 200, 300, 400, 500, 600, 700, 750, 800, 850, 900, 950];
+const ACCENT = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+const STATUS = [100, 200, 300, 400];
+
 const config: Config = {
   darkMode: ["class"],
   content: [
@@ -9,22 +18,47 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // next/font sets --font-sans (Geist) and --font-heading (Barlow Condensed) on <html>.
+      // Before this, both fonts were downloaded but never applied.
+      fontFamily: {
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+        heading: ["var(--font-heading)", "var(--font-sans)", "system-ui", "sans-serif"],
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        volt: {
-          DEFAULT: "#a3e635",
-          50: "#f7fee7",
-          100: "#ecfccb",
-          200: "#d9f99d",
-          300: "#bef264",
-          400: "#a3e635",
-          500: "#84cc16",
-          600: "#65a30d",
-          700: "#4d7c0f",
-          800: "#3f6212",
-          900: "#365314",
+
+        // Themed ramps (see src/app/themes.css). Existing zinc-/lime-/white/black classes follow the theme.
+        white: v("n-0"),
+        black: v("n-1000"),
+        zinc: ramp("n", NEUTRAL),
+        lime: ramp("a", ACCENT),
+        emerald: ramp("em", STATUS),
+        amber: ramp("am", STATUS),
+        rose: ramp("ro", STATUS),
+        sky: ramp("sk", STATUS),
+
+        // Semantic tokens: prefer these in new code
+        canvas: v("c-bg"),
+        surface: { DEFAULT: v("c-surface"), 2: v("c-surface-2") },
+        line: v("c-line"),
+        ink: { DEFAULT: v("c-text"), muted: v("c-text-muted"), subtle: v("c-text-subtle") },
+        volt: { DEFAULT: v("c-accent"), ink: v("c-accent-ink"), fg: v("c-accent-fg"), 2: v("c-accent-2") },
+        success: v("c-success"),
+        warn: v("c-warn"),
+        danger: v("c-danger"),
+        sport: {
+          badminton: v("sport-badminton"),
+          cricket: v("sport-cricket"),
+          football: v("sport-football"),
+          tennis: v("sport-tennis"),
+          swimming: v("sport-swimming"),
+          basketball: v("sport-basketball"),
+          other: v("sport-other"),
         },
+      },
+      keyframes: {
+        shimmer: { "100%": { transform: "translateX(100%)" } },
       },
     },
   },
