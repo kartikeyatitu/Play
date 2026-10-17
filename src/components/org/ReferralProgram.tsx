@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Copy, Share2, Trophy, Gift, IndianRupee, Users, Plus } from "lucide-react";
 import { createReferral } from "@/app/actions/referrals";
+import { getAppUrl } from "@/lib/app-url";
 
 interface ReferralProgramProps {
   academyName: string;
@@ -28,7 +29,7 @@ export function ReferralProgram({ academyName, totalStudents, referrals, parents
     setReferralCode(`${shortName}-${random}`);
   }, [academyName]);
 
-  const shareText = `🏆 Join ${academyName}! Use my referral code ${referralCode} and get ₹500 off your first month! Register at https://triqsports.vercel.app`;
+  const shareText = `🏆 Join ${academyName}! Use my referral code ${referralCode} and get ₹500 off your first month! Register at ${getAppUrl()}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(shareText);

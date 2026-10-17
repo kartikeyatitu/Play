@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { cleanPhone } from "@/lib/coach";
+import { getAppUrl } from "@/lib/app-url";
 
 // Same one-tap link format as src/app/actions/login-links.ts:
 // 32 random bytes hex token in the URL, only its sha256 stored, single use, 7-day expiry,
@@ -30,7 +31,7 @@ async function appOrigin() {
   } catch {
     // headers() unavailable — fall through
   }
-  return "https://triqsports.vercel.app";
+  return getAppUrl();
 }
 
 export interface ParentInvite {

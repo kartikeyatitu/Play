@@ -7,6 +7,7 @@ import { isOrgOwner } from "@/lib/membership";
 import { rateLimit } from "@/lib/rate-limit";
 import { sealSecret } from "@/lib/secret-box";
 import { razorpayKeyMode, verifyRazorpayCreds } from "@/lib/gateways/razorpay";
+import { getAppUrl } from "@/lib/app-url";
 
 type Result = { success: true; mode: "test" | "live" } | { success: false; error: string };
 
@@ -79,7 +80,7 @@ export async function getRazorpayStatus(): Promise<{
         select: { id: true, razorpayKeyId: true, razorpayKeySecretEnc: true, razorpayWebhookSecretEnc: true, razorpayConnectedAt: true },
       })
     : null;
-  const base = (process.env.NEXT_PUBLIC_APP_URL || "https://triqsports.vercel.app").replace(/\/+$/, "");
+  const base = getAppUrl();
   const keyId = org?.razorpayKeyId || null;
   return {
     connected: Boolean(keyId && org?.razorpayKeySecretEnc),

@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { markFeePaid, confirmFeePayment, rejectFeePayment } from "@/app/actions/payments";
 import { createFeePaymentLink, syncFeePaymentLink } from "@/app/actions/payment-links";
 import { buildUpiLink } from "@/lib/fees";
+import { getAppUrl } from "@/lib/app-url";
 import {
   Download,
   Share2,
@@ -397,7 +398,7 @@ export function PayNowButton({
                       </a>
                       <a
                         href={`https://wa.me/${waPhone}?text=${encodeURIComponent(
-                          `Namaste! Here is the verified fee payment receipt for ${studentName} (${month}):\nhttps://triqsports.vercel.app${receiptData.url}\n— ${payee}`
+                          `Namaste! Here is the verified fee payment receipt for ${studentName} (${month}):\n${getAppUrl()}${receiptData.url}\n— ${payee}`
                         )}`}
                         target="_blank"
                         rel="noopener noreferrer"

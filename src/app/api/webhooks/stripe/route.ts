@@ -8,6 +8,9 @@ export const dynamic = "force-dynamic";
 /**
  * Stripe webhook receiver. Verifies the Stripe-Signature over the RAW body (5 min tolerance),
  * then finalises/fails the matching Payment via payment-service (idempotent).
+ *
+ * New Stripe fee checkouts only start when PLATFORM_COLLECTS_FEES is on (see gateways/stripe.ts);
+ * this receiver stays live so sessions started earlier still reconcile.
  */
 export async function POST(req: NextRequest) {
   if (!process.env.STRIPE_WEBHOOK_SECRET) {
