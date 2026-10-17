@@ -95,6 +95,7 @@ model User {
   auditLogs        AuditLog[]    @relation("UserAuditLogs")
   loginTokens      LoginToken[]
   memberships      OrgMembership[]   @relation("UserMemberships")
+  @@index([orgId])
 }
 
 model Student {
@@ -122,6 +123,8 @@ model Student {
   Media        Media[]
   incidents    Incident[]
   receipts     Receipt[]
+  @@index([orgId])
+  @@index([parentId])
 }
 
 model Batch {
@@ -143,6 +146,8 @@ model Batch {
   Booking       Booking[]
   trialBookings TrialBooking[]
   waitlist      Waitlist[]
+  @@index([orgId])
+  @@index([coachId])
 }
 
 model BatchEnrollment {
@@ -155,6 +160,7 @@ model BatchEnrollment {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([batchId, studentId])
+  @@index([studentId])
 }
 
 model Session {
@@ -185,6 +191,7 @@ model Attendance {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, studentId])
+  @@index([studentId])
 }
 
 // ==========================================
@@ -568,6 +575,7 @@ model FeeRecord {
   @@unique([studentId, month])
   orgId       String?
   receipt     Receipt?
+  @@index([orgId, month, status])
 }
 
 model Announcement {
@@ -660,6 +668,9 @@ model Message {
   sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
   orgId       String?
+  @@index([orgId, createdAt])
+  @@index([receiverId])
+  @@index([senderId])
 }
 
 model Media {
@@ -865,6 +876,7 @@ model AuditLog {
   createdAt DateTime @default(now())
   user      User     @relation("UserAuditLogs", fields: [userId], references: [id])
   orgId       String?
+  @@index([orgId, createdAt])
 }
 
 model Lead {
@@ -882,6 +894,7 @@ model Lead {
   orgId       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  @@index([orgId, status])
 }
 
 
