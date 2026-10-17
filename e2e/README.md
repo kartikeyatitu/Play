@@ -17,7 +17,7 @@ Browser journeys run against a **local** app with a **test database** — never 
 ```
 psql "$DATABASE_URL" -f e2e/reset_team.sql
 python e2e/team.py
-psql "$DATABASE_URL" -f e2e/seed_payroll.sql
+psql "$DATABASE_URL" -f e2e/seed_payroll.sql -f e2e/seed_today.sql
 python e2e/payroll.py
 python e2e/today.py
 ```
