@@ -1,19 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Geist, Barlow_Condensed } from "next/font/google";
+import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { getAppUrl } from "@/lib/app-url";
 import { DEFAULT_THEME, THEME_BOOT_SCRIPT } from "@/lib/theme";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
-const barlowCondensed = Barlow_Condensed({
-  subsets: ["latin"],
-  weight: ["600", "700", "800", "900"],
-  variable: "--font-heading",
-  display: "swap",
-});
 
-import { Toaster } from "sonner";
+import { ThemedToaster } from "@/components/ui/themed-toaster";
 import { AnalyticsInit } from "@/components/analytics/AnalyticsInit";
 
 export const viewport: Viewport = {
@@ -21,7 +15,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   interactiveWidget: "resizes-visual",
-  themeColor: "#09090b",
+  themeColor: "#f7f7f5",
 };
 
 export const metadata: Metadata = {
@@ -52,14 +46,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme={DEFAULT_THEME} suppressHydrationWarning className={cn("dark", "font-sans", geist.variable, barlowCondensed.variable)}>
+    <html lang="en" data-theme={DEFAULT_THEME} suppressHydrationWarning className={cn("dark", "font-sans", geist.variable)}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="antialiased min-h-screen bg-canvas text-ink font-sans">
         <main>{children}</main>
-        <Toaster theme="dark" position="top-right" richColors />
+        <ThemedToaster />
         <AnalyticsInit />
       </body>
     </html>

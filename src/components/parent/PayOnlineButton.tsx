@@ -124,7 +124,7 @@ export function PayOnlineButton({
         description: res.description,
         order_id: res.orderId,
         prefill: res.prefill,
-        theme: { color: "#a3e635" },
+        theme: { color: "#d1440a" },
         handler: async (r: RazorpayResponse) => {
           try {
             const confirm = await confirmRazorpayCheckout({

@@ -376,23 +376,19 @@ export default async function CoachDashboard({
 
   return (
     <div
-      className="min-h-screen bg-zinc-950 text-zinc-50 font-sans"
+      className="min-h-screen bg-canvas text-ink font-sans"
       style={org?.brandColor && /^#[0-9a-fA-F]{6}$/.test(org.brandColor) ? ({ "--brand": org.brandColor } as CSSProperties) : undefined}
     >
       {/* Sticky header with always-on SOS */}
-      <header className="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur border-b border-zinc-900">
+      <header className="sticky top-0 z-30 bg-canvas/85 backdrop-blur-md border-b border-line">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-lime-400 to-emerald-500 p-0.5 shrink-0">
-              <div className="w-full h-full bg-zinc-950 rounded-[10px] flex items-center justify-center">
-                <span className="font-black italic text-lime-400 text-[11px]">TRQ</span>
-              </div>
+            <div className="w-8 h-8 rounded-lg brand-bg flex items-center justify-center text-[15px] font-semibold shrink-0" aria-hidden>
+              {(org?.name || "Triq").trim().charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <div className="text-sm font-bold text-white truncate leading-tight">{org?.name || "Triq"}</div>
-              <div className="text-[11px] text-emerald-400 flex items-center gap-1 leading-tight">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Coach view
-              </div>
+              <div className="text-sm font-semibold text-ink truncate leading-tight tracking-[-0.01em]">{org?.name || "Triq"}</div>
+              <div className="text-[12px] text-ink-subtle leading-tight mt-0.5">Coach view</div>
             </div>
           </div>
           <EmergencySOS students={sosStudents} coachId={coach.id} />

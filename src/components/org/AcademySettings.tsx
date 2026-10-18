@@ -66,7 +66,7 @@ export function AcademySettings({ org }: { org: any }) {
           </div>
         </div>
         <div className="flex justify-end pt-2">
-          <Button type="submit" disabled={savingPayments} className="bg-cyan-500 text-zinc-950 hover:bg-cyan-600 font-bold">
+          <Button type="submit" disabled={savingPayments} className="bg-volt text-volt-fg hover:bg-lime-500 font-medium">
             {savingPayments ? "Saving..." : "Save Payment Settings"}
           </Button>
         </div>
@@ -117,7 +117,7 @@ export function AcademySettings({ org }: { org: any }) {
           </div>
         </div>
         <div className="flex justify-end pt-2">
-          <Button type="submit" disabled={loading} className="bg-cyan-500 text-zinc-950 hover:bg-cyan-600 font-bold">
+          <Button type="submit" disabled={loading} className="bg-volt text-volt-fg hover:bg-lime-500 font-medium">
             {loading ? "Saving..." : "Save Changes"}
           </Button>
         </div>

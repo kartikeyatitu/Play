@@ -33,7 +33,3 @@ export function primarySport(orgSport: string | null | undefined, batches: { spo
   }
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
 }
-
-/** CSS colour for a sport (themed, see --sport-* in themes.css). */
-export const sportColor = (k: SportKind, alpha = 1) =>
-  `rgb(var(--sport-${k === "multi" ? "other" : k}) / ${alpha})`;

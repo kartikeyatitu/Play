@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Zap, Users, ClipboardList, MessageCircle, UserRound } from "lucide-react";
+import { CalendarCheck, Users, ClipboardList, MessageCircle, UserRound } from "lucide-react";
 
 export type CoachTab = "today" | "squad" | "plan" | "inbox" | "me";
 
-const TABS: { id: CoachTab; label: string; icon: typeof Zap }[] = [
-  { id: "today", label: "Today", icon: Zap },
+const TABS: { id: CoachTab; label: string; icon: typeof CalendarCheck }[] = [
+  { id: "today", label: "Today", icon: CalendarCheck },
   { id: "squad", label: "Squad", icon: Users },
   { id: "plan", label: "Plan", icon: ClipboardList },
   { id: "inbox", label: "Inbox", icon: MessageCircle },
@@ -52,7 +52,7 @@ export function CoachTabs({
 
       <nav
         aria-label="Coach navigation"
-        className="fixed bottom-0 inset-x-0 z-40 border-t border-zinc-800/80 bg-zinc-950/95 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/80 pb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-0 inset-x-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]"
       >
         <div className="max-w-4xl mx-auto grid grid-cols-5">
           {TABS.map(({ id, label, icon: Icon }) => {
@@ -64,15 +64,15 @@ export function CoachTabs({
                 type="button"
                 onClick={() => select(id)}
                 aria-current={active ? "page" : undefined}
-                className={`relative h-16 flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-                  active ? "text-lime-400" : "text-zinc-500 hover:text-zinc-300"
+                className={`relative h-16 flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors ${
+                  active ? "brand-text" : "text-ink-subtle hover:text-ink"
                 }`}
               >
-                {active && <span className="absolute top-0 h-0.5 w-10 rounded-full bg-lime-400" />}
+                {active && <span className="absolute top-0 h-0.5 w-10 rounded-full brand-bar" />}
                 <span className="relative">
-                  <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 2} />
+                  <Icon className="w-5 h-5" strokeWidth={active ? 2 : 1.75} />
                   {badge ? (
-                    <span className="absolute -top-1.5 -right-2.5 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center">
+                    <span className="absolute -top-1.5 -right-2.5 min-w-4 h-4 px-1 rounded-full bg-danger text-white text-[10px] font-semibold flex items-center justify-center">
                       {badge > 9 ? "9+" : badge}
                     </span>
                   ) : null}

@@ -2,15 +2,14 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, LogIn, LogOut } from "lucide-react";
+import { Loader2, LogIn, LogOut } from "lucide-react";
 import { selfCheckIn, selfCheckOut, type getMyAttendance } from "@/app/actions/team";
 import { unwrap } from "@/lib/action-result";
 import { track } from "@/lib/analytics";
 import { ATTENDANCE_LABELS, isStaffAttendanceStatus, roleLabel } from "@/lib/team";
 import { AcademySwitcher } from "@/components/team/AcademySwitcher";
-import { haptic, stagger } from "@/lib/motion";
-import { SportMotif } from "@/components/sport/SportMotif";
-import { SuccessMark } from "@/components/sport/Celebrate";
+import { haptic } from "@/lib/motion";
+import { CheckMark } from "@/components/ui/status-mark";
 
 type Data = Awaited<ReturnType<typeof getMyAttendance>>;
 
@@ -18,16 +17,16 @@ const time = (iso: string | null) =>
   iso ? new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date(iso)) : "";
 
 const DOT: Record<string, string> = {
-  PRESENT: "bg-emerald-400",
-  HALF_DAY: "bg-amber-400",
+  PRESENT: "bg-success",
+  HALF_DAY: "bg-warn",
   LEAVE: "bg-sky-400",
-  ABSENT: "bg-rose-400",
+  ABSENT: "bg-danger",
 };
 
 export function StaffHome({ name, data, logoutAction }: { name: string; data: Data; logoutAction: () => void }) {
   const [today, setToday] = React.useState(data.today);
   const [busy, setBusy] = React.useState(false);
-  // True right after this person taps Check in: plays the success animation once
+  // True right after this person taps Check in: the confirmation fades in once
   const [justCheckedIn, setJustCheckedIn] = React.useState(false);
   const firstName = name.split(" ")[0] || name;
 
@@ -38,7 +37,7 @@ export function StaffHome({ name, data, logoutAction }: { name: string; data: Da
       track("staff_checked_in", { surface: "staff_home" });
       setToday({ status: "PRESENT", checkInAt: res.checkInAt ?? new Date().toISOString(), checkOutAt: null });
       setJustCheckedIn(true);
-      haptic([15, 40, 25]);
+      haptic(20);
       toast.success(`Checked in at ${time(res.checkInAt ?? null)}. Have a great day, ${firstName}!`);
     } catch (e: any) {
       toast.error(e?.message || "Couldn't check in");
@@ -60,55 +59,59 @@ export function StaffHome({ name, data, logoutAction }: { name: string; data: Da
     }
   }
 
-  const hour = Number(new Intl.DateTimeFormat("en-IN", { hour: "numeric", hourCycle: "h23", timeZone: "Asia/Kolkata" }).format(new Date()));
+  const now = new Date();
+  const hour = Number(new Intl.DateTimeFormat("en-IN", { hour: "numeric", hourCycle: "h23", timeZone: "Asia/Kolkata" }).format(now));
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const dateLabel = (() => {
+    const parts = new Intl.DateTimeFormat("en-IN", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Kolkata" }).formatToParts(now);
+    const get = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
+    return `${get("weekday")}, ${get("day")} ${get("month")}`;
+  })();
 
   return (
     <main className="min-h-screen bg-canvas text-ink">
       <div className="mx-auto max-w-md px-4 pb-16 pt-[max(1.25rem,env(safe-area-inset-top))]">
         <header className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs uppercase tracking-wider text-ink-subtle">{roleLabel(data.role, data.staffRole)}</p>
-            <h1 className="font-heading text-lg font-bold truncate">{data.academyName}</h1>
+            <p className="text-[13px] text-ink-subtle">{roleLabel(data.role, data.staffRole)}</p>
+            <h1 className="text-base font-semibold tracking-[-0.01em] truncate">{data.academyName}</h1>
           </div>
           <form action={logoutAction}>
-            <button className="h-11 px-4 rounded-xl border border-line text-sm text-zinc-300 hover:text-ink">Sign out</button>
+            <button className="h-10 px-3.5 rounded-lg border border-line bg-surface text-[13px] font-medium text-ink-muted hover:text-ink hover:bg-surface-2">Sign out</button>
           </form>
         </header>
 
         <AcademySwitcher className="mt-4 w-full" />
 
-        <section className="mt-8 flex items-end justify-between gap-3">
-          <div className="min-w-0 rise-in">
-            <p className="text-ink-muted">{greeting},</p>
-            <h2 className="font-heading text-5xl font-black leading-[0.95] tracking-tight truncate">
-              <span className="text-volt-ink">{firstName}</span>
-            </h2>
-          </div>
-          <SportMotif sport="multi" loops={1} className="w-24 h-auto shrink-0 -mb-1" />
+        <section className="mt-8">
+          <p className="text-[13px] text-ink-subtle" suppressHydrationWarning>{dateLabel}</p>
+          <h2 className="mt-1 text-[28px] font-semibold leading-tight tracking-[-0.025em] truncate" suppressHydrationWarning>
+            {greeting}, {firstName}
+          </h2>
         </section>
 
-        <section className="mt-6 relative overflow-hidden rounded-2xl border border-line bg-surface/50 p-5">
-          <span className="texture-court pointer-events-none absolute inset-0" aria-hidden />
+        <section className="mt-6 rounded-xl border border-line bg-surface shadow-hairline p-5">
           {!today?.checkInAt ? (
             <>
-              <p className="relative text-sm text-ink-muted">You haven't checked in today.</p>
+              <p className="text-sm text-ink-muted">You haven't checked in today.</p>
               <button
                 type="button"
                 onClick={checkIn}
                 disabled={busy}
-                className="press relative mt-4 w-full h-16 overflow-hidden rounded-2xl bg-volt text-volt-fg font-heading text-2xl font-black uppercase tracking-wide inline-flex items-center justify-center gap-2 shadow-[0_10px_30px_-12px_rgb(var(--c-accent)/0.7)] disabled:opacity-60"
+                className="press mt-4 w-full h-14 rounded-xl bg-volt text-volt-fg text-[17px] font-semibold tracking-[-0.01em] inline-flex items-center justify-center gap-2 hover:bg-lime-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-volt/25 disabled:opacity-60"
               >
-                {busy ? <Loader2 className="w-6 h-6 animate-spin" /> : <LogIn className="w-6 h-6" />} Check in
+                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} Check in
               </button>
             </>
           ) : (
             <>
-              <div className="relative flex items-center gap-3" role={justCheckedIn ? "status" : undefined}>
-                {justCheckedIn ? <SuccessMark size={52} /> : <CheckCircle2 className="w-8 h-8 text-emerald-400" />}
-                <div className={justCheckedIn ? "rise-in" : undefined} style={justCheckedIn ? ({ "--i": 4 } as React.CSSProperties) : undefined}>
-                  <p className={justCheckedIn ? "font-heading text-2xl font-bold leading-tight" : "font-semibold"}>Checked in at {time(today.checkInAt)}</p>
-                  <p className="text-sm text-ink-muted">{today.checkOutAt ? `Checked out at ${time(today.checkOutAt)}` : "Remember to check out when you leave."}</p>
+              <div className="flex items-center gap-3" role={justCheckedIn ? "status" : undefined}>
+                <CheckMark size={36} fresh={justCheckedIn} />
+                <div className={justCheckedIn ? "fade-in min-w-0" : "min-w-0"}>
+                  <p className="text-lg font-semibold leading-tight tabular-nums">Checked in at {time(today.checkInAt)}</p>
+                  <p className="mt-0.5 text-[13px] text-ink-muted tabular-nums">
+                    {today.checkOutAt ? `Checked out at ${time(today.checkOutAt)}` : "Remember to check out when you leave."}
+                  </p>
                 </div>
               </div>
               {!today.checkOutAt && (
@@ -116,37 +119,37 @@ export function StaffHome({ name, data, logoutAction }: { name: string; data: Da
                   type="button"
                   onClick={checkOut}
                   disabled={busy}
-                  className="press relative mt-4 w-full h-12 rounded-xl border border-zinc-700 text-zinc-200 font-semibold inline-flex items-center justify-center gap-2 hover:border-zinc-500 disabled:opacity-60"
+                  className="press mt-4 w-full h-12 rounded-xl border border-line bg-surface text-ink font-medium inline-flex items-center justify-center gap-2 hover:bg-surface-2 hover:border-zinc-700 disabled:opacity-60"
                 >
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />} Check out
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4 text-ink-subtle" />} Check out
                 </button>
               )}
             </>
           )}
         </section>
 
-        <section className="mt-6">
+        <section className="mt-8">
           <div className="flex items-baseline justify-between">
-            <h3 className="font-heading text-lg font-bold">This month</h3>
-            <p className="text-sm text-ink-muted">
-              <span className="font-heading text-2xl font-bold text-ink tabular-nums">{data.presentDays}</span> days present
+            <h3 className="text-base font-semibold tracking-[-0.01em]">This month</h3>
+            <p className="text-[13px] text-ink-muted">
+              <span className="num text-xl font-semibold text-ink">{data.presentDays}</span> days present
             </p>
           </div>
           {data.month.length === 0 ? (
-            <p className="mt-3 text-sm text-ink-subtle">Your attendance will show here after your first check-in.</p>
+            <p className="mt-3 text-[13px] text-ink-subtle">Your attendance will show here after your first check-in.</p>
           ) : (
-            <ul className="mt-3 divide-y divide-line/70 rounded-xl border border-line/70">
-              {data.month.map((d, i) => (
-                <li key={d.date} style={stagger(i).style} className={`${stagger(i).className} flex items-center justify-between px-4 py-3 text-sm`}>
-                  <span className="text-zinc-300">
+            <ul className="mt-3 divide-y divide-line rounded-xl border border-line bg-surface shadow-hairline">
+              {data.month.map((d) => (
+                <li key={d.date} className="flex items-center justify-between px-4 py-3 text-sm">
+                  <span className="text-ink tabular-nums">
                     {(() => {
                       const parts = new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).formatToParts(new Date(d.date));
                       const get = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
                       return `${get("weekday")}, ${get("day")} ${get("month")}`;
                     })()}
                   </span>
-                  <span className="inline-flex items-center gap-2 text-ink-muted">
-                    <span className={`w-2 h-2 rounded-full ${DOT[d.status] || "bg-zinc-500"}`} />
+                  <span className="inline-flex items-center gap-2 text-[13px] text-ink-muted">
+                    <span className={`w-2 h-2 rounded-full ${DOT[d.status] || "bg-zinc-600"}`} />
                     {isStaffAttendanceStatus(d.status) ? ATTENDANCE_LABELS[d.status] : d.status}
                   </span>
                 </li>
