@@ -18,11 +18,11 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // next/font sets --font-sans (Geist) and --font-heading (Barlow Condensed) on <html>.
-      // Before this, both fonts were downloaded but never applied.
+      // next/font sets --font-sans (Geist) on <html>. One family for everything: `font-heading`
+      // is kept as an alias so older screens pick up Geist instead of a condensed display face.
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
-        heading: ["var(--font-heading)", "var(--font-sans)", "system-ui", "sans-serif"],
+        heading: ["var(--font-sans)", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
       },
       colors: {
         background: "var(--background)",
@@ -47,15 +47,6 @@ const config: Config = {
         success: v("c-success"),
         warn: v("c-warn"),
         danger: v("c-danger"),
-        sport: {
-          badminton: v("sport-badminton"),
-          cricket: v("sport-cricket"),
-          football: v("sport-football"),
-          tennis: v("sport-tennis"),
-          swimming: v("sport-swimming"),
-          basketball: v("sport-basketball"),
-          other: v("sport-other"),
-        },
       },
       keyframes: {
         shimmer: { "100%": { transform: "translateX(100%)" } },

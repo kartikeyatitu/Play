@@ -21,7 +21,7 @@ const W = 1080;
 const H = 1350;
 const PAD = 88;
 const FONT = `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
-const DEFAULT_BRAND = "#a3e635";
+const DEFAULT_BRAND = "#d1440a";
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   const rr = Math.min(r, w / 2, h / 2);

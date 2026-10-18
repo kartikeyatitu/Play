@@ -1,18 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { isHydrated, markHydrated, prefersReducedMotion } from "@/lib/motion";
+import { prefersReducedMotion } from "@/lib/motion";
 
 /**
- * Number that counts up to `value` (ease-out, ~0.7s, requestAnimationFrame).
- * - Server render and hydration show the final value (no flash of 0 on slow phones).
- * - Animates when mounted after hydration (tab switch) or when the value changes.
- * - Reduced motion: jumps straight to the value.
+ * A number that shows its value immediately and only animates when the value changes
+ * while on screen (e.g. after marking a fee paid), so the change itself is visible.
+ * Never counts up from 0 on mount. Reduced motion: jumps straight to the value.
  */
 export function CountUp({
   value,
   format = (n) => Math.round(n).toLocaleString("en-IN"),
-  duration = 700,
+  duration = 400,
   className,
 }: {
   value: number;
@@ -20,17 +19,13 @@ export function CountUp({
   duration?: number;
   className?: string;
 }) {
-  const [shown, setShown] = useState<number>(() => (typeof window !== "undefined" && isHydrated() ? 0 : value));
-  const from = useRef(shown);
+  const [shown, setShown] = useState<number>(value);
+  const from = useRef(value);
   const raf = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    markHydrated();
-  }, []);
-
-  useEffect(() => {
     const start = from.current;
-    if (start === value || prefersReducedMotion() || !Number.isFinite(value)) {
+    if (start === value || prefersReducedMotion() || !Number.isFinite(value) || !Number.isFinite(start)) {
       from.current = value;
       setShown(value);
       return;

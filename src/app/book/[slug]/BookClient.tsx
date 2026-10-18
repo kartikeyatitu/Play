@@ -145,7 +145,7 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
         description: res.description,
         order_id: res.orderId,
         prefill: res.prefill,
-        theme: { color: "#a3e635" },
+        theme: { color: "#d1440a" },
         handler: async (r: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           try {
             const c = await confirmTurfCheckout({ orderId: r.razorpay_order_id, paymentId: r.razorpay_payment_id, signature: r.razorpay_signature });

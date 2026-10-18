@@ -77,7 +77,6 @@ export interface TodayShareContext {
 
 const FOCUS_CHIPS = ["Technique", "Footwork", "Fitness", "Match practice", "Teamwork", "Game sense"];
 
-const BRAND_BORDER = { borderColor: "color-mix(in srgb, var(--brand) 40%, transparent)" } as const;
 
 const AVATAR_TONES = [
   "bg-sky-500/20 text-sky-200",
@@ -464,15 +463,14 @@ export function SessionAttendanceCard({
   if (hero) {
     return (
       <section
-        className="relative rounded-3xl bg-zinc-900/70 border p-4 sm:p-5 min-w-0 shadow-[0_0_40px_-12px_var(--brand)]"
-        style={BRAND_BORDER}
+        className="relative rounded-2xl bg-surface border border-line shadow-hairline p-4 sm:p-5 min-w-0"
       >
         <div className="flex items-start gap-3 min-w-0">
           <div className="min-w-0 flex-1">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+            <div className="text-[13px] font-medium text-ink-subtle">
               Up next · {session.time || "Today"}
             </div>
-            <h3 className="mt-1 text-xl font-black leading-tight break-words text-white">{session.batchName}</h3>
+            <h3 className="mt-1 text-xl font-semibold tracking-[-0.02em] leading-tight break-words text-ink">{session.batchName}</h3>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <span className="px-2.5 py-1 rounded-full bg-zinc-800/80 text-xs font-semibold text-zinc-300 capitalize">
                 {session.sport}
@@ -509,7 +507,7 @@ export function SessionAttendanceCard({
   );
 
   return (
-    <section className="rounded-3xl bg-zinc-900/60 min-w-0">
+    <section className="rounded-2xl bg-surface border border-line shadow-hairline min-w-0">
       <button
         type="button"
         onClick={toggleExpanded}
@@ -517,7 +515,7 @@ export function SessionAttendanceCard({
         className="w-full min-w-0 text-left p-4 sm:p-5 flex flex-col gap-3"
       >
         <div className="flex items-start justify-between gap-3 min-w-0 w-full">
-          <h3 className="min-w-0 flex-1 text-base font-bold leading-snug text-white break-words">
+          <h3 className="min-w-0 flex-1 text-base font-semibold leading-snug text-ink break-words">
             {session.time && <span className="text-zinc-400 font-semibold">{session.time} · </span>}
             {session.batchName}
           </h3>
@@ -562,7 +560,7 @@ function ProgressRing({ value, total, size = 72 }: { value: number; total: numbe
       aria-label={`${value} of ${total} in`}
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} style={{ stroke: "rgb(39 39 42)" }} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} style={{ stroke: "rgb(var(--n-800))" }} />
         {value > 0 && (
           <circle
             cx={size / 2}
@@ -578,9 +576,9 @@ function ProgressRing({ value, total, size = 72 }: { value: number; total: numbe
         )}
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-xl font-black text-white tabular-nums leading-none">
+        <span className="num text-xl font-semibold text-ink leading-none">
           {value}
-          <span className="text-xs font-semibold text-zinc-500">/{total}</span>
+          <span className="text-xs font-medium text-ink-subtle">/{total}</span>
         </span>
       </div>
     </div>

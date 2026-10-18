@@ -90,11 +90,11 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
           small ? "min-h-[36px] text-[13px]" : "min-h-[40px] text-sm"
         } ${
           isActive
-            ? "bg-white/[0.06] text-ink font-medium"
-            : "text-ink-muted hover:text-zinc-100 hover:bg-white/[0.03]"
+            ? "bg-zinc-850 text-ink font-medium"
+            : "text-ink-muted hover:text-ink hover:bg-zinc-850/60"
         }`}
       >
-        <span className={`shrink-0 ${isActive ? "brand-text" : "text-ink-subtle"}`}>{item.icon}</span>
+        <span className={`shrink-0 ${isActive ? "text-ink" : "text-ink-subtle"}`}>{item.icon}</span>
         <span className="truncate">{item.label}</span>
       </button>
     );
@@ -104,12 +104,12 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
     <>
       <div className="px-4 pt-4 pb-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg brand-bg flex items-center justify-center font-heading font-extrabold text-lg shrink-0">
+          <div className="w-8 h-8 rounded-lg brand-bg flex items-center justify-center font-semibold text-[15px] shrink-0">
             {initial}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-zinc-100 truncate leading-tight">{title}</p>
-            <p className="text-[10px] text-ink-subtle leading-tight">Powered by Triq</p>
+            <p className="text-sm font-semibold text-ink truncate leading-tight tracking-[-0.01em]">{title}</p>
+            <p className="text-[11px] text-ink-subtle leading-tight mt-0.5">Powered by Triq</p>
           </div>
         </div>
         {mobileMenuOpen && (
@@ -133,7 +133,7 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
           <div className="pt-4 space-y-4">
             {moreGroups!.map((group) => (
               <div key={group.label}>
-                <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">{group.label}</p>
+                <p className="px-3 mb-1 text-[12px] font-medium text-ink-subtle">{group.label}</p>
                 <div className="space-y-0.5">
                   {group.items.map((item) => (
                     <NavButton key={item.id} item={item} small />
@@ -157,23 +157,23 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
   return (
     <div className="min-h-screen bg-canvas flex relative" style={brandStyle}>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-60 border-r border-line/60 bg-canvas flex-col sticky top-0 h-screen z-30">
+      <aside className="hidden lg:flex w-60 border-r border-line bg-surface flex-col sticky top-0 h-screen z-30">
         {renderSidebarContent()}
       </aside>
 
       {/* Legacy mobile drawer */}
       {!grouped && mobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setMobileMenuOpen(false)} />
-          <aside className="w-72 max-w-[85vw] border-r border-line/80 bg-canvas flex flex-col h-screen relative shadow-2xl animate-in slide-in-from-left duration-200">
+          <div className="absolute inset-0 bg-[rgb(8_10_13/0.45)] backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+          <aside className="w-72 max-w-[85vw] border-r border-line bg-surface flex flex-col h-screen relative shadow-2xl animate-in slide-in-from-left duration-200">
             {renderSidebarContent()}
           </aside>
         </div>
       )}
 
       {/* Main */}
-      <main className="flex-1 min-w-0 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] lg:pb-10 shell-glow">
-        <header className="sticky top-0 z-20 bg-canvas/90 backdrop-blur-md border-b border-line/60 px-4 sm:px-8 py-2.5 sm:py-3.5">
+      <main className="flex-1 min-w-0 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] lg:pb-10">
+        <header className="sticky top-0 z-20 bg-canvas/85 backdrop-blur-md border-b border-line px-4 sm:px-8 py-2.5 sm:py-3">
           <div className="flex justify-between items-center gap-3 min-h-[44px]">
             <div className="flex items-center gap-2.5 min-w-0">
               {!grouped && (
@@ -187,12 +187,12 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
                 </button>
               )}
               {grouped && (
-                <div className="lg:hidden w-8 h-8 rounded-lg brand-bg flex items-center justify-center font-heading font-extrabold text-lg shrink-0">
+                <div className="lg:hidden w-8 h-8 rounded-lg brand-bg flex items-center justify-center font-semibold text-[15px] shrink-0">
                   {initial}
                 </div>
               )}
               <div className="min-w-0">
-                <h1 className="text-[15px] sm:text-lg font-semibold text-zinc-100 truncate tracking-tight">{title}</h1>
+                <h1 className="text-[15px] font-semibold text-ink truncate tracking-[-0.01em]">{title}</h1>
                 {subtitle && <p className="text-xs text-ink-subtle truncate tabular-nums">{subtitle}</p>}
               </div>
             </div>
@@ -208,7 +208,7 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
       {/* Mobile bottom bar */}
       <nav
         aria-label="Primary"
-        className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-canvas/[0.97] border-t border-line/80 pb-safe"
+        className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-surface/95 backdrop-blur-md border-t border-line pb-safe"
       >
         <div className="flex items-stretch px-1">
           {(grouped ? navItems : primaryMobileTabs).map((tab) => {
@@ -223,8 +223,8 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
                   isActive ? "brand-text" : "text-ink-subtle hover:text-zinc-300"
                 }`}
               >
-                {isActive && <span className="tab-ink absolute top-0 inset-x-4 h-0.5 rounded-full brand-bar" />}
-                <span className={`[&>svg]:w-5 [&>svg]:h-5 ${isActive ? "tab-icon-on" : ""}`}>{tab.icon}</span>
+                {isActive && <span className="absolute top-0 inset-x-5 h-0.5 rounded-full brand-bar" />}
+                <span className="[&>svg]:w-5 [&>svg]:h-5">{tab.icon}</span>
                 <span className="text-[10px] font-medium tracking-tight truncate max-w-full px-1">{tab.label}</span>
               </button>
             );
@@ -262,7 +262,7 @@ export function StatCard({ label, value, icon, gradient, textColor }: StatCardPr
     <div className={`rounded-xl border border-line/60 bg-gradient-to-br ${gradient} p-4 sm:p-5`}>
       <div className="flex justify-between items-start">
         <div>
-          <p className="text-[11px] font-semibold text-ink-subtle uppercase tracking-wider">{label}</p>
+          <p className="text-[13px] font-medium text-ink-muted">{label}</p>
           <p className={`text-xl sm:text-2xl font-semibold mt-1.5 tabular-nums ${textColor}`}>{value}</p>
         </div>
         <div className={`${textColor} opacity-60`}>{icon}</div>

@@ -2,49 +2,45 @@
 
 export const THEMES = [
   {
-    id: "night",
-    name: "Night + Lime",
-    description: "The original: near-black with a lime accent.",
-    swatch: ["#09090b", "#18181b", "#a3e635"],
+    id: "light",
+    name: "Light",
+    description: "Off-white and ink with an orange accent. Easy to read outdoors.",
+    swatch: ["#f7f7f5", "#ffffff", "#d1440a"],
   },
   {
-    id: "indigo",
-    name: "Floodlight",
-    description: "Deep indigo night match with a saffron accent.",
-    swatch: ["#0b1128", "#151d3c", "#ffb020"],
-  },
-  {
-    id: "stadium",
-    name: "Stadium",
-    description: "Turf green, floodlight white and trophy gold.",
-    swatch: ["#091a13", "#14281f", "#e6b842"],
-  },
-  {
-    id: "daylight",
-    name: "Daylight",
-    description: "Light and warm, navy text, clay-court orange. Easy to read outdoors.",
-    swatch: ["#f7f5f2", "#ffffff", "#c2410c"],
-  },
-  {
-    id: "arena",
-    name: "Arena",
-    description: "Cool and light, electric blue, each sport in its own colour.",
-    swatch: ["#ecf1f7", "#ffffff", "#2563eb"],
+    id: "dark",
+    name: "Dark",
+    description: "Graphite surfaces for evenings and low light.",
+    swatch: ["#0e1116", "#151a21", "#f26b2a"],
   },
 ] as const;
 
 export type ThemeId = (typeof THEMES)[number]["id"];
-export const DEFAULT_THEME: ThemeId = "night";
+export const DEFAULT_THEME: ThemeId = "light";
 export const THEME_STORAGE_KEY = "triq_theme";
+
+/** Earlier builds offered five palettes; map whatever a device saved onto Light or Dark. */
+const LEGACY: Record<string, ThemeId> = {
+  night: "dark",
+  indigo: "dark",
+  stadium: "dark",
+  daylight: "light",
+  arena: "light",
+};
 
 export function isThemeId(v: unknown): v is ThemeId {
   return typeof v === "string" && THEMES.some((t) => t.id === v);
 }
 
+export function normalizeTheme(v: unknown): ThemeId {
+  if (isThemeId(v)) return v;
+  if (typeof v === "string" && v in LEGACY) return LEGACY[v];
+  return DEFAULT_THEME;
+}
+
 export function getStoredTheme(): ThemeId {
   try {
-    const v = localStorage.getItem(THEME_STORAGE_KEY);
-    return isThemeId(v) ? v : DEFAULT_THEME;
+    return normalizeTheme(localStorage.getItem(THEME_STORAGE_KEY));
   } catch {
     return DEFAULT_THEME;
   }
@@ -61,10 +57,20 @@ export function applyTheme(id: ThemeId) {
   } catch {
     /* private mode: the theme still applies for this visit */
   }
+  window.dispatchEvent(new CustomEvent("triq:theme", { detail: id }));
 }
 
 /**
  * Inline <head> script: sets data-theme before first paint so there is no flash of the
- * default palette. Kept tiny and dependency-free.
+ * wrong palette. Legacy values (night, daylight, …) are rewritten to light/dark.
+ * Kept tiny and dependency-free.
  */
-export const THEME_BOOT_SCRIPT = `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}");if(t&&/^(${THEMES.map((t) => t.id).join("|")})$/.test(t)){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`;
+export const THEME_BOOT_SCRIPT = `(function(){try{var k="${THEME_STORAGE_KEY}",t=localStorage.getItem(k),m=${JSON.stringify(LEGACY)};if(t&&m[t]){t=m[t];localStorage.setItem(k,t);}if(t!=="light"&&t!=="dark")t="${DEFAULT_THEME}";document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
+
+/** Reads a themed RGB triplet variable (e.g. "--n-800") as a CSS colour string. */
+export function cssVarColor(name: string, alpha = 1, el?: Element | null): string {
+  if (typeof window === "undefined") return "transparent";
+  const v = getComputedStyle(el ?? document.documentElement).getPropertyValue(name).trim();
+  if (!v) return "transparent";
+  return alpha === 1 ? `rgb(${v.split(/\s+/).join(",")})` : `rgba(${v.split(/\s+/).join(",")},${alpha})`;
+}

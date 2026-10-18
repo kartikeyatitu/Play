@@ -1,61 +1,82 @@
 import type { SportKind } from "@/components/sport/sport-kind";
 
-/** Static 24px line icon per sport (original artwork, currentColor). For rows, chips and tiles. */
+/**
+ * Small monochrome sport identifier (e.g. 16px next to a batch name). Drawn on lucide's
+ * 24px grid with a 1.5px round stroke and no fills, so it sits with lucide-react icons.
+ * Colour comes from currentColor; never use it as illustration.
+ */
 export function SportGlyph({ sport = "multi", className = "w-4 h-4" }: { sport?: SportKind; className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false">
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      focusable="false"
+    >
       {GLYPHS[sport]}
     </svg>
   );
 }
 
 const GLYPHS: Record<SportKind, React.ReactNode> = {
+  // Shuttlecock: cork at the bottom, feathered skirt opening upwards
   badminton: (
     <>
-      <circle cx="17.5" cy="6.5" r="2.6" fill="currentColor" stroke="none" />
-      <path d="M15.6 8.4 L6 13 L11 18 L15.6 8.4" />
-      <path d="M15.6 8.4 L8.5 15.5" />
+      <circle cx="12" cy="18.5" r="2.5" />
+      <path d="M9.6 17.6 6.5 4h11l-3.1 13.6" />
+      <path d="M12 16V4M7.5 9h9" />
     </>
   ),
+  // Bat and ball
   cricket: (
     <>
-      <circle cx="12" cy="12" r="8" />
-      <path d="M8.5 5 C11.5 9 11.5 15 8.5 19" />
-      <path d="M11 4.4 C13.6 8.6 13.6 15.4 11 19.6" strokeDasharray="1.2 2" />
+      <path d="m14.3 4.3 5.4 5.4a1 1 0 0 1 0 1.4l-7.8 7.8-6.8-6.8 7.8-7.8a1 1 0 0 1 1.4 0Z" />
+      <path d="M8.5 15.5 4 20" />
+      <circle cx="6" cy="6" r="2" />
     </>
   ),
+  // Football: centre panel and seams to the rim
   football: (
     <>
-      <circle cx="12" cy="12" r="8" />
-      <path d="M12 8.6 L15.2 10.9 L14 14.6 L10 14.6 L8.8 10.9 Z" fill="currentColor" stroke="none" />
-      <path d="M12 8.6 V4 M15.2 10.9 L19.6 9.6 M14 14.6 L16.7 18.3 M10 14.6 L7.3 18.3 M8.8 10.9 L4.4 9.6" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="m12 8.2 3.6 2.6-1.4 4.2H9.8l-1.4-4.2Z" />
+      <path d="M12 8.2V3M15.6 10.8l4.9-1.6M14.2 15l3 4.1M9.8 15l-3 4.1M8.4 10.8 3.5 9.2" />
     </>
   ),
+  // Tennis ball
   tennis: (
     <>
-      <circle cx="12" cy="12" r="8" />
-      <path d="M5.2 7.8 C9 10 9 14 5.2 16.2 M18.8 7.8 C15 10 15 14 18.8 16.2" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="M5.6 5.6a9 9 0 0 1 0 12.8M18.4 5.6a9 9 0 0 0 0 12.8" />
     </>
   ),
+  // Swimmer over two waves
   swimming: (
     <>
-      <circle cx="8" cy="8" r="2.2" />
-      <path d="M10.5 11 L16 7.5" />
-      <path d="M3 15.5 q2.25 -2 4.5 0 t4.5 0 t4.5 0 t4.5 0" />
-      <path d="M3 19.5 q2.25 -2 4.5 0 t4.5 0 t4.5 0 t4.5 0" />
+      <circle cx="16.5" cy="6.5" r="1.75" />
+      <path d="m4.5 12 4-3.5 3.5 2.5 3-2" />
+      <path d="M3 16c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1" />
+      <path d="M3 20c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1" />
     </>
   ),
+  // Basketball
   basketball: (
     <>
-      <circle cx="12" cy="12" r="8" />
-      <path d="M4 12 H20 M12 4 V20 M6.3 6.4 C9 9 9 15 6.3 17.6 M17.7 6.4 C15 9 15 15 17.7 17.6" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3v18" />
+      <path d="M5.6 5.6a9 9 0 0 1 2.6 6.4 9 9 0 0 1-2.6 6.4M18.4 5.6a9 9 0 0 0-2.6 6.4 9 9 0 0 0 2.6 6.4" />
     </>
   ),
+  // Multi-sport: stopwatch
   multi: (
     <>
-      <circle cx="12" cy="13" r="7" />
-      <path d="M12 6 V3.5 M9.5 3.5 H14.5 M12 13 L15 10" />
-      <path d="M18.5 6.5 L19.8 5.2" />
+      <circle cx="12" cy="13.5" r="7.5" />
+      <path d="M10 2.5h4M12 2.5V6M12 13.5l3-3M18.5 6.5l1.5-1.5" />
     </>
   ),
 };

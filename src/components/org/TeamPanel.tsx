@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { addTeamMember, getTeam, markStaffAttendance, removeTeamMember, updateTeamMember } from "@/app/actions/team";
 import { unwrap } from "@/lib/action-result";
-import { haptic, stagger } from "@/lib/motion";
+import { haptic } from "@/lib/motion";
 import { CountUp } from "@/components/ui/count-up";
 import { PanelSkeleton } from "@/components/ui/skeleton";
-import { SportMotif } from "@/components/sport/SportMotif";
+import { Bar } from "@/components/ui/meter";
 import { track } from "@/lib/analytics";
 import {
   ATTENDANCE_LABELS,
@@ -25,21 +25,23 @@ import {
 type Team = Extract<Awaited<ReturnType<typeof getTeam>>, { ok: true }>;
 type Member = Team["members"][number];
 
-const fieldCls = "w-full h-11 rounded-lg bg-surface border border-line px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-volt/60";
-const labelCls = "text-xs font-semibold text-ink-muted uppercase tracking-wide";
+const fieldCls = "w-full h-11 rounded-lg bg-surface border border-line px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-volt/30";
+const labelCls = "text-[13px] font-medium text-ink-muted";
 
+/* Role is information, not state: neutral chips, the owner gets a stronger outline */
 const ROLE_TONE: Record<string, string> = {
-  OWNER: "bg-volt/10 text-volt-ink border-volt/30",
-  MANAGER: "bg-sky-400/10 text-sky-300 border-sky-400/30",
-  COACH: "bg-amber-400/10 text-amber-300 border-amber-400/30",
-  STAFF: "bg-zinc-800 text-zinc-300 border-zinc-700",
+  OWNER: "border-zinc-700 text-ink",
+  MANAGER: "border-line text-ink-muted",
+  COACH: "border-line text-ink-muted",
+  STAFF: "border-line text-ink-muted",
 };
 
+/* Attendance is state: colour only on the selected segment */
 const ATT_TONE: Record<StaffAttendanceStatus, string> = {
-  PRESENT: "bg-emerald-500/20 text-emerald-300 border-emerald-500/50",
-  HALF_DAY: "bg-amber-500/15 text-amber-300 border-amber-500/40",
-  LEAVE: "bg-sky-500/15 text-sky-300 border-sky-500/40",
-  ABSENT: "bg-rose-500/15 text-rose-300 border-rose-500/40",
+  PRESENT: "bg-success/15 text-success",
+  HALF_DAY: "bg-warn/15 text-warn",
+  LEAVE: "bg-sky-400/15 text-sky-400",
+  ABSENT: "bg-danger/10 text-danger",
 };
 const ATT_SHORT: Record<StaffAttendanceStatus, string> = { PRESENT: "In", HALF_DAY: "Half", LEAVE: "Leave", ABSENT: "Absent" };
 
@@ -59,8 +61,6 @@ export function TeamPanel() {
   const [adding, setAdding] = React.useState(false);
   const [editing, setEditing] = React.useState<Member | null>(null);
   const [menuFor, setMenuFor] = React.useState<string | null>(null);
-  // The chip the owner just tapped pops once (not every chip on every render)
-  const [justMarked, setJustMarked] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
     try {
@@ -79,7 +79,6 @@ export function TeamPanel() {
 
   async function mark(member: Member, status: StaffAttendanceStatus) {
     setBusyId(member.id);
-    setJustMarked(`${member.id}:${status}`);
     if (status === "PRESENT") haptic(12);
     // Optimistic: show the change at once, roll back if the server says no
     const prev = team;
@@ -136,62 +135,69 @@ export function TeamPanel() {
       {/* Summary */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-heading text-2xl font-bold text-ink tracking-tight">Your team</h2>
-          <p className="text-sm text-ink-muted mt-0.5">
+          <h2 className="text-2xl font-semibold text-ink tracking-[-0.025em]">Your team</h2>
+          <p className="text-sm text-ink-subtle mt-1">
             {counts.coaches} coach{counts.coaches === 1 ? "" : "es"} · {counts.staff} staff · {counts.managers} owner/manager{counts.managers === 1 ? "" : "s"}
           </p>
         </div>
         {can("team.manage") && (
-          <Button onClick={() => setAdding(true)} className="press bg-volt text-volt-fg hover:bg-volt-ink font-bold h-11">
+          <Button onClick={() => setAdding(true)} className="press bg-volt text-volt-fg hover:bg-lime-500 font-medium h-10 rounded-lg">
             <Plus className="w-4 h-4 mr-1.5" /> Add team member
           </Button>
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <SummaryTile i={0} label="Checked in today" value={<><CountUp value={inToday.length} />/{active.length}</>} accent={inToday.length === active.length && active.length > 0} />
-        <SummaryTile i={1} label="Not marked yet" value={<CountUp value={active.length - markedToday.length} />} />
-        <SummaryTile i={2} label="On leave" value={<CountUp value={active.filter((m) => m.todayAttendance?.status === "LEAVE").length} />} />
+      <div className="grid grid-cols-3 divide-x divide-line rounded-xl border border-line bg-surface shadow-hairline">
+        <SummaryTile
+          label="Checked in today"
+          value={<><CountUp value={inToday.length} /><span className="text-ink-subtle">/{active.length}</span></>}
+          meter={active.length > 0 ? <Bar value={(inToday.length / active.length) * 100} tone="success" /> : undefined}
+        />
+        <SummaryTile label="Not marked yet" value={<CountUp value={active.length - markedToday.length} />} />
+        <SummaryTile label="On leave" value={<CountUp value={active.filter((m) => m.todayAttendance?.status === "LEAVE").length} />} />
       </div>
 
       {/* Members */}
       {active.length <= 1 ? (
-        <div className="rounded-xl border border-dashed border-line p-8 text-center">
-          <SportMotif sport="multi" loops={1} className="w-28 h-auto mx-auto" />
-          <p className="mt-3 font-semibold text-zinc-200">It's just you so far</p>
-          <p className="text-sm text-ink-subtle mt-1">Add your coaches, receptionist, accountant and ground staff. Everyone logs in with their phone number.</p>
+        <div className="rounded-xl border border-line bg-surface p-8 text-center">
+          <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-ink-subtle">
+            <Plus className="w-[18px] h-[18px]" />
+          </div>
+          <p className="mt-3 text-sm font-medium text-ink">It's just you so far</p>
+          <p className="text-[13px] text-ink-subtle mt-1 max-w-sm mx-auto">Add your coaches, receptionist, accountant and ground staff. Everyone logs in with their phone number.</p>
         </div>
       ) : null}
 
-      <ul className="space-y-2">
-        {active.map((m, i) => {
+      <ul className="divide-y divide-line rounded-xl border border-line bg-surface shadow-hairline">
+        {active.map((m) => {
           const att = m.todayAttendance;
           const pay = formatPay(m);
-          const st = stagger(i, 3);
+          const isIn = att?.status === "PRESENT" || att?.status === "HALF_DAY";
           return (
-            <li key={m.id} style={st.style} className={`${st.className} rounded-xl border border-line/70 bg-surface/40 p-3 sm:p-4`}>
+            <li key={m.id} className="p-4">
               <div className="flex items-start gap-3">
-                <div className={`relative w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center font-heading text-lg font-bold text-zinc-200 shrink-0 ring-2 ring-offset-2 ring-offset-canvas ${att?.status === "PRESENT" || att?.status === "HALF_DAY" ? "ring-success/70" : "ring-transparent"}`}>
-                  {m.name.slice(0, 1).toUpperCase()}
+                <div className="relative w-10 h-10 rounded-full bg-surface-2 border border-line flex items-center justify-center text-[13px] font-semibold text-ink-muted shrink-0">
+                  {initials(m.name)}
+                  {isIn && <span className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full bg-success ring-2 ring-surface" aria-hidden />}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-ink truncate">{m.name}</span>
-                    <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${ROLE_TONE[m.role] || ROLE_TONE.STAFF}`}>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-sm font-semibold text-ink truncate">{m.name}</span>
+                    <span className={`text-[12px] font-medium px-1.5 py-px rounded-md border ${ROLE_TONE[m.role] || ROLE_TONE.STAFF}`}>
                       {roleLabel(m.role, m.staffRole)}
                     </span>
-                    {m.title && <span className="text-xs text-ink-muted">{m.title}</span>}
+                    {m.title && <span className="text-[13px] text-ink-subtle">{m.title}</span>}
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-subtle">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-subtle">
                     {m.phone && (
-                      <a href={`tel:${m.phone}`} className="inline-flex items-center gap-1 hover:text-zinc-300">
+                      <a href={`tel:${m.phone}`} className="inline-flex items-center gap-1 tabular-nums hover:text-ink">
                         <Phone className="w-3 h-3" /> {m.phone}
                       </a>
                     )}
                     {m.role === "COACH" && <span>{m.batches.length ? `${m.batches.length} batch${m.batches.length > 1 ? "es" : ""}` : "No batches yet"}</span>}
-                    {pay && <span className="text-ink-muted">{pay}</span>}
+                    {pay && <span className="text-ink-muted tabular-nums">{pay}</span>}
                     {att?.checkInAt && (
-                      <span className="text-emerald-400/90">
+                      <span className="text-success tabular-nums">
                         In {formatTime(att.checkInAt)}
                         {att.checkOutAt ? ` · Out ${formatTime(att.checkOutAt)}` : ""}
                       </span>
@@ -204,16 +210,16 @@ export function TeamPanel() {
                       type="button"
                       aria-label={`More options for ${m.name}`}
                       onClick={() => setMenuFor(menuFor === m.id ? null : m.id)}
-                      className="w-9 h-9 rounded-lg flex items-center justify-center text-ink-muted hover:text-ink hover:bg-zinc-800"
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-ink-subtle hover:text-ink hover:bg-surface-2"
                     >
                       <MoreHorizontal className="w-4 h-4" />
                     </button>
                     {menuFor === m.id && (
-                      <div className="absolute right-0 top-10 z-20 w-44 rounded-lg border border-line bg-canvas shadow-xl py-1">
-                        <button type="button" className="w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800" onClick={() => { setMenuFor(null); setEditing(m); }}>
+                      <div className="absolute right-0 top-10 z-20 w-48 rounded-lg border border-line bg-surface shadow-[0_8px_24px_-8px_rgb(var(--shadow-rgb)/0.2)] p-1">
+                        <button type="button" className="w-full text-left px-3 py-2 rounded-md text-sm text-ink hover:bg-surface-2" onClick={() => { setMenuFor(null); setEditing(m); }}>
                           Edit role and pay
                         </button>
-                        <button type="button" className="w-full text-left px-3 py-2 text-sm text-rose-300 hover:bg-zinc-800 inline-flex items-center gap-2" onClick={() => remove(m)}>
+                        <button type="button" className="w-full text-left px-3 py-2 rounded-md text-sm text-danger hover:bg-surface-2 inline-flex items-center gap-2" onClick={() => remove(m)}>
                           <UserMinus className="w-3.5 h-3.5" /> Remove from team
                         </button>
                       </div>
@@ -224,27 +230,29 @@ export function TeamPanel() {
 
               {/* Today's attendance */}
               {can("team.manage") && (
-                <div className="mt-3 flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={`Today's attendance for ${m.name}`}>
-                  <span className="text-[11px] uppercase tracking-wider text-ink-subtle mr-1">Today</span>
-                  {STAFF_ATTENDANCE_STATUSES.map((s) => {
-                    const on = att?.status === s;
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        role="radio"
-                        aria-checked={on}
-                        disabled={busyId === m.id}
-                        onClick={() => !on && mark(m, s)}
-                        className={`press h-8 px-3 rounded-full border text-xs font-semibold ${
-                          on ? ATT_TONE[s] : "border-line text-ink-muted hover:text-ink hover:border-zinc-600"
-                        } ${on && justMarked === `${m.id}:${s}` ? "pop-in" : ""}`}
-                        title={ATTENDANCE_LABELS[s]}
-                      >
-                        {ATT_SHORT[s]}
-                      </button>
-                    );
-                  })}
+                <div className="mt-3 sm:ml-[52px] flex items-center gap-3">
+                  <span className="text-[13px] text-ink-subtle">Today</span>
+                  <div className="inline-flex rounded-lg border border-line p-0.5" role="radiogroup" aria-label={`Today's attendance for ${m.name}`}>
+                    {STAFF_ATTENDANCE_STATUSES.map((s) => {
+                      const on = att?.status === s;
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          disabled={busyId === m.id}
+                          onClick={() => !on && mark(m, s)}
+                          className={`press h-8 px-3 rounded-md text-[13px] font-medium transition-colors ${
+                            on ? ATT_TONE[s] : "text-ink-muted hover:text-ink hover:bg-surface-2"
+                          }`}
+                          title={ATTENDANCE_LABELS[s]}
+                        >
+                          {ATT_SHORT[s]}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </li>
@@ -279,16 +287,24 @@ export function TeamPanel() {
   );
 }
 
-function SummaryTile({ label, value, accent, i = 0 }: { label: string; value: React.ReactNode; accent?: boolean; i?: number }) {
-  const st = stagger(i, 1);
+function SummaryTile({ label, value, meter }: { label: string; value: React.ReactNode; meter?: React.ReactNode }) {
   return (
-    <div style={st.style} className={`${st.className} relative overflow-hidden rounded-xl border p-3 ${accent ? "border-volt/40 bg-volt/5" : "border-line/70 bg-surface/40"}`}>
-      <span className="texture-court pointer-events-none absolute inset-0" aria-hidden />
-      <div className={`relative font-heading text-[28px] leading-none font-bold tabular-nums ${accent ? "text-volt-ink num-glow" : "text-ink"}`}>{value}</div>
-      <div className="relative text-[11px] font-medium text-ink-subtle mt-1.5 leading-tight">{label}</div>
+    <div className="min-w-0 p-3 sm:p-5">
+      <div className="text-[12px] sm:text-[13px] font-medium text-ink-muted leading-tight truncate">{label}</div>
+      <div className="num mt-2 text-[22px] sm:text-[28px] leading-none font-semibold text-ink">{value}</div>
+      {meter && <div className="mt-3">{meter}</div>}
     </div>
   );
 }
+
+const initials = (name: string) =>
+  name
+    .replace(/^coach\s+/i, "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]!.toUpperCase())
+    .join("");
 
 function MemberDialog({
   open,
@@ -380,7 +396,7 @@ function MemberDialog({
                     disabled={disabled}
                     onClick={() => setRole(r)}
                     className={`h-11 rounded-lg border text-sm font-semibold transition-colors disabled:opacity-40 ${
-                      role === r ? "border-volt bg-volt/10 text-volt-ink" : "border-line text-zinc-300 hover:border-zinc-600"
+                      role === r ? "border-zinc-300 bg-surface-2 text-ink" : "border-line text-ink-muted hover:text-ink hover:border-zinc-700"
                     }`}
                   >
                     {r === "COACH" ? "Coach" : r === "STAFF" ? "Staff" : "Manager"}

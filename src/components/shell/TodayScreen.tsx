@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { CreditCard, UserPlus, CalendarClock, ClipboardCheck, MessageCircle, Users, Wallet } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { CreditCard, UserPlus, CalendarClock, CalendarDays, ClipboardCheck, MessageCircle, ChevronRight, Check } from "lucide-react";
 import { FEATURES } from "@/lib/features";
 import { istDateString, scheduleRunsOn, istWeekday, type FeeMonthStatus } from "@/lib/fees";
 import { KpiTile } from "@/components/shell/KpiTile";
@@ -12,12 +12,9 @@ import { InlineAttendance } from "@/components/shell/InlineAttendance";
 import type { TodayPulse } from "@/lib/today";
 import { monthLabel } from "@/lib/payroll";
 import { track } from "@/lib/analytics";
-import { stagger } from "@/lib/motion";
 import { CountUp } from "@/components/ui/count-up";
-import { SportMotif } from "@/components/sport/SportMotif";
-import { SportGlyph } from "@/components/sport/SportGlyph";
-import { SuccessMark, celebrateMilestone } from "@/components/sport/Celebrate";
-import { primarySport, sportKind } from "@/components/sport/sport-kind";
+import { Bar, Ring, rateTone } from "@/components/ui/meter";
+import { sportKind } from "@/components/sport/sport-kind";
 
 /** Server-computed, academy-wide numbers (see loadTodayInsights in src/app/org/page.tsx). */
 export interface TodayInsights {
@@ -44,7 +41,7 @@ export interface TodayScreenProps {
   onNavigate: (tab: string) => void;
   /** Rendered above the screen (e.g. the onboarding checklist for empty academies). */
   top?: ReactNode;
-  /** Academy sport (org.sport); picks the greeting illustration. Falls back to the batches' sports. */
+  /** Academy sport (org.sport); used for the small sport icon on session rows when a batch has none. */
   sport?: string | null;
 }
 
@@ -88,20 +85,6 @@ export function TodayScreen({
   const todayStr = istDateString();
   const paidToday = recentPaidFees.filter((f) => f.status === "PAID" && f.paidAt && istDateString(new Date(f.paidAt)) === todayStr);
   const collectedToday = paidToday.reduce((s, f) => s + (f.amount || 0), 0);
-  const academySport = primarySport(sport, batches);
-
-  // First fee of the day: confetti, but only when the owner sees the count go from 0 to 1+
-  // on this device (not on every visit after fees were already paid).
-  useEffect(() => {
-    try {
-      const key = `triq_paid_seen_${todayStr}`;
-      const prev = localStorage.getItem(key);
-      localStorage.setItem(key, String(paidToday.length));
-      if (prev === "0" && paidToday.length > 0) celebrateMilestone();
-    } catch {
-      /* storage blocked: skip the celebration */
-    }
-  }, [paidToday.length, todayStr]);
 
   // Same filters as before, applied to the (month, status) buckets; counts/amounts are summed
   const countOf = (gs: FeeMonthStatus[]) => gs.reduce((n, g) => n + g.count, 0);
@@ -113,6 +96,12 @@ export function TodayScreen({
   const overdueAmount = amountOf(overdue);
   const pendingThisMonth = unpaid.filter((f) => f.status === "PENDING" && f.month === currentMonth);
   const pendingThisMonthCount = countOf(pendingThisMonth);
+  // This month's fees: collected vs everything billed for the month
+  const thisMonthFees = feeSummary.filter((f) => f.month === currentMonth);
+  const monthBilled = amountOf(thisMonthFees);
+  const monthPaid = amountOf(thisMonthFees.filter((f) => f.status === "PAID"));
+  const monthPct = monthBilled > 0 ? Math.round((monthPaid / monthBilled) * 100) : null;
+  const monthShort = monthLabel(currentMonth).split(" ")[0];
 
   const sessionsToday = insights?.todaySessions ?? [];
   const markedTotal = sessionsToday.reduce((s, x) => s + x.marked, 0);
@@ -249,116 +238,141 @@ export function TodayScreen({
   ];
   if (FEATURES.bookings) quick.push({ label: "New booking", icon: <CalendarClock className="w-4 h-4" />, tab: "bookings" });
 
+  const money = pulse?.money ?? null;
+  const moneyOut = money ? money.expenses + money.salariesPaid : 0;
+  const net = money ? money.collected - moneyOut : 0;
+  const team = pulse?.team ?? null;
+
   return (
-    <div className="space-y-7">
+    <div className="space-y-8">
       {top}
 
-      <header className="relative pr-[92px] sm:pr-52">
-        <div className="min-w-0 rise-in">
-          <p className="text-xs text-ink-subtle">{dateLabel}</p>
-          <h2 className="mt-1 font-heading text-[34px] sm:text-[46px] font-extrabold leading-[0.95] tracking-tight text-ink" suppressHydrationWarning>
-            {greeting}{firstName ? "," : ""} {firstName && <span className="brand-text">{firstName}</span>}
+      {/* Greeting + quick actions */}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[13px] text-ink-subtle">{dateLabel}</p>
+          <h2 className="mt-1 text-2xl sm:text-[32px] font-semibold leading-tight tracking-[-0.025em] text-ink" suppressHydrationWarning>
+            {greeting}{firstName ? `, ${firstName}` : ""}
           </h2>
         </div>
-        <div className="pointer-events-none absolute -right-1 -bottom-1 w-[96px] sm:w-48" aria-hidden>
-          <SportMotif sport={academySport} loops={2} className="w-full h-auto" />
+        <div className={`grid gap-2 sm:flex sm:shrink-0 ${quick.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+          {quick.map((q) => (
+            <button
+              key={q.label}
+              type="button"
+              onClick={() => onNavigate(q.tab)}
+              className={`${shellButton.quiet} !px-3 text-[13px] max-sm:flex-col max-sm:!gap-1 max-sm:py-2 max-sm:text-[12px]`}
+            >
+              <span className="text-ink-subtle shrink-0">{q.icon}</span>
+              <span className="truncate">{q.label}</span>
+            </button>
+          ))}
         </div>
       </header>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+      {/* KPIs: one card, three cells */}
+      <section aria-label="Today at a glance" className="grid grid-cols-3 divide-x divide-line rounded-xl border border-line bg-surface shadow-hairline overflow-hidden">
         <KpiTile
-          {...stagger(0, 1)}
-          label="Today's collection"
+          label="Collected today"
           value={<CountUp value={collectedToday} format={inrCompact} />}
           hint={paidToday.length > 0 ? `${paidToday.length} payment${paidToday.length === 1 ? "" : "s"}` : "No payments yet"}
-          tone={collectedToday > 0 ? "brand" : "default"}
           onClick={() => onNavigate("fees")}
         />
         <KpiTile
-          {...stagger(1, 1)}
           label="Pending dues"
           value={<CountUp value={pendingDues} format={inrCompact} />}
-          hint={unpaidCount > 0 ? `${unpaidCount} fee${unpaidCount === 1 ? "" : "s"}` : "All settled"}
-          tone={pendingDues > 0 ? "warn" : "default"}
+          meter={monthPct != null ? <Bar value={monthPct} tone="success" label={`${monthShort} fees ${monthPct}% collected`} /> : undefined}
+          hint={
+            monthPct != null
+              ? `${monthShort}: ${monthPct}% collected`
+              : unpaidCount > 0
+                ? `${unpaidCount} fee${unpaidCount === 1 ? "" : "s"}`
+                : "All settled"
+          }
           onClick={() => onNavigate("fees")}
         />
         <KpiTile
-          {...stagger(2, 1)}
           label="Attendance today"
           value={attendancePct == null ? "—" : <CountUp value={attendancePct} format={(n) => `${Math.round(n)}%`} />}
-          hint={attendancePct == null ? "Not marked yet" : `${presentTotal}/${markedTotal} present`}
+          aside={attendancePct != null ? <Ring value={attendancePct} tone={rateTone(attendancePct)} size={44} stroke={4} /> : undefined}
+          meter={attendancePct != null ? <Bar value={attendancePct} tone={rateTone(attendancePct)} className="sm:hidden" /> : undefined}
+          hint={attendancePct == null ? "Not marked yet" : `${presentTotal} of ${markedTotal} present`}
         />
-      </div>
+      </section>
 
-      {/* This month so far (owners/managers with payroll access) */}
-      {pulse?.money && (
+      {/* This month so far: P&L strip (owners/managers with payroll access) */}
+      {money && (
         <button
           type="button"
           onClick={() => onNavigate("payroll")}
-          style={stagger(3, 1).style}
-          className={`${stagger(3, 1).className} press w-full text-left rounded-xl border border-line/70 bg-surface/40 px-4 py-3 hover:border-zinc-700`}
+          className="group block w-full text-left rounded-xl border border-line bg-surface shadow-hairline transition-colors hover:border-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt/40"
         >
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs font-medium text-ink-subtle inline-flex items-center gap-1.5">
-              <Wallet className="w-3.5 h-3.5" /> This month so far
+          <div className="flex items-center justify-between gap-3 px-4 sm:px-5 pt-4">
+            <span className="text-[13px] font-medium text-ink-muted">This month so far</span>
+            <span className="inline-flex items-center gap-1 text-[12px] text-ink-subtle group-hover:text-ink">
+              Payroll <ChevronRight className="w-3.5 h-3.5" />
             </span>
-            {(() => {
-              const out = pulse.money.expenses + pulse.money.salariesPaid;
-              const net = pulse.money.collected - out;
-              return (
-                <span className={`font-heading text-xl font-bold leading-none tabular-nums ${net >= 0 ? "brand-text" : "text-rose-300"}`}>
-                  {net >= 0 ? "+" : "−"}<CountUp value={Math.abs(net)} format={inrCompact} />
-                </span>
-              );
-            })()}
           </div>
-          <div className="mt-1 text-xs text-ink-muted tabular-nums">
-            {inrCompact(pulse.money.collected)} fees in · {inrCompact(pulse.money.salariesPaid)} salaries · {inrCompact(pulse.money.expenses)} expenses
-          </div>
+          <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 px-4 sm:px-5 pb-4 pt-3">
+            <div className="min-w-0">
+              <dt className="text-[12px] text-ink-subtle">Fees in</dt>
+              <dd className="num mt-1 text-base sm:text-lg font-semibold text-ink truncate">{inrCompact(money.collected)}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-[12px] text-ink-subtle">Salaries</dt>
+              <dd className="num mt-1 text-base sm:text-lg font-semibold text-ink truncate">−{inrCompact(money.salariesPaid)}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-[12px] text-ink-subtle">Expenses</dt>
+              <dd className="num mt-1 text-base sm:text-lg font-semibold text-ink truncate">−{inrCompact(money.expenses)}</dd>
+            </div>
+            <div className="min-w-0 sm:border-l sm:border-line sm:pl-4">
+              <dt className="text-[12px] text-ink-subtle">Net</dt>
+              <dd className={`num mt-1 text-base sm:text-lg font-semibold truncate ${net >= 0 ? "text-success" : "text-danger"}`}>
+                {net >= 0 ? "+" : "−"}<CountUp value={Math.abs(net)} format={inrCompact} />
+              </dd>
+            </div>
+          </dl>
         </button>
       )}
 
       {/* Team today */}
-      {pulse?.team && (
+      {team && (
         <button
           type="button"
           onClick={() => onNavigate("team")}
-          style={stagger(4, 1).style}
-          className={`${stagger(4, 1).className} press w-full flex items-center justify-between gap-3 rounded-xl border border-line/70 bg-surface/40 px-4 py-3 text-left hover:border-zinc-700`}
+          className="group w-full flex items-center justify-between gap-4 rounded-xl border border-line bg-surface shadow-hairline px-4 sm:px-5 py-3.5 text-left transition-colors hover:border-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt/40"
         >
-          <span className="inline-flex items-center gap-2 text-sm text-zinc-300">
-            <Users className="w-4 h-4 brand-text" />
-            Team: <span className="font-semibold text-ink tabular-nums">{pulse.team.checkedIn}/{pulse.team.total}</span> checked in
-            {pulse.team.onLeave > 0 && <span className="text-ink-subtle">· {pulse.team.onLeave} on leave</span>}
+          <span className="min-w-0 text-sm text-ink-muted">
+            Team: <span className="num font-semibold text-ink">{team.checkedIn}/{team.total}</span> checked in
+            {team.onLeave > 0 && <span className="text-ink-subtle"> · {team.onLeave} on leave</span>}
           </span>
-          <span className="text-xs text-ink-subtle">View →</span>
+          <span className="flex items-center gap-3 shrink-0">
+            {team.total > 0 && team.total <= 24 && (
+              <span className="hidden sm:flex items-center gap-0.5" aria-hidden>
+                {Array.from({ length: team.total }).map((_, i) => (
+                  <span key={i} className={`h-3 w-1.5 rounded-[2px] ${i < team.checkedIn ? "bg-success" : "bg-zinc-800"}`} />
+                ))}
+              </span>
+            )}
+            <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-ink-muted" aria-hidden />
+          </span>
         </button>
       )}
-
-      {/* Quick actions */}
-      <div className={`grid gap-2.5 ${quick.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
-        {quick.map((q) => (
-          <button key={q.label} type="button" onClick={() => onNavigate(q.tab)} className={`${shellButton.quiet} !px-2 text-[13px] max-sm:flex-col max-sm:!gap-0.5 max-sm:text-[12px] max-sm:py-1.5`}>
-            <span className="brand-text shrink-0">{q.icon}</span>
-            <span className="truncate">{q.label}</span>
-          </button>
-        ))}
-      </div>
 
       {/* Needs attention */}
       <section>
         <SectionHeader title="Needs attention" />
         {attention.length > 0 ? (
-          <div className="space-y-2">
+          <div className="divide-y divide-line rounded-xl border border-line bg-surface shadow-hairline overflow-hidden">
             {attention.map((node, i) => (
-              <div key={i} {...stagger(i, 2)}>{node}</div>
+              <div key={i}>{node}</div>
             ))}
           </div>
         ) : (
           <EmptyState
             compact
-            art={<SuccessMark size={48} />}
+            icon={<Check className="text-success" />}
             title="All clear"
             description="No overdue fees, follow-ups or low-attendance students right now."
           />
@@ -368,8 +382,8 @@ export function TodayScreen({
       {/* Absent today: one-tap WhatsApp check-in with the parent */}
       {pulse && pulse.absentToday.length > 0 && (
         <section>
-          <SectionHeader title={`Absent today (${pulse.absentToday.length})`} description="Check in with parents. Kids whose parents hear from the academy come back." />
-          <ul className="divide-y divide-line/70 rounded-xl border border-line/70 bg-surface/40">
+          <SectionHeader title={`Absent today (${pulse.absentToday.length})`} description="A short message from the academy brings children back." />
+          <ul className="divide-y divide-line rounded-xl border border-line bg-surface shadow-hairline">
             {pulse.absentToday.slice(0, 8).map((a) => {
               const firstChild = a.name.split(" ")[0];
               const parent = (a.parentName || "").split(" ")[0];
@@ -378,10 +392,13 @@ export function TodayScreen({
                 `Hi${parent ? ` ${parent}` : ""}, we missed ${firstChild} at today's ${a.batchName} session${pulse.academyName ? ` at ${pulse.academyName}` : ""}. Hope all is well! Let us know if ${firstChild} would like a make-up session.`
               );
               return (
-                <li key={a.studentId} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                  <div className="min-w-0">
-                    <div className="text-sm text-zinc-100 truncate">{a.name}</div>
-                    <div className="text-xs text-ink-subtle truncate">{a.batchName}</div>
+                <li key={a.studentId} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0 flex items-center gap-3">
+                    <span className="h-2 w-2 rounded-full bg-danger shrink-0" aria-hidden />
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-ink truncate">{a.name}</div>
+                      <div className="text-[13px] text-ink-subtle truncate">{a.batchName}</div>
+                    </div>
                   </div>
                   {link ? (
                     <a
@@ -390,18 +407,18 @@ export function TodayScreen({
                       rel="noopener noreferrer"
                       aria-label={`Message ${a.name}'s parent on WhatsApp`}
                       onClick={() => track("parent_whatsapp_clicked", { surface: "today_absent" })}
-                      className="press shrink-0 h-9 px-3 rounded-lg border border-zinc-700 text-xs font-semibold text-zinc-200 hover:border-zinc-500 inline-flex items-center gap-1.5"
+                      className="press shrink-0 h-9 px-3 rounded-lg border border-line bg-surface text-[13px] font-medium text-ink hover:bg-surface-2 hover:border-zinc-700 inline-flex items-center gap-1.5"
                     >
-                      <MessageCircle className="w-3.5 h-3.5" /> Message parent
+                      <MessageCircle className="w-3.5 h-3.5 text-ink-subtle" /> Message parent
                     </a>
                   ) : (
-                    <span className="text-xs text-zinc-600">No phone</span>
+                    <span className="text-[13px] text-ink-subtle">No phone</span>
                   )}
                 </li>
               );
             })}
           </ul>
-          {pulse.absentToday.length > 8 && <p className="mt-2 text-xs text-ink-subtle">+{pulse.absentToday.length - 8} more absent today</p>}
+          {pulse.absentToday.length > 8 && <p className="mt-2 text-[13px] text-ink-subtle">+{pulse.absentToday.length - 8} more absent today</p>}
         </section>
       )}
 
@@ -410,7 +427,7 @@ export function TodayScreen({
         <SectionHeader title="Today's sessions" description={!anyParsed && batches.length > 0 ? "Add days to a batch schedule (e.g. Mon/Wed 5 PM) to see only today's." : undefined} />
         {batches.length === 0 ? (
           <EmptyState
-            art={<SportMotif sport={academySport} loops={1} className="w-32 h-auto" />}
+            icon={<CalendarDays />}
             title="No batches yet"
             description="Create your first batch to start taking attendance."
             action={<button type="button" onClick={() => onNavigate("batches")} className={shellButton.primary}>Create a batch</button>}
@@ -418,9 +435,9 @@ export function TodayScreen({
         ) : (
           <div className="space-y-2">
             {listedBatches.length === 0 && (
-              <EmptyState compact icon={<SportGlyph sport={academySport} className="w-5 h-5" />} title="No sessions scheduled today" description="Running an extra or make-up session? Pick the batch below." />
+              <EmptyState compact icon={<CalendarDays />} title="No sessions scheduled today" description="Running an extra or make-up session? Pick the batch below." />
             )}
-            {listedBatches.map((b: any, i: number) => {
+            {listedBatches.map((b: any) => {
               const s = sessionFor(b.id);
               const marked = !!s && s.marked > 0;
               const enrolled = b.enrollments?.length || 0;
@@ -429,7 +446,6 @@ export function TodayScreen({
                 <InlineAttendance
                   key={b.id}
                   sport={sportKind(b.sport || sport)}
-                  {...stagger(i, 3)}
                   batchId={b.id}
                   batchName={isExtra ? `${b.name} · extra session` : b.name}
                   subtitle={`${b.schedule || "No schedule"} · ${marked ? `${s!.present}/${s!.marked} present` : `${enrolled} student${enrolled === 1 ? "" : "s"}`}`}
@@ -445,7 +461,7 @@ export function TodayScreen({
                   aria-label="Take attendance for an extra session"
                   value=""
                   onChange={(e) => e.target.value && setExtraIds((ids) => [...ids, e.target.value])}
-                  className="flex-1 h-10 rounded-lg border border-line bg-surface/60 px-3 text-sm text-zinc-300"
+                  className="flex-1 h-10 rounded-lg border border-line bg-surface px-3 text-sm text-ink-muted"
                 >
                   <option value="">Extra session? Take attendance for another batch…</option>
                   {otherBatches.map((b: any) => (

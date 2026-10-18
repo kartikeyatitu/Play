@@ -8,9 +8,9 @@ import { getTodayRoster, markAttendance, markBatchAttendance, type RosterEntry }
 import type { AttendanceStatus } from "@/lib/coach";
 import { shellButton } from "@/components/shell/EmptyState";
 import { SportGlyph } from "@/components/sport/SportGlyph";
-import { SuccessMark } from "@/components/sport/Celebrate";
-import { sportColor, type SportKind } from "@/components/sport/sport-kind";
-import { haptic, stagger } from "@/lib/motion";
+import { CheckMark } from "@/components/ui/status-mark";
+import type { SportKind } from "@/components/sport/sport-kind";
+import { haptic } from "@/lib/motion";
 
 /**
  * Owner-side attendance for one batch, inline on the Today screen.
@@ -110,23 +110,25 @@ export function InlineAttendance({
     wasComplete.current = complete;
   }, [complete, students]);
 
+  const statusLine = students
+    ? `${subtitle.split(" · ")[0]} · ${present}/${students.length} present${markedCount < students.length ? ` · ${students.length - markedCount} unmarked` : ""}`
+    : subtitle;
+
   return (
-    <div className={`relative overflow-hidden rounded-xl border border-line/80 bg-surface/40 ${className}`} style={style}>
-      <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: sportColor(sport, 0.85) }} aria-hidden />
-      <div className="flex items-center gap-3 pl-4 pr-3.5 py-3">
-        <span
-          className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-          style={{ background: sportColor(sport, 0.12), color: sportColor(sport) }}
-          aria-hidden
-        >
-          <SportGlyph sport={sport} className="w-[18px] h-[18px]" />
+    <div className={`rounded-xl border border-line bg-surface shadow-hairline ${className}`} style={style}>
+      <div className="flex items-center gap-3 px-4 py-3">
+        <span className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line text-ink-muted" aria-hidden>
+          <SportGlyph sport={sport} className="w-4 h-4" />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-zinc-100 truncate">{batchName}</p>
-          <p className="text-xs text-ink-subtle truncate tabular-nums">
-            {students ? `${subtitle.split(" · ")[0]} · ${present}/${students.length} present${markedCount < students.length ? ` · ${students.length - markedCount} unmarked` : ""}` : subtitle}
-          </p>
+          <p className="text-sm font-medium text-ink truncate">{batchName}</p>
+          <p className="text-[13px] text-ink-subtle truncate tabular-nums mt-0.5">{statusLine}</p>
         </div>
+        {marked && !open && (
+          <span className="hidden sm:inline-flex items-center gap-1 text-[12px] font-medium text-success shrink-0">
+            <Check className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> Marked
+          </span>
+        )}
         <button
           type="button"
           onClick={toggleOpen}
@@ -139,13 +141,13 @@ export function InlineAttendance({
       </div>
 
       {open && students && (
-        <div className="border-t border-line/80 px-3.5 py-3 space-y-2">
+        <div className="rise-in border-t border-line px-4 py-3 space-y-2">
           {justCompleted && (
-            <div className="pop-in flex items-center gap-3 rounded-lg border border-success/30 bg-success/10 px-3 py-2" role="status">
-              <SuccessMark size={32} />
+            <div className="fade-in flex items-center gap-3 rounded-lg border border-success/25 bg-success/10 px-3 py-2.5" role="status">
+              <CheckMark size={24} />
               <div className="min-w-0">
-                <p className="font-heading text-lg font-bold leading-tight text-success">Session done</p>
-                <p className="text-xs text-ink-muted tabular-nums">
+                <p className="text-sm font-semibold leading-tight text-ink">Session done</p>
+                <p className="text-[13px] text-ink-muted tabular-nums">
                   {present}/{students.length} present. Tap Done to update Today.
                 </p>
               </div>
@@ -163,31 +165,33 @@ export function InlineAttendance({
               >
                 {busy === "ALL" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Mark all present
               </button>
-              <ul className="divide-y divide-line/60">
-                {students.map((s, i) => (
-                  <li key={s.id} {...stagger(i)} className={`${stagger(i).className} flex items-center gap-2 py-2`}>
-                    <span className="flex-1 min-w-0 truncate text-sm text-zinc-200">{s.name}</span>
+              <ul className="divide-y divide-line">
+                {students.map((s) => (
+                  <li key={s.id} className="flex items-center gap-2 py-2">
+                    <span className="flex-1 min-w-0 truncate text-sm text-ink">{s.name}</span>
                     {busy === s.id && <Loader2 className="w-3.5 h-3.5 animate-spin text-ink-subtle" />}
-                    <button
-                      type="button"
-                      onClick={() => set(s.id, "PRESENT")}
-                      aria-pressed={s.status === "PRESENT"}
-                      className={`press min-h-[36px] px-3 rounded-lg text-xs font-semibold border ${
-                        s.status === "PRESENT" ? "bg-emerald-500/20 border-emerald-500 text-emerald-300" : "border-line text-ink-muted hover:text-zinc-200"
-                      }`}
-                    >
-                      Present
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => set(s.id, "ABSENT")}
-                      aria-pressed={s.status === "ABSENT"}
-                      className={`press min-h-[36px] px-3 rounded-lg text-xs font-semibold border ${
-                        s.status === "ABSENT" ? "bg-rose-500/20 border-rose-500 text-rose-300" : "border-line text-ink-muted hover:text-zinc-200"
-                      }`}
-                    >
-                      <X className="w-3.5 h-3.5 inline -mt-0.5" /> Absent
-                    </button>
+                    <div className="inline-flex rounded-lg border border-line p-0.5" role="group" aria-label={`Attendance for ${s.name}`}>
+                      <button
+                        type="button"
+                        onClick={() => set(s.id, "PRESENT")}
+                        aria-pressed={s.status === "PRESENT"}
+                        className={`press min-h-[34px] px-3 rounded-md text-[13px] font-medium inline-flex items-center gap-1 ${
+                          s.status === "PRESENT" ? "bg-success/15 text-success" : "text-ink-muted hover:text-ink"
+                        }`}
+                      >
+                        {s.status === "PRESENT" && <Check className="w-3.5 h-3.5" strokeWidth={2.5} />} Present
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => set(s.id, "ABSENT")}
+                        aria-pressed={s.status === "ABSENT"}
+                        className={`press min-h-[34px] px-3 rounded-md text-[13px] font-medium inline-flex items-center gap-1 ${
+                          s.status === "ABSENT" ? "bg-danger/10 text-danger" : "text-ink-muted hover:text-ink"
+                        }`}
+                      >
+                        {s.status === "ABSENT" && <X className="w-3.5 h-3.5" strokeWidth={2.5} />} Absent
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>

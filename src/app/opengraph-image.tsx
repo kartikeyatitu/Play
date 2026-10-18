@@ -33,7 +33,7 @@ export default function OpengraphImage() {
               width: 72,
               height: 72,
               borderRadius: 18,
-              background: "#a3e635",
+              background: "#d1440a",
               color: "#09090b",
               fontSize: 24,
               fontWeight: 900,
@@ -48,7 +48,7 @@ export default function OpengraphImage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div style={{ display: "flex", flexDirection: "column", fontSize: 76, fontWeight: 800, lineHeight: 1.05, letterSpacing: -2 }}>
             <span>Run your academy</span>
-            <span style={{ color: "#a3e635" }}>from your phone.</span>
+            <span style={{ color: "#d1440a" }}>from your phone.</span>
           </div>
           <div style={{ display: "flex", fontSize: 30, color: "#a1a1aa" }}>
             Attendance, fees and parent updates — built for Indian sports coaches.
