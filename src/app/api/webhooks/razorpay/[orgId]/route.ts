@@ -118,7 +118,29 @@ export async function POST(
       return NextResponse.json({ status: "ok" });
     }
 
-    // 3. Payment failed
+    // 3. Payment link expired or cancelled — mark as FAILED and null the link URL
+    if (event === "payment_link.expired" || event === "payment_link.cancelled") {
+      const plink = body?.payload?.payment_link?.entity;
+      const plinkId = plink?.id;
+      if (plinkId) {
+        const payment = await db.payment.findFirst({
+          where: { providerOrderId: String(plinkId), orgId, status: "CREATED" },
+        });
+        if (payment) {
+          await db.payment.updateMany({
+            where: { id: payment.id, status: "CREATED" },
+            data: {
+              status: "FAILED",
+              failureReason: event === "payment_link.expired" ? "Payment link expired" : "Payment link cancelled",
+              linkUrl: null,
+            },
+          });
+        }
+      }
+      return NextResponse.json({ status: "ok" });
+    }
+
+    // 4. Payment failed
     if (event === "payment.failed") {
       const orderId = entity?.order_id;
       if (orderId) {

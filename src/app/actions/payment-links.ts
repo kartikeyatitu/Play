@@ -43,9 +43,21 @@ export async function createFeePaymentLink(studentId: string, month: string): Pr
     if (!(fee.amount > 0)) return { success: false, error: "Set a fee for this student's batch first." };
     const amountMinor = Math.round(fee.amount * 100);
 
-    // Reuse an open link for the same amount instead of creating duplicates
+    // Reuse an open link for the same amount instead of creating duplicates.
+    // Links expire after 30 days on Razorpay — only reuse links less than 28 days old
+    // and ignore any with a pending_ provider order ID (not yet confirmed by Razorpay).
+    const linkMaxAge = new Date(Date.now() - 28 * 24 * 3600 * 1000);
     const open = await db.payment.findFirst({
-      where: { feeRecordId: fee.id, orgId: session.orgId, kind: "LINK", status: "CREATED", amount: amountMinor, linkUrl: { not: null } },
+      where: {
+        feeRecordId: fee.id,
+        orgId: session.orgId,
+        kind: "LINK",
+        status: "CREATED",
+        amount: amountMinor,
+        linkUrl: { not: null },
+        createdAt: { gte: linkMaxAge },
+        providerOrderId: { not: { startsWith: "pending_" } },
+      },
       orderBy: { createdAt: "desc" },
     });
     if (open?.linkUrl) return { success: true, url: open.linkUrl, amount: fee.amount, reused: true };

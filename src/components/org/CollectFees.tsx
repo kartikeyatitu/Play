@@ -179,14 +179,27 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
     );
   }
 
+  const noPaymentMethod = !upiId && !razorpayConnected;
+
   return (
     <div id="collect-fees" className="space-y-6">
+      {noPaymentMethod && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex items-start gap-3">
+          <span className="shrink-0 h-8 w-8 rounded-lg bg-amber-500/15 text-warn grid place-items-center text-sm font-bold">!</span>
+          <div>
+            <p className="text-sm font-medium text-ink">No payment method configured</p>
+            <p className="text-[13px] text-ink-subtle mt-0.5">
+              Parents can&apos;t pay online yet. Go to <strong>Settings</strong> and add your UPI ID or connect Razorpay so you can send payment links with fee reminders.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-ink">Collect fees</h3>
           <p className="text-[13px] text-ink-subtle">
             {rows.length} unpaid · ₹{totalUnpaid.toLocaleString("en-IN")} outstanding
-            {razorpayConnected ? " · Razorpay links on" : upiId ? " · UPI deep-links on" : " · set a UPI id or connect Razorpay in Settings"}
+            {razorpayConnected ? " · Razorpay links on" : upiId ? " · UPI deep-links on" : ""}
           </p>
         </div>
       </div>
