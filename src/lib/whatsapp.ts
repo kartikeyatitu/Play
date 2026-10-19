@@ -29,8 +29,8 @@ export const MESSAGE_TEMPLATES: WhatsAppTemplate[] = [
     id: "fee_reminder",
     name: "Fee Reminder",
     category: "fee_reminder",
-    body: "💰 Fee Reminder\n\nDear {{parent_name}},\n\nThis is a reminder that {{student_name}}'s fee of ₹{{amount}} for {{month}} is pending.\n\nPlease pay at your earliest convenience.\n\n— {{academy_name}}",
-    variables: ["parent_name", "student_name", "amount", "month", "academy_name"],
+    body: "💰 Fee Reminder\n\nNamaste {{parent_name}},\n\n{{student_name}}'s fee of ₹{{amount}} for {{month}} is pending at {{academy_name}}.\n\n{{pay_link}}\n\nThank you.\n— {{academy_name}}",
+    variables: ["parent_name", "student_name", "amount", "month", "academy_name", "pay_link"],
     isActive: true,
   },
   {

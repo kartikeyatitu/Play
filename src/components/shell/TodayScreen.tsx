@@ -8,6 +8,7 @@ import { KpiTile } from "@/components/shell/KpiTile";
 import { AttentionItem } from "@/components/shell/AttentionItem";
 import { SectionHeader } from "@/components/shell/SectionHeader";
 import { EmptyState, shellButton } from "@/components/shell/EmptyState";
+import { CollectFeesBanner } from "@/components/org/CollectFees";
 import { InlineAttendance } from "@/components/shell/InlineAttendance";
 import type { TodayPulse } from "@/lib/today";
 import { monthLabel } from "@/lib/payroll";
@@ -269,6 +270,11 @@ export function TodayScreen({
           ))}
         </div>
       </header>
+
+      {/* Prominent "Collect fees" banner — appears when the academy has unpaid fees */}
+      {unpaidCount > 0 && (
+        <CollectFeesBanner onNavigate={onNavigate} count={unpaidCount} amount={pendingDues} />
+      )}
 
       {/* KPIs: one card, three cells */}
       <section aria-label="Today at a glance" className="grid grid-cols-3 divide-x divide-line rounded-xl border border-line bg-surface shadow-hairline overflow-hidden">

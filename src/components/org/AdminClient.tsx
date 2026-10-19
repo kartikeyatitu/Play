@@ -85,6 +85,7 @@ const AcademySettings = dynamic(() => import("@/components/org/AcademySettings")
 const TrialManager = dynamic(() => import("@/components/org/TrialManager").then((m) => m.TrialManager), { loading: sectionLoading });
 const PendingPayments = dynamic(() => import("@/components/org/PendingPayments").then((m) => m.PendingPayments), { loading: sectionLoading });
 const BatchFeeEditor = dynamic(() => import("@/components/org/BatchFeeEditor").then((m) => m.BatchFeeEditor), { loading: inlineLoading });
+const CollectFees = dynamic(() => import("@/components/org/CollectFees").then((m) => m.CollectFees), { loading: sectionLoading });
 
 /** Warm the chunks of the most-used tabs once the browser is idle (no effect on first paint). */
 function prefetchCommonTabs() {
@@ -500,6 +501,10 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {activeTab === "fees" && (
             <div className="space-y-8">
               <div>
+                <SectionHeader title="Collect fees" description="Unpaid fees across your academy — remind, mark paid, share receipts." />
+                <CollectFees academyName={academyName} upiId={upiId} razorpayConnected={Boolean((org as any)?.razorpayConnected)} />
+              </div>
+              <div>
                 <SectionHeader title="Payments to confirm" description={`${pendingVerification.length} reported by parents via UPI`} />
                 {!upiId && (
                   <div className="mb-3 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-2 text-xs text-amber-300">
@@ -549,7 +554,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
                                 <>
                                   <PayNowButton studentName={s.name} studentId={s.id} amount={feeAmount} month={currentMonth} parentPhone={s.parent.phone} academyName={academyName} upiId={upiId} feeRecordId={feeRecord?.id} feeStatus={feeStatus} razorpayConnected={Boolean((org as any)?.razorpayConnected)} />
                                   {feeStatus === "PENDING" && (
-                                    <WhatsAppReminder parentPhone={s.parent.phone} studentName={s.name} month={currentMonth} amount={feeAmount} academyName={academyName} upiId={upiId} />
+                                    <WhatsAppReminder parentPhone={s.parent.phone} parentName={s.parent?.name} studentName={s.name} month={currentMonth} amount={feeAmount} academyName={academyName} upiId={upiId} />
                                   )}
                                 </>
                               )}
@@ -603,7 +608,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
               </div>
               <div>
                 <SectionHeader title="Bulk WhatsApp" description="Send messages to multiple parents at once" />
-                <BulkWhatsApp students={students} academyName={academyName} studentFees={studentFees} />
+                <BulkWhatsApp students={students} academyName={academyName} studentFees={studentFees} upiId={upiId} />
               </div>
             </div>
           )}
