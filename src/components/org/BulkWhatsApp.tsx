@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { MESSAGE_TEMPLATES, WHATSAPP_CONFIG, generateWhatsAppLink, fillTemplate, WhatsAppTemplate } from "@/lib/whatsapp";
+import { buildUpiLink, isValidUpiId, istMonthString } from "@/lib/fees";
 import { MessageCircle, ExternalLink, Loader2, Send } from "lucide-react";
 
 interface StudentData {
@@ -27,9 +28,11 @@ interface BulkWhatsAppProps {
   academyName: string;
   /** Resolved monthly fee (₹) per student id — used for the {amount} variable */
   studentFees?: Record<string, number>;
+  /** Academy UPI id — fills the {{pay_link}} slot in the Fee Reminder template */
+  upiId?: string | null;
 }
 
-export function BulkWhatsApp({ students, academyName, studentFees = {} }: BulkWhatsAppProps) {
+export function BulkWhatsApp({ students, academyName, studentFees = {}, upiId = null }: BulkWhatsAppProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   
@@ -72,12 +75,32 @@ export function BulkWhatsApp({ students, academyName, studentFees = {} }: BulkWh
   };
 
   const getPreviewMessage = (student: StudentData, template: WhatsAppTemplate) => {
+    const amount = studentFees[student.id] || 0;
+    const monthStr = istMonthString();
+    // Resolve {{pay_link}}: UPI deep link if the academy has a valid UPI ID, else a plain
+    // "pay cash / bank transfer" line so the template still reads clean.
+    const payLine = (() => {
+      if (upiId && isValidUpiId(upiId) && amount > 0) {
+        const link = buildUpiLink({
+          upiId,
+          payeeName: academyName,
+          amount,
+          note: `${student.name} fee ${monthStr}`,
+        });
+        return `Pay via UPI: ${link}\n(or UPI ID: ${upiId})`;
+      }
+      if (upiId && isValidUpiId(upiId)) {
+        return `Pay via UPI: ${upiId}`;
+      }
+      return "Please pay by cash or bank transfer and let us know once done.";
+    })();
+
     const vars: Record<string, string> = {
       parent_name: student.parent.name,
       student_name: student.name,
       academy_name: academyName,
       // Mock some vars that might be needed based on template
-      amount: studentFees[student.id] ? String(studentFees[student.id]) : "—",
+      amount: amount > 0 ? String(amount) : "—",
       month: new Date().toLocaleString('default', { month: 'long' }),
       date: new Date().toLocaleDateString(),
       batch_name: student.batchName || "Regular Batch",
@@ -87,7 +110,8 @@ export function BulkWhatsApp({ students, academyName, studentFees = {} }: BulkWh
       fitness: "4",
       discipline: "5",
       attendance: student.attendancePct?.toString() || "85",
-      notes: "Progressing well."
+      notes: "Progressing well.",
+      pay_link: payLine,
     };
     return fillTemplate(template.body, vars);
   };
