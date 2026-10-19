@@ -460,7 +460,7 @@ function NewBookingDialog({
     setSaving(false);
     if (!res.success) return void toast.error(res.error);
     if (res.conflicts.length > 0) {
-      toast.warning(`Booked ${res.created}. Skipped ${res.conflicts.length} date${res.conflicts.length === 1 ? "" : "s"} that were already taken: ${res.conflicts.map(formatDateLabel).join(", ")}`);
+      toast.warning(`Booked ${res.created}. Skipped ${res.conflicts.length} date${res.conflicts.length === 1 ? "" : "s"} that were already taken: ${res.conflicts.map((d) => formatDateLabel(d)).join(", ")}`);
     } else {
       toast.success(res.created > 1 ? `Booked ${res.created} weeks` : "Booking saved");
     }
