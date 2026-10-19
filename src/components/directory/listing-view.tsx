@@ -153,7 +153,7 @@ export function DirectoryEmptyState({ city, sport }: { city: DirectoryCity; spor
       <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-400">
         {city.live
           ? "We only show academies we can verify — no placeholder listings. New academies are being added every week."
-          : `We're launching in Gurgaon first. ${city.name} listings will appear here as soon as academies join.`}
+          : `We're expanding to ${city.name} soon. Listings will appear here as academies join.`}
       </p>
       <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <Link
@@ -168,8 +168,8 @@ export function DirectoryEmptyState({ city, sport }: { city: DirectoryCity; spor
             See all sports in {city.name} <ArrowRight className="size-4" />
           </Link>
         ) : !city.live ? (
-          <Link href="/academies/gurgaon" className="inline-flex h-11 items-center gap-1.5 px-3 text-sm font-medium text-zinc-300 hover:text-white">
-            Browse Gurgaon academies <ArrowRight className="size-4" />
+          <Link href="/academies" className="inline-flex h-11 items-center gap-1.5 px-3 text-sm font-medium text-zinc-300 hover:text-white">
+            Browse academies <ArrowRight className="size-4" />
           </Link>
         ) : null}
       </div>

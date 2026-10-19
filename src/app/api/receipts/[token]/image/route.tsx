@@ -79,10 +79,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
   const { receipt, org } = data;
   const academy = org?.name || "Academy";
   const logo = org?.logo || null;
-  const amountFig = Math.round(receipt.amount).toLocaleString("en-IN");
-  const amountWords = `${amountInWords(receipt.amount)} Rupees Only`;
+  const amountFig = Math.round(receipt.amount).toLocaleString();
+  const amountWords = `${amountInWords(receipt.amount)} Only`;
   const monthLabel = monthLong(receipt.month);
-  const issued = new Date(receipt.issuedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
+  const issued = new Date(receipt.issuedAt).toLocaleDateString("en", { day: "2-digit", month: "short", year: "numeric" });
 
   return new ImageResponse(
     (

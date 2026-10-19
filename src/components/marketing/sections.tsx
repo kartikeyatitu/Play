@@ -362,7 +362,7 @@ export function MigrationSteps() {
             align="left"
             eyebrow="Switch in 24 hours"
             title={<>From registers to Triq by tomorrow evening.</>}
-            description={`We do the migration for you — free for ${FOUNDING_OFFER.city} founding academies. You keep coaching; nothing stops.`}
+            description="We do the migration for you — free for founding academies. You keep coaching; nothing stops."
           />
           <Link href="#demo" className={primaryCta}>
             Start my migration <ArrowRight className="h-4 w-4" aria-hidden />
@@ -463,20 +463,20 @@ export function FoundingAcademies() {
         <div className="relative grid gap-10 lg:grid-cols-[1.3fr_1fr] lg:items-center">
           <div>
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-lime-400">
-              Founding academies · {FOUNDING_OFFER.city}
+              Founding academies
             </p>
             <h2 className="text-balance text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
-              We&apos;re choosing our first {FOUNDING_OFFER.slots} academies in {FOUNDING_OFFER.city}. Apply now.
+              We&apos;re choosing our first {FOUNDING_OFFER.slots} founding academies. Apply now.
             </h2>
             <p className="mt-4 max-w-xl text-zinc-400">
               No logo wall here yet — we&apos;d rather earn it. Founding academies get the best price we&apos;ll ever offer and shape
               what Triq becomes.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/gurgaon" className={primaryCta}>
+              <Link href="/register" className={primaryCta}>
                 Apply as a founding academy <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
-              <WhatsAppButton message={`Hi! I'd like to apply as a founding academy in ${FOUNDING_OFFER.city}.`} />
+              <WhatsAppButton message="Hi! I'd like to apply as a founding academy." />
             </div>
           </div>
           <ul className="space-y-3">
@@ -506,8 +506,8 @@ export const FAQS: { q: string; a: string }[] = [
     a: `${formatINR(GROWTH_PLAN.perStudentMonthly)} per active student per month, with a minimum of ${formatINR(GROWTH_PLAN.minMonthly)}/month. An active student is one enrolled in at least one batch that month — students who have left or paused aren't billed.`,
   },
   {
-    q: "What is the Gurgaon founding offer?",
-    a: `The first ${FOUNDING_OFFER.slots} academies in ${FOUNDING_OFFER.city} get ${FOUNDING_OFFER.discountPercent}% off for ${FOUNDING_OFFER.months} months, plus we migrate your data for free within ${FOUNDING_OFFER.migrationHours} hours.`,
+    q: "What is the founding offer?",
+    a: `The first ${FOUNDING_OFFER.slots} academies get ${FOUNDING_OFFER.discountPercent}% off for ${FOUNDING_OFFER.months} months, plus we migrate your data for free within ${FOUNDING_OFFER.migrationHours} hours.`,
   },
   {
     q: "Do parents need to download an app?",

@@ -6,7 +6,8 @@ import { getSession } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 const BUSINESS_TYPES = ["ACADEMY", "TURF", "BOTH"] as const;
-const ONBOARDING_CITIES = ["Gurgaon", "Noida", "Delhi", "Faridabad", "Ghaziabad", "Other"] as const;
+/** @deprecated Kept only for RESERVED_SLUGS and backward compat. City is now free-text. */
+const ONBOARDING_CITIES_LEGACY = ["Gurgaon", "Noida", "Delhi", "Faridabad", "Ghaziabad", "Other"] as const;
 const ONBOARDING_SPORTS = [
   "Football", "Cricket", "Badminton", "Tennis", "Basketball", "Swimming", "Martial Arts", "Athletics", "Other",
 ] as const;
@@ -29,16 +30,11 @@ const onboardingSchema = z
   .object({
     academyName: z.string().trim().min(2, "Please enter a name (at least 2 characters).").max(80, "Name is too long (max 80 characters)."),
     businessType: z.enum(BUSINESS_TYPES, { message: "Please choose what you run." }),
-    city: z.enum(ONBOARDING_CITIES, { message: "Please choose your city." }),
-    cityOther: z.string().trim().max(60, "City name is too long.").optional(),
+    city: z.string().trim().min(1, "Please enter your city.").max(60, "City name is too long."),
     sports: z.array(z.enum(ONBOARDING_SPORTS)).min(1, "Pick at least one sport.").max(9),
     loadSampleData: z.boolean().optional(),
   })
-  .superRefine((v, ctx) => {
-    if (v.city === "Other" && (!v.cityOther || v.cityOther.length < 2)) {
-      ctx.addIssue({ code: "custom", path: ["cityOther"], message: "Please type your city." });
-    }
-  });
+  ;
 
 export type OnboardingInput = z.input<typeof onboardingSchema>;
 
@@ -75,9 +71,8 @@ export async function createAcademyWorkspace(input: OnboardingInput) {
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Please check the form and try again." };
   }
-  const { academyName, businessType, sports, loadSampleData = false } = parsed.data;
-  const city = parsed.data.city === "Other" ? parsed.data.cityOther!.trim() : parsed.data.city;
-  const state = CITY_STATE[parsed.data.city] ?? "India";
+  const { academyName, businessType, city, sports, loadSampleData = false } = parsed.data;
+  const state = "";
   const sport = sports.join(", ");
   const primarySport = sports[0];
 

@@ -25,15 +25,12 @@ const BUSINESS_TYPES = [
   { value: "BOTH", label: "Both", hint: "Academy + bookings", icon: "⚡" },
 ] as const;
 
-const CITIES = ["Gurgaon", "Noida", "Delhi", "Faridabad", "Ghaziabad", "Other"] as const;
-
 type BusinessType = (typeof BUSINESS_TYPES)[number]["value"];
 
 export default function OnboardingPage() {
   const [name, setName] = useState("");
   const [businessType, setBusinessType] = useState<BusinessType>("ACADEMY");
-  const [city, setCity] = useState<(typeof CITIES)[number]>("Gurgaon");
-  const [cityOther, setCityOther] = useState("");
+  const [city, setCity] = useState("");
   const [sports, setSports] = useState<string[]>(["Football"]);
   const [loadSampleData, setLoadSampleData] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -49,7 +46,7 @@ export default function OnboardingPage() {
     e.preventDefault();
     if (name.trim().length < 2) return setError(`Please enter your ${nameLabel.toLowerCase()} (at least 2 characters).`);
     if (sports.length === 0) return setError("Pick at least one sport.");
-    if (city === "Other" && cityOther.trim().length < 2) return setError("Please type your city.");
+    if (city.trim().length < 2) return setError("Please enter your city.");
 
     setLoading(true);
     setError(null);
@@ -57,8 +54,7 @@ export default function OnboardingPage() {
       const res = await createAcademyWorkspace({
         academyName: name,
         businessType,
-        city,
-        cityOther: city === "Other" ? cityOther : undefined,
+        city: city.trim(),
         sports: sports as any,
         loadSampleData: loadSampleData && !isTurf,
       });
@@ -143,27 +139,16 @@ export default function OnboardingPage() {
           {/* City */}
           <div className="space-y-2">
             <label htmlFor="biz-city" className={labelCls}>City</label>
-            <select
+            <Input
               id="biz-city"
+              type="text"
               value={city}
-              onChange={(e) => setCity(e.target.value as (typeof CITIES)[number])}
-              className="flex h-12 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-base text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400"
-            >
-              {CITIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-            {city === "Other" && (
-              <Input
-                type="text"
-                value={cityOther}
-                onChange={(e) => setCityOther(e.target.value)}
-                maxLength={60}
-                placeholder="Type your city"
-                aria-label="Your city"
-                className="bg-zinc-900 border-zinc-800 text-white h-11 text-sm focus-visible:ring-lime-400"
-              />
-            )}
+              onChange={(e) => setCity(e.target.value)}
+              required
+              maxLength={60}
+              placeholder="e.g. London, Dubai, Mumbai, New York"
+              className="bg-zinc-900 border-zinc-800 text-white h-12 text-base focus-visible:ring-lime-400"
+            />
           </div>
 
           {/* Sports (multi) */}

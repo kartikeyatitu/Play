@@ -29,7 +29,7 @@ export const MESSAGE_TEMPLATES: WhatsAppTemplate[] = [
     id: "fee_reminder",
     name: "Fee Reminder",
     category: "fee_reminder",
-    body: "💰 Fee Reminder\n\nNamaste {{parent_name}},\n\n{{student_name}}'s fee of ₹{{amount}} for {{month}} is pending at {{academy_name}}.\n\n{{pay_link}}\n\nThank you.\n— {{academy_name}}",
+    body: "💰 Fee Reminder\n\nHi {{parent_name}},\n\n{{student_name}}'s fee of {{amount}} for {{month}} is pending at {{academy_name}}.\n\n{{pay_link}}\n\nThank you.\n— {{academy_name}}",
     variables: ["parent_name", "student_name", "amount", "month", "academy_name", "pay_link"],
     isActive: true,
   },
@@ -85,12 +85,10 @@ export function fillTemplate(template: string, variables: Record<string, string>
 }
 
 // Generate wa.me link (fallback when API not configured).
-// Bare 10-digit numbers are Indian; "+44…" stays "44…" (it used to become "9144…"), and a 10-digit
-// Indian number that happens to start with 91 now gets its country code too.
+// Uses parsePhone to normalize; assumes numbers include country code digits.
 export function generateWhatsAppLink(phone: string, message: string): string {
-  const cleanPhone = phone.replace(/[^0-9]/g, "");
-  const fullPhone = toWaMeNumber(phone) ?? (cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`);
-  return `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
+  const digits = toWaMeNumber(phone) ?? phone.replace(/[^0-9]/g, "");
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
 // ─── Server-side Cloud API sender ────────────────────────────────────────────

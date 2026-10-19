@@ -218,7 +218,7 @@ export default async function PublicCoachProfilePage({ params }: { params: Promi
                       <div className="flex flex-wrap items-center gap-2 pt-0.5">
                         {b.monthlyFee != null && b.monthlyFee > 0 && (
                           <span className="text-xs font-semibold text-zinc-200">
-                            ₹{b.monthlyFee.toLocaleString("en-IN")}
+                            {b.monthlyFee.toLocaleString()}
                             <span className="text-zinc-500 font-normal">/month</span>
                           </span>
                         )}

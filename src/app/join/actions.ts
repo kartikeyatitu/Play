@@ -26,7 +26,7 @@ export async function registerParent(
   if (!slug) return { error: "Please use the registration link provided by your academy." };
   if (parentName.length < 2 || parentName.length > 80) return { error: "Parent name must be 2-80 characters." };
   if (childName.length < 2 || childName.length > 80) return { error: "Child's name must be 2-80 characters." };
-  if (!phone) return { error: "Please enter a valid 10-digit Indian mobile number." };
+  if (!phone) return { error: "Please enter a valid phone number." };
 
   let dob: Date | null = null;
   if (dobRaw) {
@@ -72,7 +72,9 @@ export async function registerParent(
     }
 
     // Phone may be stored with or without country code
-    const phoneVariants = [phone, `+91${phone}`, `91${phone}`, `+91 ${phone}`];
+    // Phone may be stored with or without country code — try common variants
+    const phoneVariants = [phone, `+${phone}`, phone.replace(/^\+/, "")];
+    if (phone.length === 10) phoneVariants.push(`91${phone}`, `+91${phone}`);
     const existingUser = await db.user.findFirst({ where: { phone: { in: phoneVariants } } });
     if (existingUser) {
       if (existingUser.orgId !== org.id) {

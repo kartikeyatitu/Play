@@ -18,14 +18,14 @@ export function FoundingOfferBanner({ className }: { className?: string }) {
           <Sparkles className="h-5 w-5" aria-hidden />
         </span>
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wider text-amber-300">{FOUNDING_OFFER.city} founding offer</p>
+          <p className="text-sm font-semibold uppercase tracking-wider text-amber-300">Founding offer</p>
           <p className="mt-1 text-lg font-semibold text-zinc-50">
             First {FOUNDING_OFFER.slots} academies: {FOUNDING_OFFER.discountPercent}% off for {FOUNDING_OFFER.months} months + free
             migration in {FOUNDING_OFFER.migrationHours} hours.
           </p>
         </div>
       </div>
-      <Link href="/gurgaon" className={cn(secondaryCta, "h-10 shrink-0 border-amber-400/40 px-5 text-amber-200 hover:bg-amber-400/10")}>
+      <Link href="/register" className={cn(secondaryCta, "h-10 shrink-0 border-amber-400/40 px-5 text-amber-200 hover:bg-amber-400/10")}>
         Apply as founding academy
       </Link>
     </div>

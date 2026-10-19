@@ -68,7 +68,7 @@ export default function OpengraphImage() {
               color: "#fcd34d",
             }}
           >
-            {`${FOUNDING_OFFER.city} founding offer: ${FOUNDING_OFFER.discountPercent}% off`}
+            {`Founding offer: ${FOUNDING_OFFER.discountPercent}% off`}
           </div>
         </div>
       </div>

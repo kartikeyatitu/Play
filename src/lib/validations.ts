@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const phoneSchema = z.string().regex(/^[6-9]\d{9}$/, "Enter valid 10-digit Indian phone number");
+export const phoneSchema = z.string().min(7, "Enter a valid phone number").max(15, "Phone number too long").regex(/^\+?\d{7,15}$/, "Enter a valid phone number");
 export const nameSchema = z.string().min(2, "Name must be at least 2 characters").max(100);
 export const emailSchema = z.string().email("Enter a valid email").optional().or(z.literal(""));
 

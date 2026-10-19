@@ -1,26 +1,27 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, MapPin, Sparkles, Star, Zap, MessageCircle } from "lucide-react";
-import { CITIES, SITE_URL, SPORTS, getCity } from "@/lib/directory";
+import { CITIES, SITE_URL, SPORTS } from "@/lib/directory";
 import { DirectoryShell, JsonLd } from "@/components/directory/directory-shell";
 import { getCityDirectory, sportCounts } from "./data";
 
 export const revalidate = 3600;
 
-const LAUNCH_CITY = getCity("gurgaon")!;
+/** First live city used for the default sport tiles; falls back to first live city in the CITIES array. */
+const LAUNCH_CITY = CITIES.find((c) => c.live) ?? CITIES[0];
 
 export const metadata: Metadata = {
   title: "Find Sports Academies Near You · Compare & Book Free Trials | Triq",
   description:
-    "Discover cricket, football, badminton, swimming, tennis and more academies in Gurgaon. Compare by area and Google rating, see live batches & fees, and book a free trial.",
+    "Discover cricket, football, badminton, swimming, tennis and more academies near you. Compare by area and Google rating, see live batches & fees, and book a free trial.",
   alternates: { canonical: "/academies" },
   openGraph: {
     title: "Find the right sports academy for your child | Triq",
-    description: "Compare academies in Gurgaon by area, rating and fees. Book a free trial in under a minute.",
+    description: "Compare academies by area, rating and fees. Book a free trial in under a minute.",
     url: "/academies",
     siteName: "Triq",
     type: "website",
-    locale: "en_IN",
+    locale: "en",
   },
 };
 

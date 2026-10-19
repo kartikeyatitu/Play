@@ -6,13 +6,13 @@ import { getAppUrl } from "@/lib/app-url";
 
 const title = "Triq for parents — know how your child is really doing";
 const description =
-  "Attendance alerts, session recaps from the coach, progress reports and easy fee payments. Find a Gurgaon academy on Triq or ask yours to switch.";
+  "Attendance alerts, session recaps from the coach, progress reports and easy fee payments. Find an academy on Triq or ask yours to switch.";
 
 export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: "/parents" },
-  openGraph: { title, description, url: "/parents", siteName: "Triq", type: "website", locale: "en_IN" },
+  openGraph: { title, description, url: "/parents", siteName: "Triq", type: "website", locale: "en" },
   twitter: { card: "summary_large_image", title, description },
 };
 
@@ -39,8 +39,8 @@ export default function ParentsPage() {
         </h1>
         <p className="mt-4 text-zinc-400 max-w-xl mx-auto">{description}</p>
         <div className="mt-7 flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/academies/gurgaon" className={primaryCta}>
-            <Search className="w-4 h-4" /> Find an academy in Gurgaon
+          <Link href="/academies" className={primaryCta}>
+            <Search className="w-4 h-4" /> Find an academy
           </Link>
           <a
             href={`https://wa.me/?text=${encodeURIComponent(ASK_ACADEMY_TEXT)}`}

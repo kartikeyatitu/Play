@@ -130,7 +130,7 @@ export async function submitDemoRequest(_prev: DemoFormState, formData: FormData
         academy: data.academy ?? null,
         sport: data.sport ?? null,
         students: data.students ?? null,
-        city: data.city ?? "Gurgaon",
+        city: data.city ?? null,
         source: "landing",
         utm: sanitiseUtm(data.utm),
       },

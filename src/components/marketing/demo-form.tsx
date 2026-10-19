@@ -58,7 +58,7 @@ function Field({
  */
 export function DemoForm({
   utm,
-  defaultCity = "Gurgaon",
+  defaultCity = "",
   whatsappHref,
 }: {
   utm: string;

@@ -47,10 +47,12 @@ export function parseDob(raw: unknown): Date | null {
   return d;
 }
 
-/** Normalise an Indian mobile number to its last 10 digits; null if it can't be one. */
-export function cleanIndianPhone(raw: unknown): string | null {
+/** Normalise a phone number: strips non-digits, returns digits if valid length (7-15). */
+export function cleanPhone(raw: unknown): string | null {
   const digits = String(raw ?? "").replace(/[^0-9]/g, "");
-  if (digits.length < 10) return null;
-  const last10 = digits.slice(-10);
-  return /^[6-9]\d{9}$/.test(last10) ? last10 : null;
+  if (digits.length < 7 || digits.length > 15) return null;
+  return digits;
 }
+
+/** @deprecated Use cleanPhone instead. */
+export const cleanIndianPhone = cleanPhone;

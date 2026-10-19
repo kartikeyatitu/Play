@@ -1,6 +1,8 @@
 // Pure helpers for hourly turf/court slots. Safe for both server and client code.
-// Everything a person sees is IST; everything stored is UTC.
+// Everything a person sees is in the org's timezone; everything stored is UTC.
+// TODO: accept org timezone parameter instead of defaulting to IST.
 
+/** @deprecated Pass org timezone instead of using hardcoded IST offset. */
 const IST_OFFSET = "+05:30";
 export const MAX_HOURS_PER_BOOKING = 6;
 export const MAX_LEASE_WEEKS = 26;
@@ -58,13 +60,14 @@ export function formatRange(startHour: number, hours: number): string {
   return `${formatHour(startHour)} – ${formatHour(startHour + hours)}`;
 }
 
-export function formatDateLabel(dateStr: string): string {
+export function formatDateLabel(dateStr: string, tz = "Asia/Kolkata", locale = "en"): string {
   const d = new Date(`${dateStr}T12:00:00${IST_OFFSET}`);
-  return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+  return d.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short", timeZone: tz });
 }
 
 export const ACTIVE_STATUSES = ["HOLD", "CONFIRMED"] as const;
 
+/** @deprecated Use formatMoney from i18n.ts for org-aware formatting. */
 export function rupees(n: number): string {
   return `₹${Math.round(n).toLocaleString("en-IN")}`;
 }

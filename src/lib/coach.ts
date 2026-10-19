@@ -94,14 +94,11 @@ export function shortMedicalLabel(summary: string): string {
   return first.length > 18 ? `${first.slice(0, 18)}…` : first.toLowerCase();
 }
 
-/** Digits-only Indian phone with 91 prefix, or null if unusable. */
+/** Digits-only phone, or null if unusable. Assumes stored numbers already include country code. */
 export function cleanPhone(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const d = raw.replace(/\D/g, "");
-  if (d.length === 10) return `91${d}`;
-  if (d.length === 12 && d.startsWith("91")) return d;
-  if (d.length > 10) return d;
-  return null;
+  return d.length >= 7 ? d : null;
 }
 
 /** Extract a display time like "4:00 PM" / "6-7 AM" from a free-text schedule. */

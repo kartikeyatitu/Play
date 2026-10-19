@@ -96,7 +96,7 @@ export function buildReminderMessage(opts: BuildReminderOpts): ReminderMessage {
   const amount = Number(opts.amount) || 0;
   const monthLabel = formatMonthHuman(opts.month);
   const academy = opts.academyName || "the academy";
-  const amountText = amount > 0 ? `₹${amount.toLocaleString("en-IN")}` : "the monthly fee";
+  const amountText = amount > 0 ? amount.toLocaleString() : "the monthly fee";
 
   const greeting = parent ? `Hi ${parent}` : "Hi";
   const opening = `${greeting}, ${studentName}'s ${monthLabel} fee of ${amountText} is pending at ${academy}.`;

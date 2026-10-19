@@ -32,9 +32,9 @@ export function isMonthString(v: unknown): v is string {
   return typeof v === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(v);
 }
 
-export function monthLabel(month: string): string {
+export function monthLabel(month: string, locale = "en"): string {
   const [y, m] = month.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(y, m - 1, 1)));
+  return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(y, m - 1, 1)));
 }
 
 export function shiftMonth(month: string, delta: number): string {
@@ -65,6 +65,7 @@ export function netPay(base: number, bonus: number, deduction: number, advance: 
   return Math.max(0, Math.round(base + bonus - deduction - advance));
 }
 
+/** @deprecated Use formatMoney from i18n.ts for org-aware formatting. */
 export const formatINR = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 /** Payslip text for WhatsApp. */
@@ -103,7 +104,7 @@ export function payslipText(p: {
   if (p.advance) lines.push(`Advance already paid: −${formatINR(p.advance)}`);
   lines.push(``, `*Net pay: ${formatINR(p.net)}*`);
   if (p.paid) {
-    const when = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(p.paid.at));
+    const when = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(p.paid.at));
     const mode = p.paid.mode && isPaymentMode(p.paid.mode) ? PAYMENT_MODE_LABELS[p.paid.mode] : p.paid.mode;
     lines.push(`Paid on ${when}${mode ? ` by ${mode}` : ""}${p.paid.reference ? ` (ref ${p.paid.reference})` : ""}`);
   }

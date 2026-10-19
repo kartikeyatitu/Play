@@ -11,11 +11,15 @@ interface FeePricingAnalyzerProps {
   city: string;
 }
 
+/** Rough market benchmarks by city. Shown as guidance only; not financial advice. */
 const MARKET_DATA: Record<string, { min: number; max: number; avg: number }> = {
   "Gurgaon": { min: 2000, max: 5000, avg: 3200 },
   "Delhi": { min: 1500, max: 4500, avg: 2800 },
   "Mumbai": { min: 2500, max: 6000, avg: 4000 },
   "Bangalore": { min: 2000, max: 5500, avg: 3500 },
+  "Dubai": { min: 3000, max: 8000, avg: 5000 },
+  "Singapore": { min: 4000, max: 10000, avg: 7000 },
+  "London": { min: 4000, max: 12000, avg: 8000 },
   "Default": { min: 1500, max: 4000, avg: 2500 },
 };
 

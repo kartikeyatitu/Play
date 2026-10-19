@@ -112,20 +112,17 @@ export function cityMatches(orgCity: string | null | undefined, city: DirectoryC
   return city.aliases.some((a) => v.includes(a));
 }
 
-/** Cleans an Indian mobile number to 10 digits (strips spaces, +91, leading 0). */
-export function cleanIndianPhone(raw: string | null | undefined): string {
-  let d = String(raw ?? "").replace(/\D/g, "");
-  if (d.length === 12 && d.startsWith("91")) d = d.slice(2);
-  else if (d.length === 11 && d.startsWith("0")) d = d.slice(1);
-  return d;
+/** Clean a phone number: strips non-digits, returns raw digits. */
+export function cleanPhone(raw: string | null | undefined): string {
+  return String(raw ?? "").replace(/\D/g, "");
 }
 
-export const INDIAN_MOBILE_RE = /^[6-9]\d{9}$/;
+/** @deprecated Use cleanPhone instead */
+export const cleanIndianPhone = cleanPhone;
 
-/** wa.me link for a stored phone (10-digit Indian numbers get the 91 prefix). */
+/** wa.me link for a stored phone (assumes digits include country code). */
 export function waLink(phone: string, text?: string): string {
-  let d = String(phone).replace(/\D/g, "");
-  if (d.length === 10) d = `91${d}`;
+  const d = String(phone).replace(/\D/g, "");
   return `https://wa.me/${d}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
 }
 
@@ -158,6 +155,7 @@ export function isSafeHexColor(c: string | null | undefined): c is string {
   return !!c && /^#[0-9a-f]{3,8}$/i.test(c);
 }
 
+/** @deprecated Use formatMoney from i18n.ts for org-aware formatting. */
 export function formatINR(n: number): string {
   return new Intl.NumberFormat("en-IN").format(n);
 }

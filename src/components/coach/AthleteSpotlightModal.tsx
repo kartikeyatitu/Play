@@ -51,13 +51,11 @@ interface AthleteSpotlightProps {
   trigger?: React.ReactNode;
 }
 
-function cleanIndianPhone(rawPhone: string | null | undefined): string | null {
+/** Clean phone for wa.me links — assumes stored numbers include country code digits. */
+function cleanPhone(rawPhone: string | null | undefined): string | null {
   if (!rawPhone) return null;
   const digits = rawPhone.replace(/\D/g, "");
-  if (digits.length === 10) return `91${digits}`;
-  if (digits.length === 12 && digits.startsWith("91")) return digits;
-  if (digits.length > 10) return digits;
-  return digits.length > 0 ? digits : null;
+  return digits.length >= 7 ? digits : null;
 }
 
 export function AthleteSpotlightModal({
@@ -68,7 +66,7 @@ export function AthleteSpotlightModal({
 }: AthleteSpotlightProps) {
   const [open, setOpen] = useState(false);
 
-  const parentPhone = cleanIndianPhone(athlete.parent?.phone);
+  const parentPhone = cleanPhone(athlete.parent?.phone);
   const parentName = athlete.parent?.name || "Parent";
   const medical = parseMedicalInfo(athlete.medicalInfo);
   const hasMedical = medical.hasAny;

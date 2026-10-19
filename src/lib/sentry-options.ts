@@ -3,7 +3,7 @@
 // Sentry stays completely off unless a DSN env var is set; see .env.example.
 
 const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
-// Indian mobiles (optional +91/91 prefix, spaces or dashes) and any other "+<country>…" number.
+// Phone numbers (various formats with optional country prefix) — scrubbed from error reports.
 // No lookbehind: older iOS WebViews can't parse it and the whole client chunk would fail.
 const PHONE = /(?:\+|\b)(?:91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}\b|\+\d{1,3}[\s-]?\d[\d\s-]{6,12}\d\b/g;
 

@@ -75,7 +75,7 @@ function SiteNav() {
         <div className="hidden items-center gap-7 text-sm text-zinc-400 md:flex">
           <Link href="/#features" className="hover:text-zinc-100">Features</Link>
           <Link href="/pricing" className="hover:text-zinc-100">Pricing</Link>
-          <Link href="/gurgaon" className="hover:text-zinc-100">Gurgaon</Link>
+          <Link href="/academies" className="hover:text-zinc-100">Academies</Link>
           <Link href="/#faq" className="hover:text-zinc-100">FAQ</Link>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
@@ -98,7 +98,7 @@ function SiteFooter() {
         <div className="space-y-3">
           <Logo />
           <p className="max-w-xs text-sm text-zinc-400">
-            Fees on time, parents informed, zero WhatsApp chaos. Built for Indian sports coaches and academies.
+            Fees on time, parents informed, zero WhatsApp chaos. Built for sports coaches and academies.
           </p>
         </div>
         <div>
@@ -111,10 +111,9 @@ function SiteFooter() {
           </ul>
         </div>
         <div>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">Gurgaon</h2>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">Directory</h2>
           <ul className="space-y-2 text-sm text-zinc-400">
-            <li><Link href="/gurgaon" className="hover:text-zinc-100">Founding academies</Link></li>
-            <li><Link href="/academies/gurgaon" className="hover:text-zinc-100">Find academies in Gurgaon</Link></li>
+            <li><Link href="/academies" className="hover:text-zinc-100">Find academies</Link></li>
             <li><Link href="/parents" className="hover:text-zinc-100">For parents</Link></li>
           </ul>
         </div>

@@ -7,6 +7,7 @@
 // Sending needs a different shape: E.164 ("+919876543210") for Twilio / WhatsApp, and
 // "91XXXXXXXXXX" (country code, no "+") for MSG91.
 
+/** @deprecated Will be expanded to support all country codes. Currently only "IN" has special parsing. */
 export type PhoneCountry = "IN";
 
 export interface ParsedPhone {

@@ -281,7 +281,7 @@ export default async function ListedAcademyPage({ params }: { params: Params }) 
               </dl>
               <p className="mt-4 text-[11px] leading-relaxed text-zinc-600">
                 Compiled from public sources{listing.rating != null ? "; rating from Google" : ""}. Last updated{" "}
-                {listing.updatedAt.toLocaleDateString("en-IN", { month: "short", year: "numeric" })}.
+                {listing.updatedAt.toLocaleDateString("en", { month: "short", year: "numeric" })}.
               </p>
             </section>
 

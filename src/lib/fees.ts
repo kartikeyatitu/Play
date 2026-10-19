@@ -44,7 +44,7 @@ export function buildUpiLink(opts: { upiId: string; payeeName: string; amount?: 
   params.set("pa", opts.upiId.trim());
   params.set("pn", opts.payeeName.slice(0, 50));
   if (opts.amount && opts.amount > 0) params.set("am", String(opts.amount));
-  params.set("cu", "INR");
+  params.set("cu", "INR"); // UPI is India-only; currency is always INR for UPI links
   if (opts.note) params.set("tn", opts.note.slice(0, 80));
   // URLSearchParams encodes spaces as "+", which some UPI apps show literally.
   return `upi://pay?${params.toString().replace(/\+/g, "%20")}`;
@@ -61,30 +61,36 @@ export const FEE_STATUS = {
   PAID: "PAID",
 } as const;
 
-const IST_TZ = "Asia/Kolkata";
-
-/** YYYY-MM-DD for "now" (or a given date) in India time. */
-export function istDateString(d: Date = new Date()): string {
-  // en-CA formats as YYYY-MM-DD
-  return new Intl.DateTimeFormat("en-CA", { timeZone: IST_TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
-}
-
-/** YYYY-MM for the current month in India time. */
-export function istMonthString(d: Date = new Date()): string {
-  return istDateString(d).slice(0, 7);
+/**
+ * YYYY-MM-DD for "now" in the given timezone. Defaults to UTC.
+ * @deprecated Prefer orgToday() from i18n.ts for org-aware timezone.
+ */
+export function istDateString(d: Date = new Date(), tz = "UTC"): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 }
 
 /**
- * Today's date in India as a Date at 00:00 UTC of that calendar day.
- * Sessions are stored with this canonical value so "today" is stable regardless of server TZ.
+ * YYYY-MM for the current month in the given timezone.
+ * @deprecated Prefer orgCurrentMonth() from i18n.ts for org-aware timezone.
  */
-export function istToday(d: Date = new Date()): Date {
-  return new Date(`${istDateString(d)}T00:00:00.000Z`);
+export function istMonthString(d: Date = new Date(), tz = "UTC"): string {
+  return istDateString(d, tz).slice(0, 7);
 }
 
-/** Weekday short name (Mon, Tue…) for today in India. */
-export function istWeekday(d: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-US", { timeZone: IST_TZ, weekday: "short" }).format(d);
+/**
+ * Today's date as a Date at 00:00 UTC of that calendar day.
+ * @deprecated Prefer orgToday() from i18n.ts for org-aware timezone.
+ */
+export function istToday(d: Date = new Date(), tz = "UTC"): Date {
+  return new Date(`${istDateString(d, tz)}T00:00:00.000Z`);
+}
+
+/**
+ * Weekday short name (Mon, Tue…) for today.
+ * @deprecated Prefer using org timezone from i18n.ts.
+ */
+export function istWeekday(d: Date = new Date(), tz = "UTC"): string {
+  return new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" }).format(d);
 }
 
 const DAY_TOKENS: Record<string, string[]> = {

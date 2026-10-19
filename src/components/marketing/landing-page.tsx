@@ -18,10 +18,10 @@ import { DemoSection, buildUtm, type MarketingSearchParams } from "./demo-sectio
 
 const HERO_COPY: Record<HeroLang, HeroCopyStrings> = {
   en: {
-    eyebrow: `${FOUNDING_OFFER.city} founding offer — ${FOUNDING_OFFER.discountPercent}% off for ${FOUNDING_OFFER.months} months`,
+    eyebrow: `Founding offer — ${FOUNDING_OFFER.discountPercent}% off for ${FOUNDING_OFFER.months} months`,
     titleA: "Run your academy",
     titleB: "from your phone.",
-    sub: `Attendance in seconds, fees collected on time, and parents updated automatically — without the WhatsApp chaos. Built for Indian sports coaches. Free up to ${FREE_PLAN.maxStudents} students.`,
+    sub: `Attendance in seconds, fees collected on time, and parents updated automatically — without the WhatsApp chaos. Built for sports coaches. Free up to ${FREE_PLAN.maxStudents} students.`,
     startFree: "Start free",
     bookDemo: "Book a 15-min demo",
     micro: ["No credit card", `Free up to ${FREE_PLAN.maxStudents} students`, `We migrate your data in ${FOUNDING_OFFER.migrationHours}h`],

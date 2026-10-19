@@ -33,7 +33,7 @@ export default function PrivacyPolicyPage() {
           <h2 className="text-lg font-semibold text-zinc-100">2. Information We Collect</h2>
           <p>We collect only the essential information needed to operate sports coaching and academy management:</p>
           <ul className="list-disc pl-5 space-y-2 text-zinc-400">
-            <li><strong className="text-zinc-200">Account & Contact Info:</strong> Name, 10-digit Indian mobile number, email address, role (Admin, Coach, Parent).</li>
+            <li><strong className="text-zinc-200">Account & Contact Info:</strong> Name, phone number, email address, role (Admin, Coach, Parent).</li>
             <li><strong className="text-zinc-200">Student & Player Profiles:</strong> Student name, date of birth, blood group, emergency medical alerts, and batch enrollment (provided strictly with parent/guardian consent).</li>
             <li><strong className="text-zinc-200">Coaching & Attendance Records:</strong> Daily training attendance logs, skill ratings, match schedules, and performance progress.</li>
             <li><strong className="text-zinc-200">Fee & Transaction Metadata:</strong> Monthly fee status, payment reference numbers (UTR), and receipts. Note: Payment transactions are conducted directly via Unified Payments Interface (UPI) into the academy&apos;s bank account. Triq does not store bank account passwords, UPI PINs, or debit/credit card numbers.</li>
@@ -68,7 +68,7 @@ export default function PrivacyPolicyPage() {
           <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 text-xs space-y-1">
             <p className="font-semibold text-zinc-200">Triq Grievance Redressal</p>
             <p className="text-zinc-400">Email: <a href="mailto:privacy@triq.app" className="text-emerald-400">privacy@triq.app</a></p>
-            <p className="text-zinc-400">Location: Gurgaon, Haryana, India</p>
+            <p className="text-zinc-400">Location: contact@triq.app</p>
           </div>
         </section>
 

@@ -103,13 +103,6 @@ export function formatCurrency(amount: number | null | undefined, currency: stri
   const config = SUPPORTED_CURRENCIES[curr];
 
   try {
-    if (curr === "INR") {
-      return `₹${Math.round(amount).toLocaleString("en-IN")}`;
-    }
-    if (curr === "AED") {
-      return `AED ${Math.round(amount).toLocaleString("en-US")}`;
-    }
-
     return new Intl.NumberFormat(config?.locale || "en-US", {
       style: "currency",
       currency: curr,

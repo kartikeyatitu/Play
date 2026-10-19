@@ -7,7 +7,7 @@ import { Faq } from "@/components/marketing/sections";
 import { DemoSection, buildUtm } from "@/components/marketing/demo-section";
 
 const title = `Pricing — Triq | Free up to ${FREE_PLAN.maxStudents} students`;
-const description = `Free up to ${FREE_PLAN.maxStudents} students. Growth is ${formatINR(GROWTH_PLAN.perStudentMonthly)} per active student per month (minimum ${formatINR(GROWTH_PLAN.minMonthly)}). ${FOUNDING_OFFER.city} founding academies get ${FOUNDING_OFFER.discountPercent}% off for ${FOUNDING_OFFER.months} months.`;
+const description = `Free up to ${FREE_PLAN.maxStudents} students. Growth is ${formatINR(GROWTH_PLAN.perStudentMonthly)} per active student per month (minimum ${formatINR(GROWTH_PLAN.minMonthly)}). Founding academies get ${FOUNDING_OFFER.discountPercent}% off for ${FOUNDING_OFFER.months} months.`;
 
 export const metadata: Metadata = {
   title,

@@ -229,8 +229,7 @@ export default async function CoachDashboard({
     })
   );
 
-  const todayLabel = new Date().toLocaleDateString("en-IN", {
-    timeZone: "Asia/Kolkata",
+  const todayLabel = new Date().toLocaleDateString("en", {
     weekday: "long",
     day: "numeric",
     month: "short",
@@ -316,7 +315,7 @@ export default async function CoachDashboard({
                 </div>
                 <p className="text-xs text-zinc-400 flex items-center gap-1.5 flex-wrap">
                   <Calendar className="w-3 h-3" />
-                  {new Date(event.date).toLocaleString("en-IN", {
+                  {new Date(event.date).toLocaleString("en", {
                     timeZone: "Asia/Kolkata",
                     weekday: "short",
                     day: "numeric",

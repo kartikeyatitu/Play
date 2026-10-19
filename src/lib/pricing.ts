@@ -1,6 +1,7 @@
-// Single source of truth for Triq pricing.
-// Change numbers HERE ONLY — the landing page, /pricing, /gurgaon and FAQ copy all read from this file.
+// Single source of truth for Triq pricing (currently INR — multi-currency pricing TBD).
+// Change numbers HERE ONLY — the landing page, /pricing and FAQ copy all read from this file.
 
+/** @deprecated Use formatMoney from i18n.ts instead for org-aware formatting. */
 export const CURRENCY = "₹";
 
 export const FREE_PLAN = {
@@ -25,7 +26,6 @@ export const ACADEMY_PLAN = {
 } as const;
 
 export const FOUNDING_OFFER = {
-  city: "Gurgaon",
   slots: 50,
   discountPercent: 50,
   months: 12,

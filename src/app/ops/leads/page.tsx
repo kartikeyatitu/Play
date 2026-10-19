@@ -36,7 +36,7 @@ function ago(d: Date) {
   if (mins < 60) return `${Math.max(1, mins)}m ago`;
   const h = Math.round(mins / 60);
   if (h < 48) return `${h}h ago`;
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  return d.toLocaleDateString("en", { day: "numeric", month: "short" });
 }
 
 export default async function OpsLeadsPage() {

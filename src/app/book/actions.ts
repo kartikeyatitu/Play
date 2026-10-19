@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
-import { cleanIndianPhone } from "@/lib/import-utils";
+import { cleanPhone } from "@/lib/import-utils";
 import { reserveSlot, confirmPaidBooking, UPI_REPORTED } from "@/lib/turf-engine";
 import { getOrgRazorpay } from "@/lib/razorpay-org";
 import { createRazorpayOrder, verifyRazorpayCheckoutSignature } from "@/lib/gateways/razorpay";
@@ -135,7 +135,7 @@ export async function startOnlineBooking(input: {
 }): Promise<StartBookingResult> {
   try {
     const name = String(input?.name ?? "").trim();
-    const phone = cleanIndianPhone(input?.phone);
+    const phone = cleanPhone(input?.phone);
     const date = String(input?.date ?? "");
     const startHour = Math.round(Number(input?.startHour));
     const hours = Math.round(Number(input?.hours));
@@ -303,7 +303,7 @@ export async function startUpiBooking(input: {
 }): Promise<StartUpiResult> {
   try {
     const name = String(input?.name ?? "").trim();
-    const phone = cleanIndianPhone(input?.phone);
+    const phone = cleanPhone(input?.phone);
     const date = String(input?.date ?? "");
     const startHour = Math.round(Number(input?.startHour));
     const hours = Math.round(Number(input?.hours));
@@ -385,7 +385,7 @@ export type ReportUpiResult = { success: true; late: boolean } | { success: fals
  */
 export async function reportUpiPaid(input: { bookingId: string; phone: string; utr?: string }): Promise<ReportUpiResult> {
   try {
-    const phone = cleanIndianPhone(input?.phone);
+    const phone = cleanPhone(input?.phone);
     if (!input?.bookingId || !phone) return { success: false, error: "Missing details." };
     const ip = await clientIp();
     if (!rateLimit(`turf:upi:${ip}`, 20, 10 * 60_000).allowed) return { success: false, error: "Too many attempts." };

@@ -57,7 +57,7 @@ export default async function ReceiptPage(props: {
     qrDataUri = "";
   }
 
-  const shareText = `*Fee Payment Receipt*\nStudent: ${receipt.studentName}\nAcademy: ${org?.name || "Academy"}\nMonth: ${formattedMonth}\nAmount: ₹${receipt.amount.toLocaleString("en-IN")}\nReceipt #: ${receipt.receiptNumber}\n\nView & verify official receipt:\n${verificationUrl}`;
+  const shareText = `*Fee Payment Receipt*\nStudent: ${receipt.studentName}\nAcademy: ${org?.name || "Academy"}\nMonth: ${formattedMonth}\nAmount: ${receipt.amount.toLocaleString()}\nReceipt #: ${receipt.receiptNumber}\n\nView & verify official receipt:\n${verificationUrl}`;
   const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
   return (
@@ -105,7 +105,7 @@ export default async function ReceiptPage(props: {
               {org?.name || "Sports Academy"}
             </h1>
             <p className="text-xs text-zinc-400 mt-0.5 print:text-zinc-600">
-              {org?.city ? `${org.city}${org.state ? `, ${org.state}` : ""}` : "India"} · {org?.phone || "Sports Academy Management"}
+              {org?.city ? `${org.city}${org.state ? `, ${org.state}` : ""}` : ""}{org?.city ? " · " : ""}{org?.phone || "Sports Academy Management"}
             </p>
           </div>
           <div className="text-right">
@@ -114,7 +114,7 @@ export default async function ReceiptPage(props: {
               {receipt.receiptNumber}
             </div>
             <div className="text-[11px] text-zinc-400 mt-1 print:text-zinc-600">
-              {new Date(receipt.issuedAt).toLocaleDateString("en-IN", {
+              {new Date(receipt.issuedAt).toLocaleDateString("en", {
                 day: "numeric",
                 month: "short",
                 year: "numeric",
@@ -157,14 +157,14 @@ export default async function ReceiptPage(props: {
               Monthly Coaching Fee — <span className="font-medium text-white print:text-black">{formattedMonth}</span>
             </span>
             <span className="font-mono font-medium text-zinc-200 print:text-black">
-              ₹{receipt.amount.toLocaleString("en-IN")}
+              {receipt.amount.toLocaleString()}
             </span>
           </div>
 
           <div className="border-t border-zinc-800/80 pt-3 mt-3 flex items-center justify-between text-base font-bold print:border-zinc-300">
             <span className="text-white print:text-black">Total Amount Paid</span>
             <span className="font-mono text-xl text-lime-400 print:text-emerald-700">
-              ₹{receipt.amount.toLocaleString("en-IN")}
+              {receipt.amount.toLocaleString()}
             </span>
           </div>
         </div>

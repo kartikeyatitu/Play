@@ -22,7 +22,7 @@ export function DemoSection({
   utm,
   title = "Book a 15-minute demo",
   description = "We'll show you Triq on your own phone, with your batches — and answer every question about fees, parents and switching over.",
-  defaultCity = "Gurgaon",
+  defaultCity = "",
 }: {
   utm: string;
   title?: string;

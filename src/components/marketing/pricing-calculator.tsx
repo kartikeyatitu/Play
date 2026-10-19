@@ -55,7 +55,7 @@ export function PricingCalculator({ initial = 60 }: { initial?: number }) {
           <>
             {" "}
             <span className="font-medium text-amber-300">
-              {FOUNDING_OFFER.city} founding price: {formatINR(founding)}/mo for {FOUNDING_OFFER.months} months.
+              Founding price: {formatINR(founding)}/mo for {FOUNDING_OFFER.months} months.
             </span>
           </>
         )}

@@ -4,14 +4,14 @@
 // - requestTrial: parent free-trial enquiry for a ListedAcademy (unclaimed / pending).
 //   Triq academies (Organizations) use the existing /trial?academy=<slug> booking flow instead.
 // - claimListing: an owner claims a listing → ClaimRequest + SalesLead (source "directory_claim").
-// Hardening: zod validation, Indian mobile check, honeypot, rate-limits by phone and IP.
+// Hardening: zod validation, phone check, honeypot, rate-limits by phone and IP.
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
-import { INDIAN_MOBILE_RE, cleanIndianPhone, listingPath, parseSports } from "@/lib/directory";
+import { cleanIndianPhone, listingPath, parseSports } from "@/lib/directory";
 
 export type DirectoryActionState = {
   ok: boolean;
@@ -38,7 +38,7 @@ function str(fd: FormData, key: string): string {
 const phoneField = z
   .string()
   .transform((v) => cleanIndianPhone(v))
-  .refine((v) => INDIAN_MOBILE_RE.test(v), "Enter a valid 10-digit Indian mobile number");
+  .refine((v) => v !== null && v.length >= 7 && v.length <= 15, "Enter a valid phone number");
 
 const idField = z.string().trim().min(1).max(64).regex(/^[a-zA-Z0-9_-]+$/);
 

@@ -102,7 +102,7 @@ export function AcademyCard({ item, priority = false }: { item: DirectoryItem; p
           <p className="flex flex-wrap items-center gap-x-2 text-[13px] text-zinc-300">
             {item.minFee != null && (
               <span>
-                From <span className="font-semibold text-white">₹{formatINR(item.minFee)}</span>
+                From <span className="font-semibold text-white">{item.minFee.toLocaleString()}</span>
                 <span className="text-zinc-500">/mo</span>
               </span>
             )}
