@@ -292,7 +292,8 @@ export default async function CoachDashboard({
       student: { ...e.student, feeDue: feeByStudent.get(e.student.id)?.status === "PENDING" },
     })),
   }));
-  const squadPanel = <CoachBatchRoster batches={squadBatches} coachId={coach.id} currentMonth={currentMonth} />;
+  // Cast: DB rows carry extra Prisma fields beyond BatchRecord's shape.
+  const squadPanel = <CoachBatchRoster batches={squadBatches as unknown as import("@/components/coach/CoachBatchRoster").BatchRecord[]} coachId={coach.id} currentMonth={currentMonth} />;
 
   const planPanel = (
     <div className="space-y-4">
