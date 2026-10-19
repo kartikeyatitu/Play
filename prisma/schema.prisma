@@ -42,6 +42,13 @@ model Organization {
   brandColor        String?  // hex, e.g. "#a3e635"; null = Triq lime
   hidePoweredBy     Boolean  @default(false)
 
+  // Globalisation (additive): per-academy locale. Defaults filled at signup.
+  country       String   @default("IN")       // ISO 3166-1 alpha-2
+  currency      String   @default("INR")      // ISO 4217
+  timezone      String   @default("Asia/Kolkata")
+  locale        String   @default("en-IN")    // BCP-47
+  phoneCountry  String   @default("91")       // calling code without +
+
   // M3 (additive): the academy's OWN Razorpay account. Money settles to the academy, never to Triq.
   // Secrets are AES-256-GCM encrypted (src/lib/secret-box.ts) and must never be sent to the client.
   razorpayKeyId            String?
@@ -594,9 +601,11 @@ model SkillReport {
   studentId  String
   coachId    String
   month      String // "YYYY-MM"
-  technique  Int      @default(3) // 1-5 stars
+  technique  Int      @default(3) // 1-5 stars (legacy — kept for backward compat)
   fitness    Int      @default(3)
   discipline Int      @default(3)
+  sport      String?  // sport at time of evaluation (denormalized from batch)
+  metrics    Json?    // sport-specific scores: { "batting": 4, "bowling": 3, … }
   notes      String?
   createdAt  DateTime @default(now())
 

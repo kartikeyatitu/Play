@@ -7,43 +7,92 @@ import { Button } from "@/components/ui/button";
 import { submitSkillReport } from "@/app/actions/reports";
 import { Loader2, Star, Award } from "lucide-react";
 import { toast } from "sonner";
+import { getSportConfig, type SkillDimension } from "@/lib/sport-metrics";
 
-type ExistingReport = { technique: number; fitness: number; discipline: number; notes?: string | null } | null;
+type ExistingReport = {
+  technique: number;
+  fitness: number;
+  discipline: number;
+  notes?: string | null;
+  metrics?: Record<string, number> | null;
+} | null;
 
 export function EvaluateModal({
   student,
   coachId,
   currentMonth,
+  sport,
   trigger,
   existing = null,
 }: {
   student: { id: string; name: string };
   coachId: string;
   currentMonth: string;
+  /** Batch sport — drives which skill dimensions are shown. */
+  sport?: string | null;
   trigger?: React.ReactNode;
   existing?: ExistingReport;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [technique, setTechnique] = useState(existing?.technique ?? 3);
-  const [fitness, setFitness] = useState(existing?.fitness ?? 3);
-  const [discipline, setDiscipline] = useState(existing?.discipline ?? 3);
   const [notes, setNotes] = useState(existing?.notes ?? "");
 
+  const config = getSportConfig(sport);
+  const dimensions = config.dimensions;
+
+  // Build initial scores from existing report
+  function buildInitialScores(): Record<string, number> {
+    const scores: Record<string, number> = {};
+    const existingMetrics = existing?.metrics || {};
+    dimensions.forEach((dim, idx) => {
+      if (existingMetrics[dim.key] != null) {
+        scores[dim.key] = existingMetrics[dim.key];
+      } else if (idx === 0 && existing) {
+        scores[dim.key] = existing.technique;
+      } else if (idx === 1 && existing) {
+        scores[dim.key] = existing.fitness;
+      } else if (idx === 2 && existing) {
+        scores[dim.key] = existing.discipline;
+      } else {
+        scores[dim.key] = 3;
+      }
+    });
+    return scores;
+  }
+
+  const [scores, setScores] = useState<Record<string, number>>(buildInitialScores);
+
   function openModal() {
-    // Re-sync with the latest server data each time the modal opens
-    setTechnique(existing?.technique ?? 3);
-    setFitness(existing?.fitness ?? 3);
-    setDiscipline(existing?.discipline ?? 3);
+    setScores(buildInitialScores());
     setNotes(existing?.notes ?? "");
     setOpen(true);
+  }
+
+  function setScore(key: string, value: number) {
+    setScores((prev) => ({ ...prev, [key]: value }));
   }
 
   async function handleSubmit() {
     setLoading(true);
     try {
-      const res = await submitSkillReport(student.id, coachId, currentMonth, technique, fitness, discipline, notes.trim());
+      // Legacy fields get the first 3 dimension scores for backward compat
+      const keys = dimensions.map((d) => d.key);
+      const technique = scores[keys[0]] ?? 3;
+      const fitness = scores[keys[1]] ?? 3;
+      const discipline = scores[keys[2]] ?? 3;
+
+      const res = await submitSkillReport(
+        student.id,
+        coachId,
+        currentMonth,
+        technique,
+        fitness,
+        discipline,
+        notes.trim(),
+        sport ?? undefined,
+        scores
+      );
       if (res?.success) {
         toast.success(`${existing ? "Updated" : "Saved"} evaluation for ${student.name}`);
         setOpen(false);
@@ -58,13 +107,13 @@ export function EvaluateModal({
     }
   }
 
-  const renderStars = (value: number, setValue: (v: number) => void) => (
+  const renderStars = (value: number, onChange: (v: number) => void) => (
     <div className="flex gap-1.5">
       {[1, 2, 3, 4, 5].map((star) => (
         <button
           type="button"
           key={star}
-          onClick={() => setValue(star)}
+          onClick={() => onChange(star)}
           className="focus:outline-none p-1 hover:scale-110 transition-transform"
         >
           <Star
@@ -95,33 +144,29 @@ export function EvaluateModal({
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100 max-w-md rounded-3xl p-6">
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100 max-w-md rounded-3xl p-6 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-white">Evaluate {student.name}</DialogTitle>
-            <p className="text-xs text-zinc-400">Monthly Progress Assessment for {currentMonth}</p>
+            <p className="text-xs text-zinc-400">
+              {config.emoji} {config.name} — {currentMonth}
+            </p>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
+            {dimensions.map((dim: SkillDimension) => (
+              <div key={dim.key} className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                  {dim.label}
+                </label>
+                <p className="text-[11px] text-zinc-500 -mt-0.5">{dim.hint}</p>
+                {renderStars(scores[dim.key] ?? 3, (v) => setScore(dim.key, v))}
+              </div>
+            ))}
+
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-wider text-zinc-300">
-                Technique & Execution
+                Coach notes (visible to parents)
               </label>
-              {renderStars(technique, setTechnique)}
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-300">
-                Fitness & Conditioning
-              </label>
-              {renderStars(fitness, setFitness)}
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-300">
-                Discipline & Game Sense
-              </label>
-              {renderStars(discipline, setDiscipline)}
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-300">Coach notes (visible to parents)</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}

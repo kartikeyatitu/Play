@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 
 // COACH added: skill reports are submitted from the coach dashboard (EvaluateModal).
-export async function submitSkillReport(studentId: string, coachId: string, month: string, technique: number, fitness: number, discipline: number, notes: string) {
+export async function submitSkillReport(studentId: string, coachId: string, month: string, technique: number, fitness: number, discipline: number, notes: string, sport?: string, metrics?: Record<string, number>) {
     const session = await requireAuth(['ADMIN', 'COACH']);
   const orgId = session.orgId || "__no_org__";
 
@@ -29,10 +29,14 @@ export async function submitSkillReport(studentId: string, coachId: string, mont
       studentId_month: { studentId: student.id, month }
     },
     update: {
-      technique, fitness, discipline, notes, coachId: authorId, orgId: student.orgId
+      technique, fitness, discipline, notes, coachId: authorId, orgId: student.orgId,
+      ...(sport != null && { sport }),
+      ...(metrics != null && { metrics }),
     },
     create: {
-      studentId: student.id, month, coachId: authorId, technique, fitness, discipline, notes, orgId: student.orgId
+      studentId: student.id, month, coachId: authorId, technique, fitness, discipline, notes, orgId: student.orgId,
+      ...(sport != null && { sport }),
+      ...(metrics != null && { metrics }),
     }
   });
 

@@ -98,7 +98,7 @@ export function buildReminderMessage(opts: BuildReminderOpts): ReminderMessage {
   const academy = opts.academyName || "the academy";
   const amountText = amount > 0 ? `₹${amount.toLocaleString("en-IN")}` : "the monthly fee";
 
-  const greeting = parent ? `Namaste ${parent}` : "Namaste";
+  const greeting = parent ? `Hi ${parent}` : "Hi";
   const opening = `${greeting}, ${studentName}'s ${monthLabel} fee of ${amountText} is pending at ${academy}.`;
 
   if (opts.pay.kind === "razorpay") {

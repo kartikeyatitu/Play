@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Link from "next/link";
 import { MedicalForm } from "@/components/org/MedicalForm";
+import { PlayerAnalytics } from "@/components/analytics/PlayerAnalytics";
+import { formatMoney, type OrgLocale } from "@/lib/i18n";
 
 export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -22,6 +24,15 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
         : { orgId: orgScope };
 
   const backHref = session.role === "PARENT" ? "/parent" : session.role === "COACH" ? "/coach" : "/org";
+
+  // Load org locale for currency formatting
+  const org = session.orgId
+    ? await db.organization.findUnique({
+        where: { id: session.orgId },
+        select: { country: true, currency: true, timezone: true, locale: true, phoneCountry: true },
+      })
+    : null;
+  const orgLocale: OrgLocale = org ?? {};
 
   const student = await db.student.findFirst({
     where: { id, ...accessFilter },
@@ -151,7 +162,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                   {student.feeRecords.map((f) => (
                     <TableRow key={f.id} className="border-zinc-800">
                       <TableCell>{f.month}</TableCell>
-                      <TableCell>₹{f.amount}</TableCell>
+                      <TableCell>{formatMoney(f.amount, orgLocale)}</TableCell>
                       <TableCell>
                         {f.status === "PAID" ? (
                           <Badge variant="emerald" className="bg-emerald-900/30 text-emerald-400 border-emerald-900/50">PAID</Badge>
@@ -173,26 +184,20 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
         </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Skill Reports */}
-          <Card className="bg-zinc-900/40 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-lg">Skill Reports</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {student.skillReports.map((r) => (
-                <div key={r.id} className="p-3 bg-zinc-900/80 rounded-md border border-zinc-800">
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="font-medium text-sm text-zinc-100">{new Date(r.createdAt).toLocaleDateString()}</div>
-                    <div className="text-amber-400 text-xs">{"★".repeat(Math.round((r.technique + r.fitness + r.discipline) / 3))}{"☆".repeat(5-Math.round((r.technique + r.fitness + r.discipline) / 3))}</div>
-                  </div>
-                  <p className="text-sm text-zinc-400">{r.notes}</p>
-                </div>
-              ))}
-              {student.skillReports.length === 0 && (
-                <p className="text-zinc-500 text-sm">No skill reports yet.</p>
-              )}
-            </CardContent>
-          </Card>
+          {/* Sport-specific Skill Analytics */}
+          <PlayerAnalytics
+            reports={student.skillReports.map((r) => ({
+              month: r.month,
+              technique: r.technique,
+              fitness: r.fitness,
+              discipline: r.discipline,
+              notes: r.notes,
+              sport: (r as Record<string, unknown>).sport as string | null | undefined,
+              metrics: (r as Record<string, unknown>).metrics as Record<string, number> | null | undefined,
+            }))}
+            sport={student.enrollments[0]?.batch?.sport}
+            studentName={student.name}
+          />
 
           {/* Incidents & Media */}
           <div className="space-y-6">

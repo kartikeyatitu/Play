@@ -42,6 +42,7 @@ interface AthleteSpotlightProps {
       fitness: number;
       discipline: number;
       notes?: string | null;
+      metrics?: Record<string, number> | null;
     } | null;
     attendances?: { isPresent: boolean }[];
   };
@@ -246,6 +247,7 @@ export function AthleteSpotlightModal({
                 existing={athlete.skillReport ?? null}
                 coachId={coachId}
                 currentMonth={currentMonth}
+                sport={athlete.batchSport}
               />
               <CoachActions
                 studentId={athlete.id}

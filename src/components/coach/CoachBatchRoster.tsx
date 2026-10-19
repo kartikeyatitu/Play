@@ -33,6 +33,7 @@ export interface StudentRecord {
     fitness: number;
     discipline: number;
     notes?: string | null;
+    metrics?: Record<string, number> | null;
   }[];
   attendances?: {
     id?: string;
@@ -488,6 +489,7 @@ export function CoachBatchRoster({ batches, coachId, currentMonth }: CoachBatchR
             existing={null}
             coachId={coachId}
             currentMonth={currentMonth}
+            sport={nextToEvaluate.batchSport}
             trigger={
               <div
                 role="button"
