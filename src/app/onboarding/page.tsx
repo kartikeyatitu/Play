@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { createAcademyWorkspace } from "@/app/actions/onboarding";
 import { Loader2, Sparkles, PlusCircle, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -139,14 +140,12 @@ export default function OnboardingPage() {
           {/* City */}
           <div className="space-y-2">
             <label htmlFor="biz-city" className={labelCls}>City</label>
-            <Input
+            <CityAutocomplete
               id="biz-city"
-              type="text"
               value={city}
-              onChange={(e) => setCity(e.target.value)}
+              onChange={(v) => setCity(v)}
               required
-              maxLength={60}
-              placeholder="e.g. London, Dubai, Mumbai, New York"
+              placeholder="Start typing — e.g. Bangalore, Dubai, London"
               className="bg-zinc-900 border-zinc-800 text-white h-12 text-base focus-visible:ring-lime-400"
             />
           </div>

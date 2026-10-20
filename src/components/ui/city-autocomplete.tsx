@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { matchCities, type CitySuggestion } from "@/lib/cities";
-import { MapPin, Check } from "lucide-react";
+import { searchCities, type PlaceSuggestion } from "@/app/actions/places";
+import { MapPin, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CityAutocompleteProps {
   value: string;
   onChange: (value: string, country?: string) => void;
-  /** ISO 3166-1 alpha-2. If set, suggestions are filtered to this country. */
+  /** ISO 3166-1 alpha-2. If set, static suggestions are filtered to this country. */
   country?: string;
   id?: string;
   placeholder?: string;
@@ -18,10 +19,40 @@ interface CityAutocompleteProps {
   className?: string;
 }
 
+/** Internal shape — either source (static or Google Places) rendered the same way. */
+interface Suggestion {
+  key: string;
+  name: string;
+  subtitle: string;
+  country?: string;
+  source: "static" | "places";
+}
+
+const toStatic = (s: CitySuggestion): Suggestion => ({
+  key: `s:${s.name}-${s.country}`,
+  name: s.name,
+  subtitle: s.country,
+  country: s.country,
+  source: "static",
+});
+
+const toPlaces = (p: PlaceSuggestion): Suggestion => ({
+  key: `p:${p.placeId}`,
+  name: p.mainText,
+  subtitle: p.secondaryText,
+  country: p.country,
+  source: "places",
+});
+
 /**
- * Searchable city input: typeahead suggestions from a curated list +
- * free-text fallback for any city not on the list. Picking a suggestion
- * also communicates its country, so the parent can auto-set country.
+ * City input with live autocomplete.
+ *
+ * Two sources in order of preference:
+ * 1. Static curated list — rendered instantly on every keystroke (zero latency).
+ * 2. Google Places (via server action) — fetched on debounce; replaces static
+ *    when results arrive. If Places fails or returns empty, static stays.
+ *
+ * Free-text is always accepted — the user can type any city not in either list.
  */
 export function CityAutocomplete({
   value,
@@ -34,15 +65,46 @@ export function CityAutocomplete({
   className,
 }: CityAutocompleteProps) {
   const [open, setOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  // Guard against stale server responses overwriting newer ones.
+  const requestIdRef = useRef(0);
 
-  // Recompute suggestions on value or country change.
+  // Instant static matches on every value/country change.
   useEffect(() => {
-    setSuggestions(matchCities(value, country, 8));
+    const matches = matchCities(value, country, 8).map(toStatic);
+    setSuggestions(matches);
     setActiveIndex(0);
   }, [value, country]);
+
+  // Debounced Google Places call — kicks in once the user has typed ≥ 2 chars.
+  useEffect(() => {
+    const q = value.trim();
+    if (q.length < 2) return;
+
+    const myRequest = ++requestIdRef.current;
+    setLoading(true);
+
+    const timeout = setTimeout(async () => {
+      try {
+        const results = await searchCities(q);
+        // Discard if a newer keystroke already fired another request.
+        if (myRequest !== requestIdRef.current) return;
+        if (results.length > 0) {
+          setSuggestions(results.map(toPlaces));
+          setActiveIndex(0);
+        }
+      } catch {
+        // Keep static fallback on error.
+      } finally {
+        if (myRequest === requestIdRef.current) setLoading(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timeout);
+  }, [value]);
 
   // Close on outside click.
   useEffect(() => {
@@ -55,7 +117,7 @@ export function CityAutocomplete({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  const pick = (s: CitySuggestion) => {
+  const pick = (s: Suggestion) => {
     onChange(s.name, s.country);
     setOpen(false);
   };
@@ -76,8 +138,9 @@ export function CityAutocomplete({
     }
   };
 
-  // Does the current typed value already match one of our suggestions exactly?
-  const isExactMatch = suggestions.some((s) => s.name.toLowerCase() === value.trim().toLowerCase());
+  const isExactMatch = suggestions.some(
+    (s) => s.name.toLowerCase() === value.trim().toLowerCase(),
+  );
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -97,6 +160,12 @@ export function CityAutocomplete({
         autoComplete="off"
         className={cn("h-12 text-base", className)}
       />
+      {loading && (
+        <Loader2
+          className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 animate-spin"
+          aria-hidden
+        />
+      )}
       {open && suggestions.length > 0 && (
         <div
           role="listbox"
@@ -104,10 +173,11 @@ export function CityAutocomplete({
         >
           {suggestions.map((s, i) => {
             const active = i === activeIndex;
-            const selected = isExactMatch && s.name.toLowerCase() === value.trim().toLowerCase();
+            const selected =
+              isExactMatch && s.name.toLowerCase() === value.trim().toLowerCase();
             return (
               <button
-                key={`${s.name}-${s.country}`}
+                key={s.key}
                 type="button"
                 role="option"
                 aria-selected={active}
@@ -121,13 +191,16 @@ export function CityAutocomplete({
                 <span className="flex items-center gap-2 min-w-0">
                   <MapPin className="w-3.5 h-3.5 text-zinc-500 shrink-0" aria-hidden />
                   <span className="truncate">{s.name}</span>
-                  <span className="text-[11px] text-zinc-500 uppercase shrink-0">{s.country}</span>
+                  {s.subtitle && (
+                    <span className="text-[11px] text-zinc-500 truncate shrink-0">
+                      {s.subtitle}
+                    </span>
+                  )}
                 </span>
-                {selected && <Check className="w-4 h-4 text-lime-400" aria-hidden />}
+                {selected && <Check className="w-4 h-4 text-lime-400 shrink-0" aria-hidden />}
               </button>
             );
           })}
-          {/* Free-text hint when user is typing something not on the list */}
           {value.trim().length >= 2 && !isExactMatch && (
             <div className="border-t border-zinc-800 px-3 py-2 text-[11px] text-zinc-500 bg-zinc-900/60">
               Can&apos;t find yours? Just keep typing — any city works.
