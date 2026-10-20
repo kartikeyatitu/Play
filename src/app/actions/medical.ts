@@ -16,7 +16,19 @@ function studentAccessWhere(session: { id: string; role: string; orgId: string |
   return { id: studentId, orgId };
 }
 
-export async function updateMedicalInfo(studentId: string, data: any) {
+/** Payload shape for updateMedicalInfo. All fields optional; unknown keys are ignored. */
+export interface MedicalInfoInput {
+  bloodGroup?: string | null;
+  allergies?: string;
+  medications?: string;
+  conditions?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  dietaryNotes?: string;
+  [extra: string]: unknown; // forward-compat for new fields the UI adds
+}
+
+export async function updateMedicalInfo(studentId: string, data: MedicalInfoInput) {
     // PARENT added: the MedicalForm is rendered on /student/[id] for parents too (own children only)
     const session = await requireAuth(['ADMIN', 'COACH', 'PARENT']);
   try {
