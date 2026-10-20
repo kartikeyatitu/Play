@@ -1,8 +1,53 @@
 // Single source of truth for Triq pricing (currently INR — multi-currency pricing TBD).
 // Change numbers HERE ONLY — the landing page, /pricing and FAQ copy all read from this file.
+//
+// 🚨 Per plan §9: do not overwrite current pricing without founder approval.
 
 /** @deprecated Use formatMoney from i18n.ts instead for org-aware formatting. */
 export const CURRENCY = "₹";
+
+// ─── Canonical plan identifiers ─────────────────────────────────────────────
+//
+// Three independent vocabularies had grown up in the codebase (audit §4.H):
+//   - pricing.ts    → "free" / "growth" / "academy"       (shown in UI)
+//   - onboarding    → writes "FREE_TRIAL" to Organization.plan
+//   - billing-svc   → reads "FREE" / "STARTER" / "PRO" / "ENTERPRISE" from Subscription.plan
+//
+// From this file on, the canonical set is lowercase: "free" | "growth" | "academy".
+// Legacy values stored in production (every current org is "FREE_TRIAL") still read
+// correctly via canonicalPlan() — no DB migration is executed here. A migration script
+// is documented in docs/sprints/sprint-1-reliability-lockdown.md and awaits founder sign-off.
+
+export const PLAN_IDS = ["free", "growth", "academy"] as const;
+export type PlanId = (typeof PLAN_IDS)[number];
+
+/**
+ * Normalise any plan string we might read from the DB (Organization.plan or
+ * Subscription.plan) into the canonical PlanId. Unknown values default to "free"
+ * so the entitlement check always errs on the restrictive side.
+ */
+export function canonicalPlan(raw: string | null | undefined): PlanId {
+  const v = String(raw ?? "").trim().toLowerCase();
+  // Already canonical
+  if (v === "free" || v === "growth" || v === "academy") return v;
+  // Legacy Organization.plan values (currently every production row)
+  if (v === "free_trial") return "free";
+  // Legacy Subscription.plan values
+  if (v === "starter" || v === "pro") return "growth";
+  if (v === "enterprise") return "academy";
+  // Anything else → safest option
+  return "free";
+}
+
+/**
+ * True when the org is on a free-tier plan whose trial grace period has not expired
+ * (per Organization.planExpiry). "FREE_TRIAL" was the legacy marker for "free + trial";
+ * the trial now lives on planExpiry independent of the plan string.
+ */
+export function isInTrial(planExpiry: Date | null | undefined): boolean {
+  if (!planExpiry) return false;
+  return planExpiry.getTime() > Date.now();
+}
 
 export const FREE_PLAN = {
   id: "free",
@@ -23,6 +68,13 @@ export const ACADEMY_PLAN = {
   id: "academy",
   name: "Academy",
   label: "Custom",
+} as const;
+
+/** Maximum active students per plan (used by billing-service for quota checks). */
+export const PLAN_LIMITS: Record<PlanId, number> = {
+  free: FREE_PLAN.maxStudents,
+  growth: 10_000,     // soft cap — Growth is pay-per-student with no hard ceiling
+  academy: 100_000,   // custom plan; this cap only exists as a sanity guard
 } as const;
 
 export const FOUNDING_OFFER = {
