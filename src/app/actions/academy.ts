@@ -71,3 +71,41 @@ export async function updateAcademyPayments(formData: FormData) {
   revalidatePath("/parent");
   return { success: true };
 }
+
+/**
+ * ADMIN only: update the academy's country / currency / timezone / locale / phone country.
+ * The fields have DB defaults (India) so they're always set; this lets international
+ * academies change them.
+ */
+export async function updateAcademyLocale(formData: FormData) {
+  const session = await requireAuth(["ADMIN"]);
+  if (!session.orgId) return { success: false, error: "No academy found for your account." };
+  if (!(await isOrgOwner(session.id, session.orgId))) {
+    return { success: false, error: "Only the academy owner can change this." };
+  }
+
+  const str = (key: string, max: number) => {
+    const v = String(formData.get(key) ?? "").trim();
+    return v.length > 0 && v.length <= max ? v : null;
+  };
+
+  const country = str("country", 2);
+  const currency = str("currency", 3);
+  const timezone = str("timezone", 64);
+  const locale = str("locale", 32);
+  const phoneCountry = str("phoneCountry", 4);
+
+  if (!country || !currency || !timezone || !locale || !phoneCountry) {
+    return { success: false, error: "All locale fields are required." };
+  }
+
+  await db.organization.update({
+    where: { id: session.orgId },
+    data: { country, currency, timezone, locale, phoneCountry },
+  });
+
+  revalidatePath("/org");
+  revalidatePath("/parent");
+  revalidatePath("/academies");
+  return { success: true };
+}
