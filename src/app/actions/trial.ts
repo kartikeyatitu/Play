@@ -70,28 +70,32 @@ export async function bookTrial(
     throw new Error("Too many requests. Please try again later.");
   }
 
-  await db.trialBooking.create({
-    data: {
-      parentName,
-      parentPhone,
-      childName,
-      childAge,
-      batchId: batch.id,
-      date,
-    }
-  });
+  // Atomic: a trial without its matching lead row leaves the academy's CRM
+  // out of sync, so both writes either land together or neither does.
+  await db.$transaction(async (tx) => {
+    await tx.trialBooking.create({
+      data: {
+        parentName,
+        parentPhone,
+        childName,
+        childAge,
+        batchId: batch.id,
+        date,
+      },
+    });
 
-  await db.lead.create({
-    data: {
-      parentName,
-      parentPhone,
-      childName,
-      childAge,
-      sport: batch.sport,
-      source: "WEBSITE",
-      status: "TRIAL_BOOKED",
-      orgId: batch.orgId,
-    }
+    await tx.lead.create({
+      data: {
+        parentName,
+        parentPhone,
+        childName,
+        childAge,
+        sport: batch.sport,
+        source: "WEBSITE",
+        status: "TRIAL_BOOKED",
+        orgId: batch.orgId,
+      },
+    });
   });
 
   revalidatePath("/trial");

@@ -10,7 +10,9 @@ import { prefersReducedMotion } from "@/lib/motion";
  */
 export function CountUp({
   value,
-  format = (n) => Math.round(n).toLocaleString("en-IN"),
+  // Caller-supplied formatter wins. Default: round and let the browser pick a thousands separator
+  // from the user's own locale instead of forcing en-IN grouping on everyone.
+  format = (n) => Math.round(n).toLocaleString(),
   duration = 400,
   className,
 }: {

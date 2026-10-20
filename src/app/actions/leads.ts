@@ -54,13 +54,16 @@ export async function createLead(data: {
   }
 }
 
-/** Allowed lifecycle values for a Lead. */
+/**
+ * Allowed lifecycle values for a Lead.
+ * Set derived from values actually in production as of 2026-10-20.
+ */
 export const LEAD_STATUSES = [
   "NEW",
   "CONTACTED",
-  "TRIAL_SCHEDULED",
-  "QUALIFIED",
-  "CONVERTED",
+  "TRIAL_BOOKED",
+  "TRIAL_ATTENDED",
+  "ENROLLED",
   "LOST",
 ] as const;
 export type LeadStatus = (typeof LEAD_STATUSES)[number];

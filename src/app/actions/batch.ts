@@ -14,6 +14,36 @@ function parseOptionalInt(value: FormDataEntryValue | null): number | null | und
   return n;
 }
 
+/**
+ * Confirms `userId` is a current member of `orgId` who can coach a batch.
+ * Coaches often work at several academies, so User.orgId is unreliable here —
+ * membership is the authoritative source of truth.
+ *
+ * Returns the user's id if valid, otherwise null (so the caller can reject the
+ * assignment with a clear error instead of silently falling back).
+ */
+async function validateBatchCoach(userId: string, orgId: string): Promise<string | null> {
+  // Owner or manager of the org can always coach their own batches.
+  const membership = await db.orgMembership.findUnique({
+    where: { userId_orgId: { userId, orgId } },
+    select: { role: true, status: true },
+  });
+  if (membership?.status === "ACTIVE" && ["OWNER", "MANAGER", "COACH"].includes(membership.role)) {
+    return userId;
+  }
+  // Backward-compat: pre-membership rows where User.orgId points at the org and role is COACH/ADMIN.
+  const legacy = await db.user.findFirst({
+    where: {
+      id: userId,
+      orgId,
+      role: { in: ["COACH", "ADMIN"] },
+      memberships: { none: { orgId } },
+    },
+    select: { id: true },
+  });
+  return legacy?.id ?? null;
+}
+
 export async function createBatch(formData: FormData) {
   const { session } = await requirePermission("batches.manage");
   const name = formData.get("name") as string;
@@ -28,19 +58,16 @@ export async function createBatch(formData: FormData) {
     throw new Error("Missing required fields");
   }
 
-  // Tenant check: the coach must belong to the admin's academy
-  const coach = await db.user.findFirst({
-    where: { id: coachId, orgId: session.orgId, role: { in: ["COACH", "ADMIN"] } },
-    select: { id: true },
-  });
-  if (!coach) throw new Error("Coach not found in your academy");
+  // Membership-aware check: works for coaches who are members at several academies.
+  const validatedCoachId = await validateBatchCoach(coachId, session.orgId);
+  if (!validatedCoachId) throw new Error("Coach not found or not active in your academy");
 
   await db.batch.create({
     data: {
       name,
       sport,
       schedule,
-      coachId,
+      coachId: validatedCoachId,
       orgId: session.orgId,
       monthlyFee: monthlyFee ?? null,
       capacity: capacity ?? null,
@@ -113,10 +140,9 @@ export async function updateBatch(
   if (data.capacity !== undefined) updateData.capacity = data.capacity;
 
   if (data.coachId) {
-    const coach = await db.user.findFirst({
-      where: { id: data.coachId, orgId: session.orgId, role: { in: ["COACH", "ADMIN"] } },
-    });
-    if (coach) updateData.coachId = coach.id;
+    const validatedCoachId = await validateBatchCoach(data.coachId, session.orgId);
+    if (!validatedCoachId) throw new Error("Coach not found or not active in your academy");
+    updateData.coachId = validatedCoachId;
   }
 
   await db.batch.update({

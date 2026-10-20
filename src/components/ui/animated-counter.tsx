@@ -25,5 +25,5 @@ export function AnimatedCounter({ value, duration = 1000, prefix = '', suffix = 
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [value, duration]);
 
-  return <span className="tabular-nums">{prefix}{displayValue.toLocaleString('en-IN')}{suffix}</span>;
+  return <span className="tabular-nums">{prefix}{displayValue.toLocaleString()}{suffix}</span>;
 }

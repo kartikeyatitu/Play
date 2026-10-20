@@ -37,7 +37,7 @@ export function PrintView({ children, title }: PrintViewProps) {
         </head>
         <body>
           <h1>Triq</h1>
-          <h2>${title || "Report"} — ${new Date().toLocaleDateString('en-IN')}</h2>
+          <h2>${title || "Report"} — ${new Date().toLocaleDateString()}</h2>
           ${content.innerHTML}
         </body>
       </html>

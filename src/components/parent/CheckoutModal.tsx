@@ -110,7 +110,7 @@ export function CheckoutModal({
             {currentStatus === "PENDING" && (
               <PayOnlineButton
                 feeRecordId={feeRecordId}
-                amountLabel={`₹${amount.toLocaleString("en-IN")}`}
+                amountLabel={`₹${amount.toLocaleString()}`}
                 disabled={loading}
                 onLaunch={() => setOpen(false)}
               />

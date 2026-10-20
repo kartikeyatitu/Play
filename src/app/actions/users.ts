@@ -172,20 +172,23 @@ export async function updateStudent(
     }
 
     if (data.batchId !== undefined) {
-      // Remove existing enrollments
-      await tx.batchEnrollment.deleteMany({
-        where: { studentId },
-      });
-      // Add new enrollment if specified
+      // Validate FIRST, then mutate. Previously we deleted existing enrolments
+      // and only then validated the new batch — an invalid batch id left the
+      // student with no enrolment at all.
       if (data.batchId) {
         const batch = await tx.batch.findFirst({
           where: { id: data.batchId, orgId: session.orgId },
+          select: { id: true },
         });
-        if (batch) {
-          await tx.batchEnrollment.create({
-            data: { batchId: data.batchId, studentId },
-          });
+        if (!batch) {
+          throw new Error("Batch not found or not in your academy.");
         }
+      }
+      await tx.batchEnrollment.deleteMany({ where: { studentId } });
+      if (data.batchId) {
+        await tx.batchEnrollment.create({
+          data: { batchId: data.batchId, studentId },
+        });
       }
     }
   });
