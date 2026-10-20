@@ -19,6 +19,17 @@ export async function convertTrialToStudent(trialId: string) {
   const orgId = trial.batch.orgId;
 
   await db.$transaction(async (tx) => {
+    // Compare-and-swap lock: atomically flip SCHEDULED/ATTENDED → ENROLLED. If a
+    // concurrent call already did this, our updateMany returns count:0 and we
+    // bail before creating a duplicate student/parent/enrollment.
+    const locked = await tx.trialBooking.updateMany({
+      where: { id: trial.id, status: { not: "ENROLLED" } },
+      data: { status: "ENROLLED" },
+    });
+    if (locked.count === 0) {
+      throw new Error("Trial already converted (or being converted by another request).");
+    }
+
     // 1. Create or Find Parent
     let parent = await tx.user.findFirst({
       where: { phone: trial.parentPhone, role: "PARENT", orgId }
@@ -69,11 +80,7 @@ export async function convertTrialToStudent(trialId: string) {
       }
     });
 
-    // 4. Update trial status
-    await tx.trialBooking.update({
-      where: { id: trial.id },
-      data: { status: "ENROLLED" }
-    });
+    // 4. Trial status already set to ENROLLED above by the lock step.
   });
 
   revalidatePath("/org");

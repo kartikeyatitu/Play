@@ -185,6 +185,16 @@ export async function convertLeadToStudent(leadId: string, batchId: string) {
     if (!cleanPhone) throw new Error("Lead parent phone is not a valid 10-digit number");
 
     const result = await db.$transaction(async (tx) => {
+      // Compare-and-swap lock: atomically flip the lead to ENROLLED. If a
+      // concurrent conversion already did this, bail before creating duplicates.
+      const locked = await tx.lead.updateMany({
+        where: { id: lead.id, orgId, status: { not: "ENROLLED" } },
+        data: { status: "ENROLLED" },
+      });
+      if (locked.count === 0) {
+        throw new Error("Lead already converted (or being converted by another request).");
+      }
+
       let user = await tx.user.findUnique({ where: { phone: cleanPhone } });
       if (user && user.orgId && user.orgId !== orgId) {
         throw new Error("This phone number is registered with another academy");
@@ -223,10 +233,7 @@ export async function convertLeadToStudent(leadId: string, batchId: string) {
         },
       });
 
-      await tx.lead.update({
-        where: { id: lead.id },
-        data: { status: "ENROLLED" },
-      });
+      // Lead status already set to ENROLLED above by the lock step.
 
       await tx.auditLog.create({
         data: {
