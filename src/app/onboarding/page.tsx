@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
+import { PhotoPicker } from "@/components/ui/photo-picker";
 import { createAcademyWorkspace } from "@/app/actions/onboarding";
+import { uploadAcademyPhoto } from "@/app/actions/photos";
 import { Loader2, Sparkles, PlusCircle, Check } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,7 +36,9 @@ export default function OnboardingPage() {
   const [city, setCity] = useState("");
   const [sports, setSports] = useState<string[]>(["Football"]);
   const [loadSampleData, setLoadSampleData] = useState(false);
+  const [photoFiles, setPhotoFiles] = useState<Array<{ file: File; previewUrl: string }>>([]);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const isTurf = businessType === "TURF";
@@ -63,10 +67,30 @@ export default function OnboardingPage() {
         setError(res.error);
         toast.error(res.error);
         setLoading(false);
-      } else if (res.success) {
-        toast.success(`Welcome to Triq! ${name.trim()} is ready.`);
-        window.location.href = (res as { redirect?: string }).redirect || "/org";
+        return;
       }
+      if (!res.success) {
+        setLoading(false);
+        return;
+      }
+
+      // Workspace exists → the session now has orgId. Upload any photos.
+      if (photoFiles.length > 0) {
+        for (let i = 0; i < photoFiles.length; i++) {
+          setUploadProgress(`Uploading photo ${i + 1} of ${photoFiles.length}…`);
+          const fd = new FormData();
+          fd.append("file", photoFiles[i].file);
+          const uploadRes = await uploadAcademyPhoto(fd);
+          if (!uploadRes.success) {
+            // Non-fatal: carry on; the academy is already created.
+            toast.error(`Photo ${i + 1} did not upload: ${uploadRes.error}`);
+          }
+        }
+        setUploadProgress(null);
+      }
+
+      toast.success(`Welcome to Triq! ${name.trim()} is ready.`);
+      window.location.href = (res as { redirect?: string }).redirect || "/org";
     } catch {
       setError("Something went wrong creating your workspace. Please try again.");
       setLoading(false);
@@ -150,6 +174,20 @@ export default function OnboardingPage() {
             />
           </div>
 
+          {/* Photos (optional) */}
+          <div className="space-y-2">
+            <span className={`${labelCls} flex items-center justify-between`}>
+              <span>{isTurf ? "Venue photos" : "Academy photos"}</span>
+              <span className="text-[11px] text-zinc-500 font-normal lowercase">optional · shown on your public listing</span>
+            </span>
+            <PhotoPicker
+              mode="manual"
+              files={photoFiles}
+              onChange={setPhotoFiles}
+              maxPhotos={6}
+            />
+          </div>
+
           {/* Sports (multi) */}
           <div className="space-y-2">
             <span className={`${labelCls} flex items-center justify-between`}>
@@ -227,7 +265,8 @@ export default function OnboardingPage() {
           >
             {loading ? (
               <span className="flex items-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin" /> Launching workspace...
+                <Loader2 className="w-5 h-5 animate-spin" />
+                {uploadProgress ?? "Launching workspace..."}
               </span>
             ) : (
               "Launch my workspace 🚀"

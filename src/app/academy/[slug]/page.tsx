@@ -80,6 +80,26 @@ export default async function AcademyProfilePage({
         </div>
       </div>
 
+      {/* Photo gallery — only if the academy has uploaded photos */}
+      {org.photos && org.photos.length > 0 && (
+        <div className="border-b border-zinc-800 bg-zinc-950">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+              {org.photos.map((url, i) => (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  key={url}
+                  src={url}
+                  alt={`${org.name} photo ${i + 1}`}
+                  loading={i === 0 ? "eager" : "lazy"}
+                  className="h-56 sm:h-72 w-auto rounded-2xl border border-zinc-800 object-cover snap-start shrink-0 shadow-md"
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid md:grid-cols-3 gap-12">
         {/* Main Content */}
         <div className="md:col-span-2 space-y-12">

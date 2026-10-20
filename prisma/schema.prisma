@@ -49,6 +49,10 @@ model Organization {
   locale        String   @default("en-IN")    // BCP-47
   phoneCountry  String   @default("91")       // calling code without +
 
+  // Photos of the facility (up to 6), shown on public listing and OG card.
+  // Hosted on Vercel Blob; first entry is the hero image.
+  photos        String[] @default([])
+
   // M3 (additive): the academy's OWN Razorpay account. Money settles to the academy, never to Triq.
   // Secrets are AES-256-GCM encrypted (src/lib/secret-box.ts) and must never be sent to the client.
   razorpayKeyId            String?
