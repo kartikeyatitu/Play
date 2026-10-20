@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { toggleFeeStatus } from "@/app/actions/fees";
+import { markFeeAsPaid } from "@/app/actions/fees";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -36,8 +36,11 @@ export function BulkActions({ students, currentMonth }: BulkActionsProps) {
       const student = students.find(s => s.id === studentId);
       const fee = student?.feeRecords.find(f => f.month === currentMonth);
       if (fee && fee.status !== "PAID") {
-        await toggleFeeStatus(fee.id, "PAID");
-        count++;
+        // Fix pre-existing bug: old call passed (fee.id, "PAID") but
+        // the action expects (studentId, month). The result was silently
+        // rejected ("Invalid month."); the bulk mark-paid did nothing.
+        const res = await markFeeAsPaid(studentId, currentMonth);
+        if (res.success) count++;
       }
     }
     toast.success(`Marked ${count} students as PAID`);

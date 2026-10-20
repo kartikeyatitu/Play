@@ -31,15 +31,65 @@ async function attendanceTotalsByBatch(orgId: string) {
   return new Map(rows.map((r) => [r.batchId, { total: Number(r.total), present: Number(r.present) }]));
 }
 
+/**
+ * Per-batch "at-risk" students: last ~10 attendance rows per student with <60% presence
+ * AND at least 3 sessions on record (so a brand-new student doesn't get flagged).
+ * Computed in one SQL round-trip using a window function.
+ */
+async function atRiskStudentsByBatch(orgId: string) {
+  const rows = await db.$queryRaw<
+    { batchId: string; studentId: string; studentName: string; rate: number; sessions: number }[]
+  >`
+    WITH recent AS (
+      SELECT
+        s."batchId"               AS "batchId",
+        a."studentId"             AS "studentId",
+        st."name"                 AS "studentName",
+        a."isPresent"             AS "isPresent",
+        ROW_NUMBER() OVER (PARTITION BY a."studentId", s."batchId" ORDER BY s."date" DESC) AS rn
+      FROM "Attendance" a
+      JOIN "Session" s ON s."id" = a."sessionId"
+      JOIN "Batch"   b ON b."id" = s."batchId"
+      JOIN "Student" st ON st."id" = a."studentId"
+      WHERE b."orgId" = ${orgId}
+    )
+    SELECT
+      "batchId",
+      "studentId",
+      "studentName",
+      ROUND(100.0 * COUNT(*) FILTER (WHERE "isPresent") / COUNT(*))::int AS rate,
+      COUNT(*)::int AS sessions
+    FROM recent
+    WHERE rn <= 10
+    GROUP BY "batchId", "studentId", "studentName"
+    HAVING COUNT(*) >= 3
+       AND (COUNT(*) FILTER (WHERE "isPresent"))::float / COUNT(*) < 0.6
+    ORDER BY rate ASC`;
+
+  const grouped = new Map<string, { studentId: string; studentName: string; rate: number; sessions: number }[]>();
+  for (const r of rows) {
+    const list = grouped.get(r.batchId) ?? [];
+    list.push({
+      studentId: r.studentId,
+      studentName: r.studentName,
+      rate: Number(r.rate),
+      sessions: Number(r.sessions),
+    });
+    grouped.set(r.batchId, list);
+  }
+  return grouped;
+}
+
 export async function getAttendanceAnalytics(_orgId?: string) {
   const orgId = await adminOrgId();
-  const [batches, totals] = await Promise.all([
+  const [batches, totals, atRiskByBatch] = await Promise.all([
     // Session count only (was: every session + every attendance row)
     db.batch.findMany({
       where: { orgId },
       select: { id: true, name: true, _count: { select: { sessions: true } } },
     }),
     attendanceTotalsByBatch(orgId),
+    atRiskStudentsByBatch(orgId),
   ]);
 
   return batches.map(batch => {
@@ -54,7 +104,9 @@ export async function getAttendanceAnalytics(_orgId?: string) {
       batchName: batch.name,
       totalSessions,
       avgAttendance,
-      atRiskStudents: []
+      // Students whose recent attendance rate (last ≤ 10 sessions) is < 60%
+      // with at least 3 sessions on record. Empty when there's not enough data yet.
+      atRiskStudents: atRiskByBatch.get(batch.id) ?? [],
     }
   })
 }

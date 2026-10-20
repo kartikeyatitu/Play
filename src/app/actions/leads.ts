@@ -54,10 +54,29 @@ export async function createLead(data: {
   }
 }
 
+/** Allowed lifecycle values for a Lead. */
+export const LEAD_STATUSES = [
+  "NEW",
+  "CONTACTED",
+  "TRIAL_SCHEDULED",
+  "QUALIFIED",
+  "CONVERTED",
+  "LOST",
+] as const;
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
+
 export async function updateLeadStatus(leadId: string, status: string) {
   const auth = await checkPermission("leads.manage");
   if (!auth.ok) return { success: false, error: auth.error };
   const { session } = auth;
+
+  if (!LEAD_STATUSES.includes(status as LeadStatus)) {
+    return {
+      success: false,
+      error: `Invalid status "${status}". Allowed: ${LEAD_STATUSES.join(", ")}`,
+    };
+  }
+
   try {
     const existing = await db.lead.findFirst({ where: { id: leadId, orgId: session.orgId } });
     if (!existing) return { success: false, error: "Lead not found" };

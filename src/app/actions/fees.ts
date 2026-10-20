@@ -4,87 +4,139 @@ import { revalidatePath } from "next/cache";
 import { checkPermission } from "@/lib/membership";
 import { resolveStudentFee, istToday } from "@/lib/fees";
 
-export async function toggleFeeStatus(studentId: string, month: string) {
+/**
+ * Mark a student's fee for `month` as PAID. Idempotent — returns success if already paid.
+ *
+ * Replaces the old bidirectional `toggleFeeStatus`. A single admin tap on a "mark paid" chip
+ * should NEVER accidentally revert a paid fee (especially a Razorpay-reconciled one). To
+ * reverse a paid fee, callers must use `reverseFeePayment` with an explicit reason.
+ */
+export async function markFeeAsPaid(studentId: string, month: string) {
   const auth = await checkPermission("fees.collect");
   if (!auth.ok) return { success: false, error: auth.error };
   const { session } = auth;
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) return { success: false, error: "Invalid month." };
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) {
+    return { success: false, error: "Invalid month (expected YYYY-MM)." };
+  }
 
-  // Student must belong to the admin's academy
   const student = await db.student.findFirst({
     where: { id: studentId, orgId: session.orgId },
     include: { enrollments: { include: { batch: true } }, org: true },
   });
   if (!student) return { success: false, error: "Student not found in your academy." };
 
-  // Find if a record exists
   const existing = await db.feeRecord.findUnique({
-    where: {
-      studentId_month: {
-        studentId,
-        month,
-      }
-    }
+    where: { studentId_month: { studentId, month } },
   });
 
+  // Idempotent: already paid → no-op.
+  if (existing?.status === "PAID") {
+    return { success: true, newStatus: "PAID" as const, alreadyPaid: true };
+  }
+
+  let feeRecordId: string;
+  let amount: number;
+
   if (existing) {
-    // Toggle status (PENDING / PENDING_VERIFICATION → PAID, PAID → PENDING)
-    const newStatus = existing.status === "PAID" ? "PENDING" : "PAID";
-    await db.feeRecord.update({
+    const updated = await db.feeRecord.update({
       where: { id: existing.id },
-      data: {
-        status: newStatus,
-        paidAt: newStatus === "PAID" ? new Date() : null,
-      }
+      data: { status: "PAID", paidAt: new Date() },
     });
-
-    if (newStatus === "PAID") {
-      try {
-        const { getOrCreateReceipt } = await import("@/lib/receipt-service");
-        await getOrCreateReceipt({
-          feeRecordId: existing.id,
-          studentId,
-          orgId: session.orgId,
-          amount: existing.amount,
-          month,
-          paymentMode: "MANUAL",
-        });
-      } catch (err) {
-        console.error("Receipt generation on fee toggle failed:", err);
-      }
-    }
-
-    revalidatePath("/org");
-    return { success: true, newStatus };
+    feeRecordId = updated.id;
+    amount = updated.amount;
   } else {
-    // Create new as PAID, using the student's real fee (override → batch → academy default)
-    const amount = resolveStudentFee(student, student.org?.defaultMonthlyFee);
-    const created = await db.feeRecord.create({ data: { orgId: session.orgId, 
+    amount = resolveStudentFee(student, student.org?.defaultMonthlyFee);
+    const created = await db.feeRecord.create({
+      data: {
+        orgId: session.orgId,
         studentId,
         month,
         status: "PAID",
         paidAt: new Date(),
         amount,
-      }
+      },
     });
-
-    try {
-      const { getOrCreateReceipt } = await import("@/lib/receipt-service");
-      await getOrCreateReceipt({
-        feeRecordId: created.id,
-        studentId,
-        orgId: session.orgId,
-        amount,
-        month,
-        paymentMode: "MANUAL",
-      });
-    } catch (err) {
-      console.error("Receipt generation on fee creation failed:", err);
-    }
-
-    revalidatePath("/org");
-    return { success: true, newStatus: "PAID" };
+    feeRecordId = created.id;
   }
+
+  try {
+    const { getOrCreateReceipt } = await import("@/lib/receipt-service");
+    await getOrCreateReceipt({
+      feeRecordId,
+      studentId,
+      orgId: session.orgId,
+      amount,
+      month,
+      paymentMode: "MANUAL",
+    });
+  } catch (err) {
+    console.error("Receipt generation on markFeeAsPaid failed:", err);
+  }
+
+  revalidatePath("/org");
+  return { success: true, newStatus: "PAID" as const };
+}
+
+/**
+ * Reverse a PAID fee back to PENDING. Requires an explicit reason (logged).
+ * Refuses to reverse a Razorpay-reconciled payment — those must be refunded through
+ * the gateway, not just marked unpaid in the DB.
+ */
+export async function reverseFeePayment(studentId: string, month: string, reason: string) {
+  const auth = await checkPermission("fees.collect");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) {
+    return { success: false, error: "Invalid month (expected YYYY-MM)." };
+  }
+  if (!reason || reason.trim().length < 3) {
+    return { success: false, error: "Please provide a reason (min 3 characters) for the correction." };
+  }
+
+  const existing = await db.feeRecord.findUnique({
+    where: { studentId_month: { studentId, month } },
+    include: { student: { select: { orgId: true } } },
+  });
+  if (!existing || existing.student?.orgId !== session.orgId) {
+    return { success: false, error: "Fee record not found in your academy." };
+  }
+  if (existing.status !== "PAID") {
+    return { success: false, error: `Fee is already ${existing.status}, nothing to reverse.` };
+  }
+
+  // Guardrail: a reconciled online payment must go through refund, not a DB flip.
+  const onlinePayment = await db.payment.findFirst({
+    where: { feeRecordId: existing.id, status: "PAID" },
+    select: { id: true, provider: true, providerPaymentId: true },
+  });
+  if (onlinePayment?.providerPaymentId) {
+    return {
+      success: false,
+      error: `This fee was paid online via ${onlinePayment.provider}. Issue a refund from the gateway dashboard instead of reversing the status.`,
+    };
+  }
+
+  await db.feeRecord.update({
+    where: { id: existing.id },
+    data: { status: "PENDING", paidAt: null },
+  });
+
+  console.log(
+    `[fees] reverseFeePayment orgId=${session.orgId} studentId=${studentId} month=${month} by=${session.id} reason="${reason.trim()}"`,
+  );
+
+  revalidatePath("/org");
+  return { success: true, newStatus: "PENDING" as const };
+}
+
+/**
+ * @deprecated Use `markFeeAsPaid` (safe, idempotent) or `reverseFeePayment` (explicit, audited).
+ * The old toggle could silently revert a reconciled online payment on a stray click.
+ *
+ * Kept as a thin wrapper so existing callers don't break mid-deploy; they should migrate.
+ */
+export async function toggleFeeStatus(studentId: string, month: string) {
+  return markFeeAsPaid(studentId, month);
 }
 
 export interface UnpaidFeeRow {

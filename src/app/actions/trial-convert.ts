@@ -79,11 +79,29 @@ export async function convertTrialToStudent(trialId: string) {
   revalidatePath("/org");
 }
 
+/** Allowed lifecycle values for a TrialBooking. */
+export const TRIAL_STATUSES = [
+  "SCHEDULED",
+  "ATTENDED",
+  "NO_SHOW",
+  "ENROLLED",
+  "DECLINED",
+  "CANCELLED",
+] as const;
+export type TrialStatus = (typeof TRIAL_STATUSES)[number];
+
 export async function updateTrialStatus(trialId: string, status: string) {
   const { session } = await requirePermission("leads.manage");
+
+  if (!TRIAL_STATUSES.includes(status as TrialStatus)) {
+    throw new Error(
+      `Invalid trial status "${status}". Allowed: ${TRIAL_STATUSES.join(", ")}`,
+    );
+  }
+
   const result = await db.trialBooking.updateMany({
     where: { id: trialId, batch: { orgId: session.orgId } },
-    data: { status }
+    data: { status },
   });
   if (result.count === 0) throw new Error("Trial not found");
   revalidatePath("/org");
