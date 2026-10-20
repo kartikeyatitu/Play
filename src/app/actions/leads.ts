@@ -54,29 +54,19 @@ export async function createLead(data: {
   }
 }
 
-/**
- * Allowed lifecycle values for a Lead.
- * Set derived from values actually in production as of 2026-10-20.
- */
-export const LEAD_STATUSES = [
-  "NEW",
-  "CONTACTED",
-  "TRIAL_BOOKED",
-  "TRIAL_ATTENDED",
-  "ENROLLED",
-  "LOST",
-] as const;
-export type LeadStatus = (typeof LEAD_STATUSES)[number];
+// Lifecycle enums live in @/lib/enums (no Prisma deps) so tests can import them.
+export { LEAD_STATUSES, type LeadStatus } from "@/lib/enums";
+import { LEAD_STATUSES as _LEAD_STATUSES, type LeadStatus as _LeadStatus } from "@/lib/enums";
 
 export async function updateLeadStatus(leadId: string, status: string) {
   const auth = await checkPermission("leads.manage");
   if (!auth.ok) return { success: false, error: auth.error };
   const { session } = auth;
 
-  if (!LEAD_STATUSES.includes(status as LeadStatus)) {
+  if (!_LEAD_STATUSES.includes(status as _LeadStatus)) {
     return {
       success: false,
-      error: `Invalid status "${status}". Allowed: ${LEAD_STATUSES.join(", ")}`,
+      error: `Invalid status "${status}". Allowed: ${_LEAD_STATUSES.join(", ")}`,
     };
   }
 

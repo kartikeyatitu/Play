@@ -86,23 +86,16 @@ export async function convertTrialToStudent(trialId: string) {
   revalidatePath("/org");
 }
 
-/** Allowed lifecycle values for a TrialBooking. */
-export const TRIAL_STATUSES = [
-  "SCHEDULED",
-  "ATTENDED",
-  "NO_SHOW",
-  "ENROLLED",
-  "DECLINED",
-  "CANCELLED",
-] as const;
-export type TrialStatus = (typeof TRIAL_STATUSES)[number];
+// Lifecycle enums live in @/lib/enums (no Prisma deps) so tests can import them.
+export { TRIAL_STATUSES, type TrialStatus } from "@/lib/enums";
+import { TRIAL_STATUSES as _TRIAL_STATUSES, type TrialStatus as _TrialStatus } from "@/lib/enums";
 
 export async function updateTrialStatus(trialId: string, status: string) {
   const { session } = await requirePermission("leads.manage");
 
-  if (!TRIAL_STATUSES.includes(status as TrialStatus)) {
+  if (!_TRIAL_STATUSES.includes(status as _TrialStatus)) {
     throw new Error(
-      `Invalid trial status "${status}". Allowed: ${TRIAL_STATUSES.join(", ")}`,
+      `Invalid trial status "${status}". Allowed: ${_TRIAL_STATUSES.join(", ")}`,
     );
   }
 
