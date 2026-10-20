@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     url: getAppUrl(),
     siteName: "Triq",
     type: "website",
-    locale: "en_IN",
+    locale: "en",
   },
   twitter: {
     card: "summary_large_image",
@@ -38,6 +38,13 @@ export const metadata: Metadata = {
     description: "Run your sports academy like a pro. Manage batches, fees, attendance & athlete growth.",
   },
   robots: { index: true, follow: true },
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
