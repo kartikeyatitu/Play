@@ -14,6 +14,7 @@ import { put, del } from "@vercel/blob";
 import { randomBytes } from "crypto";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { isOrgOwner } from "@/lib/membership";
 import { revalidatePath } from "next/cache";
 
 const MAX_PHOTOS_PER_ACADEMY = 6;
@@ -31,8 +32,10 @@ export type UploadResult =
  */
 export async function uploadAcademyPhoto(formData: FormData): Promise<UploadResult> {
   const session = await getSession();
-  if (!session || !session.orgId || session.role !== "ADMIN") {
-    return { success: false, error: "Only academy owners can upload photos." };
+  if (!session) return { success: false, error: "Please sign in first." };
+  if (!session.orgId) return { success: false, error: "No academy found for your account." };
+  if (!(await isOrgOwner(session.id, session.orgId))) {
+    return { success: false, error: "Only the academy owner can upload photos." };
   }
 
   const file = formData.get("file");
@@ -82,8 +85,10 @@ export async function uploadAcademyPhoto(formData: FormData): Promise<UploadResu
 
 export async function removeAcademyPhoto(url: string): Promise<{ success: boolean; error?: string }> {
   const session = await getSession();
-  if (!session || !session.orgId || session.role !== "ADMIN") {
-    return { success: false, error: "Only academy owners can remove photos." };
+  if (!session) return { success: false, error: "Please sign in first." };
+  if (!session.orgId) return { success: false, error: "No academy found for your account." };
+  if (!(await isOrgOwner(session.id, session.orgId))) {
+    return { success: false, error: "Only the academy owner can remove photos." };
   }
 
   const org = await db.organization.findUnique({
@@ -118,8 +123,10 @@ export async function removeAcademyPhoto(url: string): Promise<{ success: boolea
 /** Reorder (used by drag-handle in settings; new order replaces existing). */
 export async function reorderAcademyPhotos(urls: string[]): Promise<{ success: boolean; error?: string }> {
   const session = await getSession();
-  if (!session || !session.orgId || session.role !== "ADMIN") {
-    return { success: false, error: "Only academy owners can reorder photos." };
+  if (!session) return { success: false, error: "Please sign in first." };
+  if (!session.orgId) return { success: false, error: "No academy found for your account." };
+  if (!(await isOrgOwner(session.id, session.orgId))) {
+    return { success: false, error: "Only the academy owner can reorder photos." };
   }
   const org = await db.organization.findUnique({
     where: { id: session.orgId },
