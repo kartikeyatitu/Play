@@ -10,7 +10,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 import { cleanIndianPhone, listingPath, parseSports } from "@/lib/directory";
 
 export type DirectoryActionState = {
@@ -96,7 +96,7 @@ export async function requestTrial(_prev: DirectoryActionState, formData: FormDa
   const data = parsed.data;
 
   const ip = await clientIp();
-  if (!rateLimit(`dir-trial:ip:${ip}`, 10, WINDOW_MS).allowed || !rateLimit(`dir-trial:phone:${data.phone}`, 3, WINDOW_MS).allowed) {
+  if (!(await rateLimitDb(`dir-trial:ip:${ip}`, 10, WINDOW_MS)).allowed || !(await rateLimitDb(`dir-trial:phone:${data.phone}`, 3, WINDOW_MS)).allowed) {
     return fail("Too many requests. Please try again in a few minutes.");
   }
 
@@ -197,7 +197,7 @@ export async function claimListing(_prev: DirectoryActionState, formData: FormDa
   const data = parsed.data;
 
   const ip = await clientIp();
-  if (!rateLimit(`dir-claim:ip:${ip}`, 5, WINDOW_MS).allowed || !rateLimit(`dir-claim:phone:${data.phone}`, 3, WINDOW_MS).allowed) {
+  if (!(await rateLimitDb(`dir-claim:ip:${ip}`, 5, WINDOW_MS)).allowed || !(await rateLimitDb(`dir-claim:phone:${data.phone}`, 3, WINDOW_MS)).allowed) {
     return fail("Too many requests. Please try again in a few minutes.");
   }
 

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 
 type LeadField = "name" | "phone" | "academy" | "sport" | "students" | "city";
 const LEAD_FIELDS: readonly LeadField[] = ["name", "phone", "academy", "sport", "students", "city"];
@@ -85,7 +85,7 @@ export async function submitDemoRequest(_prev: DemoFormState, formData: FormData
     // headers() unavailable — fall back to a shared bucket
   }
 
-  const { allowed } = rateLimit(`sales-lead:${ip}`, 5, 10 * 60_000);
+  const { allowed } = await rateLimitDb(`sales-lead:${ip}`, 5, 10 * 60_000);
   if (!allowed) {
     return { status: "error", message: "Too many requests. Please try again in a few minutes or message us on WhatsApp." };
   }
@@ -118,7 +118,7 @@ export async function submitDemoRequest(_prev: DemoFormState, formData: FormData
   const data = parsed.data;
 
   // Per-phone limit too, so one number can't be spammed from rotating IPs.
-  if (!rateLimit(`sales-lead-phone:${data.phone}`, 3, 60 * 60_000).allowed) {
+  if (!(await rateLimitDb(`sales-lead-phone:${data.phone}`, 3, 60 * 60_000)).allowed) {
     return { status: "success", message: "We already have your request — we'll WhatsApp you shortly." };
   }
 

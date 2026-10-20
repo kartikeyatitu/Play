@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 import { cleanPhone } from "@/lib/import-utils";
 import { reserveSlot, confirmPaidBooking, UPI_REPORTED } from "@/lib/turf-engine";
 import { getOrgRazorpay } from "@/lib/razorpay-org";
@@ -148,7 +148,7 @@ export async function startOnlineBooking(input: {
     if (!(hours >= 1 && hours <= MAX_HOURS_PER_BOOKING)) return { success: false, error: `You can book 1 to ${MAX_HOURS_PER_BOOKING} hours.` };
 
     const ip = await clientIp();
-    if (!rateLimit(`turf:phone:${phone}`, 6, 10 * 60_000).allowed || !rateLimit(`turf:ip:${ip}`, 20, 60 * 60_000).allowed) {
+    if (!(await rateLimitDb(`turf:phone:${phone}`, 6, 10 * 60_000)).allowed || !(await rateLimitDb(`turf:ip:${ip}`, 20, 60 * 60_000)).allowed) {
       return { success: false, error: "Too many attempts. Please try again in a few minutes." };
     }
 
@@ -244,7 +244,7 @@ export async function confirmTurfCheckout(a: { orderId: string; paymentId: strin
   try {
     if (!a?.orderId || !a?.paymentId || !a?.signature) return { success: false, error: "Missing payment details." };
     const ip = await clientIp();
-    if (!rateLimit(`turf:confirm:${ip}`, 30, 10 * 60_000).allowed) return { success: false, error: "Too many attempts." };
+    if (!(await rateLimitDb(`turf:confirm:${ip}`, 30, 10 * 60_000)).allowed) return { success: false, error: "Too many attempts." };
 
     const booking = await db.turfBooking.findUnique({ where: { providerOrderId: a.orderId }, include: { facility: true } });
     if (!booking) return { success: false, error: "Booking not found." };
@@ -316,7 +316,7 @@ export async function startUpiBooking(input: {
     if (!(hours >= 1 && hours <= MAX_HOURS_PER_BOOKING)) return { success: false, error: `You can book 1 to ${MAX_HOURS_PER_BOOKING} hours.` };
 
     const ip = await clientIp();
-    if (!rateLimit(`turf:phone:${phone}`, 6, 10 * 60_000).allowed || !rateLimit(`turf:ip:${ip}`, 20, 60 * 60_000).allowed) {
+    if (!(await rateLimitDb(`turf:phone:${phone}`, 6, 10 * 60_000)).allowed || !(await rateLimitDb(`turf:ip:${ip}`, 20, 60 * 60_000)).allowed) {
       return { success: false, error: "Too many attempts. Please try again in a few minutes." };
     }
 
@@ -388,7 +388,7 @@ export async function reportUpiPaid(input: { bookingId: string; phone: string; u
     const phone = cleanPhone(input?.phone);
     if (!input?.bookingId || !phone) return { success: false, error: "Missing details." };
     const ip = await clientIp();
-    if (!rateLimit(`turf:upi:${ip}`, 20, 10 * 60_000).allowed) return { success: false, error: "Too many attempts." };
+    if (!(await rateLimitDb(`turf:upi:${ip}`, 20, 10 * 60_000)).allowed) return { success: false, error: "Too many attempts." };
 
     const b = await db.turfBooking.findUnique({ where: { id: String(input.bookingId) } });
     if (!b || b.source !== "ONLINE" || b.customerPhone !== phone) return { success: false, error: "Booking not found." };
