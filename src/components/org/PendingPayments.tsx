@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { confirmFeePayment, rejectFeePayment } from "@/app/actions/payments";
 import { Check, X, Loader2, Clock } from "lucide-react";
+import { useFormatMoney } from "@/lib/org-locale-context";
 
 type PendingItem = {
   id: string;
@@ -16,6 +17,7 @@ type PendingItem = {
 export function PendingPayments({ items }: { items: PendingItem[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
+  const fmt = useFormatMoney();
 
   async function act(id: string, kind: "confirm" | "reject") {
     if (kind === "reject" && !confirm("Mark this payment as NOT received? The parent will see it as pending again.")) return;
@@ -45,7 +47,7 @@ export function PendingPayments({ items }: { items: PendingItem[] }) {
             <Clock className="w-4 h-4 text-amber-400 shrink-0" />
             <div className="min-w-0">
               <p className="text-sm text-zinc-200 font-medium truncate">
-                {f.student?.name || "Student"} · ₹{(f.amount || 0).toLocaleString("en-IN")} · {f.month}
+                {f.student?.name || "Student"} · {fmt(f.amount || 0)} · {f.month}
               </p>
               <p className="text-xs text-zinc-500 truncate">
                 Reported paid by {f.student?.parent?.name || "parent"}
