@@ -80,7 +80,7 @@ export async function convertTrialToStudent(trialId: string) {
 }
 
 /** Allowed lifecycle values for a TrialBooking. */
-export const TRIAL_STATUSES = [
+const TRIAL_STATUSES = [
   "SCHEDULED",
   "ATTENDED",
   "NO_SHOW",
