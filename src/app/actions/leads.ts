@@ -58,7 +58,7 @@ export async function createLead(data: {
  * Allowed lifecycle values for a Lead.
  * Set derived from values actually in production as of 2026-10-20.
  */
-export const LEAD_STATUSES = [
+const LEAD_STATUSES = [
   "NEW",
   "CONTACTED",
   "TRIAL_BOOKED",
