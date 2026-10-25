@@ -1,8 +1,9 @@
 import { db } from "@/lib/db";
+import { canonicalPlan, FREE_PLAN, PLAN_LIMITS, type PlanId } from "@/lib/pricing";
 
 export interface QuotaStatus {
   allowed: boolean;
-  plan: string;
+  plan: PlanId;
   count: number;
   limit: number;
   isOverLimit: boolean;
@@ -13,25 +14,29 @@ export interface QuotaStatus {
 }
 
 /**
- * Checks the academy's current active student count against their Triq subscription plan.
- * Default Free Tier: 30 active students with a 14-day grace period.
+ * Checks the academy's current active student count against their Triq plan.
+ *
+ * Plan resolution order (first non-null wins):
+ *   1. Subscription.plan        (set by billing automation)
+ *   2. Organization.plan        (set at signup; legacy "FREE_TRIAL" normalised to "free")
+ *   3. Default                  → "free"
+ *
+ * Default Free tier: 30 active students with a 14-day grace period after they
+ * hit the ceiling.
  */
 export async function checkStudentQuota(orgId: string): Promise<QuotaStatus> {
-  const [sub, currentCount] = await Promise.all([
-    db.subscription.findUnique({
-      where: { orgId },
-    }),
-    db.student.count({
-      where: { orgId },
-    }),
+  const [sub, org, currentCount] = await Promise.all([
+    db.subscription.findUnique({ where: { orgId } }),
+    db.organization.findUnique({ where: { id: orgId }, select: { plan: true } }),
+    db.student.count({ where: { orgId } }),
   ]);
 
-  const plan = sub?.plan || "FREE";
+  const plan: PlanId = canonicalPlan(sub?.plan ?? org?.plan ?? "free");
   const status = sub?.status || "ACTIVE";
-  const limit = sub?.maxStudents || 30;
+  const limit = sub?.maxStudents || PLAN_LIMITS[plan] || FREE_PLAN.maxStudents;
 
-  // Active paid plans allow up to their provisioned ceiling
-  if (status === "ACTIVE" && (plan === "STARTER" || plan === "PRO" || plan === "ENTERPRISE")) {
+  // Paid tiers (anything above "free") get the configured ceiling with no grace period.
+  if (status === "ACTIVE" && plan !== "free") {
     const isOver = currentCount >= limit;
     return {
       allowed: !isOver,
@@ -45,11 +50,11 @@ export async function checkStudentQuota(orgId: string): Promise<QuotaStatus> {
     };
   }
 
-  // Free Tier enforcement (30 students + 14 day grace period)
+  // Free tier: 30 students, then 14-day grace period.
   if (currentCount < limit) {
     return {
       allowed: true,
-      plan: "FREE",
+      plan: "free",
       count: currentCount,
       limit,
       isOverLimit: false,
@@ -58,25 +63,22 @@ export async function checkStudentQuota(orgId: string): Promise<QuotaStatus> {
     };
   }
 
-  // Academy has reached or exceeded 30 students on free tier
+  // At or over the free ceiling → trigger grace period if it hasn't started yet.
   const now = new Date();
   let graceEndsAt = sub?.gracePeriodEndsAt;
 
   if (!graceEndsAt) {
-    // Start the 14-day grace period clock
     graceEndsAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
     await db.subscription.upsert({
       where: { orgId },
       create: {
         orgId,
-        plan: "FREE",
+        plan: "free", // canonical, lower-case
         status: "ACTIVE",
-        maxStudents: 30,
+        maxStudents: FREE_PLAN.maxStudents,
         gracePeriodEndsAt: graceEndsAt,
       },
-      update: {
-        gracePeriodEndsAt: graceEndsAt,
-      },
+      update: { gracePeriodEndsAt: graceEndsAt },
     });
   }
 
@@ -86,25 +88,25 @@ export async function checkStudentQuota(orgId: string): Promise<QuotaStatus> {
   if (msRemaining > 0) {
     return {
       allowed: true,
-      plan: "FREE",
+      plan: "free",
       count: currentCount,
       limit,
       isOverLimit: true,
       gracePeriodActive: true,
       gracePeriodDaysRemaining: daysRemaining,
-      warning: `You have reached the free limit of 30 students. 14-day grace period active (${daysRemaining} day${daysRemaining === 1 ? "" : "s"} remaining) to upgrade to Triq Starter.`,
+      warning: `You have reached the free limit of ${limit} students. 14-day grace period active (${daysRemaining} day${daysRemaining === 1 ? "" : "s"} remaining) to upgrade to Growth.`,
     };
   }
 
   return {
     allowed: false,
-    plan: "FREE",
+    plan: "free",
     count: currentCount,
     limit,
     isOverLimit: true,
     gracePeriodActive: false,
     gracePeriodDaysRemaining: 0,
-    error: "Free limit of 30 students exceeded and 14-day grace period has expired. Upgrade to Triq Starter to add more students.",
+    error: `Free limit of ${limit} students exceeded and 14-day grace period has expired. Upgrade to Growth to add more students.`,
   };
 }
 

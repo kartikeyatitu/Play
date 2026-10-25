@@ -19,6 +19,17 @@ export async function convertTrialToStudent(trialId: string) {
   const orgId = trial.batch.orgId;
 
   await db.$transaction(async (tx) => {
+    // Compare-and-swap lock: atomically flip SCHEDULED/ATTENDED → ENROLLED. If a
+    // concurrent call already did this, our updateMany returns count:0 and we
+    // bail before creating a duplicate student/parent/enrollment.
+    const locked = await tx.trialBooking.updateMany({
+      where: { id: trial.id, status: { not: "ENROLLED" } },
+      data: { status: "ENROLLED" },
+    });
+    if (locked.count === 0) {
+      throw new Error("Trial already converted (or being converted by another request).");
+    }
+
     // 1. Create or Find Parent
     let parent = await tx.user.findFirst({
       where: { phone: trial.parentPhone, role: "PARENT", orgId }
@@ -69,33 +80,22 @@ export async function convertTrialToStudent(trialId: string) {
       }
     });
 
-    // 4. Update trial status
-    await tx.trialBooking.update({
-      where: { id: trial.id },
-      data: { status: "ENROLLED" }
-    });
+    // 4. Trial status already set to ENROLLED above by the lock step.
   });
 
   revalidatePath("/org");
 }
 
-/** Allowed lifecycle values for a TrialBooking. */
-const TRIAL_STATUSES = [
-  "SCHEDULED",
-  "ATTENDED",
-  "NO_SHOW",
-  "ENROLLED",
-  "DECLINED",
-  "CANCELLED",
-] as const;
-export type TrialStatus = (typeof TRIAL_STATUSES)[number];
+// Lifecycle enums live in @/lib/enums (no Prisma deps, test-safe). A "use server" file may only
+// export async functions at runtime, so the constant is imported, not re-exported; types are fine.
+import { TRIAL_STATUSES as _TRIAL_STATUSES, type TrialStatus as _TrialStatus } from "@/lib/enums";
 
 export async function updateTrialStatus(trialId: string, status: string) {
   const { session } = await requirePermission("leads.manage");
 
-  if (!TRIAL_STATUSES.includes(status as TrialStatus)) {
+  if (!_TRIAL_STATUSES.includes(status as _TrialStatus)) {
     throw new Error(
-      `Invalid trial status "${status}". Allowed: ${TRIAL_STATUSES.join(", ")}`,
+      `Invalid trial status "${status}". Allowed: ${_TRIAL_STATUSES.join(", ")}`,
     );
   }
 

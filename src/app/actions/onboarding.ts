@@ -101,7 +101,10 @@ export async function createAcademyWorkspace(input: OnboardingInput) {
               city,
               state,
               businessType,
-              plan: "FREE_TRIAL",
+              // Plan vocabulary reconciliation (plan audit §4.H):
+              // canonical PlanId is lowercase "free" / "growth" / "academy". Trial state
+              // lives on planExpiry (14 days from signup), not on the plan string.
+              plan: "free",
               planExpiry: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14-day trial
               isActive: true,
             },

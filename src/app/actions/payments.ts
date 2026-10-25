@@ -27,13 +27,13 @@ export async function markFeePaid(studentId: string, month: string, paymentId: s
     if (fee) {
       await db.feeRecord.update({
         where: { id: fee.id },
-        data: { status: "PAID", paidAt: new Date(), orgId: fee.orgId ?? session.orgId },
+        data: { status: "PAID", paidAt: new Date(), orgId: fee.orgId ?? session.orgId, paymentMethod: "OFFLINE_RECORDED" },
       });
       feeAmount = fee.amount;
     } else {
       feeAmount = resolveStudentFee(student, student.org?.defaultMonthlyFee);
       const created = await db.feeRecord.create({
-        data: { orgId: session.orgId, studentId, amount: feeAmount, month, status: "PAID", paidAt: new Date() },
+        data: { orgId: session.orgId, studentId, amount: feeAmount, month, status: "PAID", paidAt: new Date(), paymentMethod: "OFFLINE_RECORDED" },
       });
       feeRecordId = created.id;
     }
@@ -80,7 +80,7 @@ export async function reportFeePaid(feeRecordId: string) {
 
     const moved = await db.feeRecord.updateMany({
       where: { id: fee.id, status: { not: "PAID" } },
-      data: { status: "PENDING_VERIFICATION" },
+      data: { status: "PENDING_VERIFICATION", paymentMethod: "PARENT_REPORTED_UPI" },
     });
     if (moved.count === 0) return { success: true, status: "PAID" };
 
@@ -114,6 +114,23 @@ async function setFeeStatusAsAdmin(feeRecordId: string, status: "PAID" | "PENDIN
     if (!fee || fee.student.orgId !== session.orgId) {
       return { success: false, error: "Fee record not found in your academy." };
     }
+    // Only act on fees a parent reported as paid. This stops "reject" from
+    // flipping an already-settled (possibly gateway-verified) fee back to PENDING.
+    if (fee.status === "PAID" && status === "PAID") {
+      return { success: true, status: "PAID" as const, receipt: null };
+    }
+    if (fee.status !== "PENDING_VERIFICATION") {
+      return { success: false, error: `This fee is ${fee.status}, not awaiting confirmation.` };
+    }
+    // Persist the decision. Previously this function never wrote the status,
+    // so "Received" was a no-op and reported payments could never be confirmed.
+    await db.feeRecord.update({
+      where: { id: fee.id },
+      data:
+        status === "PAID"
+          ? { status: "PAID", paidAt: new Date(), paymentMethod: "ADMIN_CONFIRMED_UPI" }
+          : { status: "PENDING", paidAt: null, paymentMethod: null },
+    });
     let receiptData = null;
     if (status === "PAID") {
       try {

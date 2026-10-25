@@ -1,8 +1,14 @@
-// Simple in-memory rate limiter for serverless
-// Resets on cold start — good enough for MVP, use Redis/Upstash for production scale
+// In-memory rate limiter — kept for very-high-volume paths where DB cost would hurt
+// (none at the moment). Resets on cold start and isn't shared across serverless instances,
+// so it only works as a very loose circuit breaker, not real abuse protection.
+//
+// All public and sensitive endpoints should use `rateLimitDb` below (Postgres-backed,
+// persistent across instances). As of Sprint 1 Task 5, every known call site has been
+// migrated; this export is retained for backward compatibility.
 
 const attempts = new Map<string, { count: number; resetAt: number }>();
 
+/** @deprecated Use `rateLimitDb` for any endpoint that matters. See file header. */
 export function rateLimit(key: string, maxAttempts: number = 5, windowMs: number = 60_000): { allowed: boolean; remaining: number } {
   const now = Date.now();
   const entry = attempts.get(key);

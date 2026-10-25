@@ -92,7 +92,8 @@ export async function registerAcademy(formData: {
           phone,
           email,
           address,
-          plan: "FREE_TRIAL",
+          // Canonical plan vocabulary (audit §4.H): "free" + planExpiry = trial.
+          plan: "free",
           planExpiry: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
         },
       });

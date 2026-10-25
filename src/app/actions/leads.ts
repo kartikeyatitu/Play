@@ -54,29 +54,19 @@ export async function createLead(data: {
   }
 }
 
-/**
- * Allowed lifecycle values for a Lead.
- * Set derived from values actually in production as of 2026-10-20.
- */
-const LEAD_STATUSES = [
-  "NEW",
-  "CONTACTED",
-  "TRIAL_BOOKED",
-  "TRIAL_ATTENDED",
-  "ENROLLED",
-  "LOST",
-] as const;
-export type LeadStatus = (typeof LEAD_STATUSES)[number];
+// Lifecycle enums live in @/lib/enums (no Prisma deps, test-safe). A "use server" file may only
+// export async functions at runtime, so the constant is imported, not re-exported; types are fine.
+import { LEAD_STATUSES as _LEAD_STATUSES, type LeadStatus as _LeadStatus } from "@/lib/enums";
 
 export async function updateLeadStatus(leadId: string, status: string) {
   const auth = await checkPermission("leads.manage");
   if (!auth.ok) return { success: false, error: auth.error };
   const { session } = auth;
 
-  if (!LEAD_STATUSES.includes(status as LeadStatus)) {
+  if (!_LEAD_STATUSES.includes(status as _LeadStatus)) {
     return {
       success: false,
-      error: `Invalid status "${status}". Allowed: ${LEAD_STATUSES.join(", ")}`,
+      error: `Invalid status "${status}". Allowed: ${_LEAD_STATUSES.join(", ")}`,
     };
   }
 
@@ -185,6 +175,16 @@ export async function convertLeadToStudent(leadId: string, batchId: string) {
     if (!cleanPhone) throw new Error("Lead parent phone is not a valid 10-digit number");
 
     const result = await db.$transaction(async (tx) => {
+      // Compare-and-swap lock: atomically flip the lead to ENROLLED. If a
+      // concurrent conversion already did this, bail before creating duplicates.
+      const locked = await tx.lead.updateMany({
+        where: { id: lead.id, orgId, status: { not: "ENROLLED" } },
+        data: { status: "ENROLLED" },
+      });
+      if (locked.count === 0) {
+        throw new Error("Lead already converted (or being converted by another request).");
+      }
+
       let user = await tx.user.findUnique({ where: { phone: cleanPhone } });
       if (user && user.orgId && user.orgId !== orgId) {
         throw new Error("This phone number is registered with another academy");
@@ -223,10 +223,7 @@ export async function convertLeadToStudent(leadId: string, batchId: string) {
         },
       });
 
-      await tx.lead.update({
-        where: { id: lead.id },
-        data: { status: "ENROLLED" },
-      });
+      // Lead status already set to ENROLLED above by the lock step.
 
       await tx.auditLog.create({
         data: {

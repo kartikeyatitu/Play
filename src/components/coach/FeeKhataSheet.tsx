@@ -4,8 +4,7 @@ import { useState } from "react";
 import { ChevronRight, IndianRupee, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { CoachFeeKhata, type CoachStudentFee } from "@/components/coach/CoachFeeKhata";
-
-const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+import { useFormatMoney } from "@/lib/org-locale-context";
 
 /** Compact Fee Khata summary row that opens the full CoachFeeKhata in a dialog. */
 export function FeeKhataSheet({
@@ -24,6 +23,7 @@ export function FeeKhataSheet({
   const [open, setOpen] = useState(false);
   if (!students || students.length === 0) return null;
 
+  const inr = useFormatMoney();
   const due = students.filter((s) => s.feeStatus === "PENDING");
   const totalDue = due.reduce((n, s) => n + s.monthlyFee, 0);
   const totalBilled = students.reduce((n, s) => n + s.monthlyFee, 0);

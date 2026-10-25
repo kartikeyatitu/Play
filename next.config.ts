@@ -55,11 +55,22 @@ const nextConfig: NextConfig = {
       "upgrade-insecure-requests",
     ].join("; ");
 
+    // CSP mode:
+    //   CSP_ENFORCE=true  → block violations (production-safe once allowlist is proven)
+    //   anything else     → report-only (log violations but don't block)
+    //
+    // Flip to enforce by setting CSP_ENFORCE=true in Vercel env vars. Audit the last
+    // 14 days of browser-reported CSP violations first (DevTools console, or a report-uri
+    // if configured) so no legitimate script gets blocked. The in-memory report-only
+    // mode has been the default for a while; see docs/known-issues.md.
+    const cspHeaderKey =
+      process.env.CSP_ENFORCE === "true" ? "Content-Security-Policy" : "Content-Security-Policy-Report-Only";
+
     return [
       {
         source: "/:path*",
         headers: [
-          { key: "Content-Security-Policy-Report-Only", value: csp },
+          { key: cspHeaderKey, value: csp },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

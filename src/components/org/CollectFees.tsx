@@ -8,6 +8,7 @@ import { markFeePaid } from "@/app/actions/payments";
 import { buildReminderMessage } from "@/lib/pay-link";
 import { shellButton } from "@/components/shell/EmptyState";
 import { getAppUrl } from "@/lib/app-url";
+import { useFormatMoney } from "@/lib/org-locale-context";
 
 interface CollectFeesProps {
   academyName: string;
@@ -60,6 +61,7 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
   const [error, setError] = useState<string | null>(null);
   const [busyRows, setBusyRows] = useState<Record<string, boolean>>({});
   const [isPending, startTransition] = useTransition();
+  const fmt = useFormatMoney();
 
   const reload = () => {
     startTransition(async () => {
@@ -125,7 +127,7 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
       setRows(prev);
       toast.error(r.error || "Could not mark paid.");
     } else {
-      toast.success(`₹${row.amount.toLocaleString("en-IN")} marked paid — ${row.studentName}`);
+      toast.success(`${fmt(row.amount)} marked paid — ${row.studentName}`);
     }
     setBusyRows((s) => ({ ...s, [row.feeRecordId]: false }));
   };
@@ -146,7 +148,7 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
         return;
       }
       const url = `${getAppUrl()}/api/receipts/${tokenRes.token}/image`;
-      const text = `Thank you ${row.parentName || ""}, we have received ₹${row.amount.toLocaleString("en-IN")} for ${row.studentName} (${formatMonth(row.month)}).\nReceipt: ${url}\n— ${academyName}`;
+      const text = `Thank you ${row.parentName || ""}, we have received ${fmt(row.amount)} for ${row.studentName} (${formatMonth(row.month)}).\nReceipt: ${url}\n— ${academyName}`;
       if (row.parentPhone) window.open(waLink(row.parentPhone, text), "_blank");
       setRows((rs) => (rs ? rs.filter((x) => x.feeRecordId !== row.feeRecordId) : rs));
       toast.success("Receipt shared.");
@@ -198,7 +200,7 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
         <div>
           <h3 className="text-base font-semibold text-ink">Collect fees</h3>
           <p className="text-[13px] text-ink-subtle">
-            {rows.length} unpaid · ₹{totalUnpaid.toLocaleString("en-IN")} outstanding
+            {rows.length} unpaid · {fmt(totalUnpaid)} outstanding
             {razorpayConnected ? " · Razorpay links on" : upiId ? " · UPI deep-links on" : ""}
           </p>
         </div>
@@ -226,7 +228,7 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
                       </p>
                     </div>
                     <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-                      <span className="text-sm font-semibold text-ink num">₹{row.amount.toLocaleString("en-IN")}</span>
+                      <span className="text-sm font-semibold text-ink num">{fmt(row.amount)}</span>
                       <span className="text-[11px] text-ink-subtle">{formatMonth(row.month)}</span>
                       <span className={`text-[11px] rounded-full px-2 py-0.5 ${tone.chip}`}>{tone.label}</span>
                     </div>
@@ -276,6 +278,7 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
 
 /** Compact banner for the Today screen: a prominent "Collect fees (N due)" button. */
 export function CollectFeesBanner({ onNavigate, count, amount }: { onNavigate: (tab: string) => void; count: number; amount: number }) {
+  const fmt = useFormatMoney();
   if (count === 0) return null;
   return (
     <button
@@ -290,7 +293,7 @@ export function CollectFeesBanner({ onNavigate, count, amount }: { onNavigate: (
         </span>
         <span className="min-w-0">
           <span className="block text-sm font-semibold text-ink">Collect fees ({count} due)</span>
-          <span className="block text-[12px] text-ink-muted truncate">₹{amount.toLocaleString("en-IN")} outstanding · tap to review and remind</span>
+          <span className="block text-[12px] text-ink-muted truncate">{fmt(amount)} outstanding · tap to review and remind</span>
         </span>
       </span>
       <span className="text-[12px] text-ink-subtle shrink-0">Open ›</span>
