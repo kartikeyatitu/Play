@@ -4,12 +4,14 @@ import { useEffect, useState } from "react"
 import { getFeeHistory } from "@/app/actions/fee-history"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { PaymentMethodBadge } from "@/components/ui/payment-method-badge"
 
 type FeeRecord = {
   id: string
   month: string
   amount: number
   status: string
+  paymentMethod?: string | null
 }
 
 export function FeeHistory({ studentId }: { studentId: string }) {
@@ -58,9 +60,12 @@ export function FeeHistory({ studentId }: { studentId: string }) {
                 }</TableCell>
                 <TableCell className="text-zinc-100">₹{record.amount}</TableCell>
                 <TableCell>
-                  <Badge variant={record.status === "PAID" ? "emerald" : "rose"}>
-                    {record.status}
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant={record.status === "PAID" ? "emerald" : "rose"}>
+                      {record.status}
+                    </Badge>
+                    <PaymentMethodBadge status={record.status} method={record.paymentMethod} />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

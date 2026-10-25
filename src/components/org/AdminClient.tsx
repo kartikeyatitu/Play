@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import dynamic from "next/dynamic";
 import { CommandPalette } from "@/components/ui/command-palette";
 import { FeeToggle } from "@/components/org/FeeToggle";
+import { PaymentMethodBadge } from "@/components/ui/payment-method-badge";
 import { SeedButton } from "@/components/org/SeedButton";
 import { TeamPanel } from "@/components/org/TeamPanel";
 import { PayrollPanel } from "@/components/org/PayrollPanel";
@@ -550,6 +551,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
                             </TableCell>
                             <TableCell className="text-right flex items-center justify-end gap-2">
                               <FeeToggle studentId={s.id} month={currentMonth} initialStatus={feeStatus} />
+                              <PaymentMethodBadge status={feeStatus} method={feeRecord?.paymentMethod} />
                               {(feeStatus === "PENDING" || feeStatus === "PENDING_VERIFICATION") && s.parent?.phone && feeAmount > 0 && (
                                 <>
                                   <PayNowButton studentName={s.name} studentId={s.id} amount={feeAmount} month={currentMonth} parentPhone={s.parent.phone} academyName={academyName} upiId={upiId} feeRecordId={feeRecord?.id} feeStatus={feeStatus} razorpayConnected={Boolean((org as any)?.razorpayConnected)} />

@@ -3,7 +3,8 @@
 import { useEffect, useState, useTransition, useMemo } from "react";
 import { MessageCircle, Check, Share2, Loader2, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { getUnpaidFees, resolvePayOption, getFeeReceiptToken, type UnpaidFeeRow } from "@/app/actions/fees";
+import { getUnpaidFees, getRecentPaidFees, resolvePayOption, getFeeReceiptToken, type UnpaidFeeRow, type RecentPaidFeeRow } from "@/app/actions/fees";
+import { PaymentMethodBadge } from "@/components/ui/payment-method-badge";
 import { markFeePaid } from "@/app/actions/payments";
 import { buildReminderMessage } from "@/lib/pay-link";
 import { shellButton } from "@/components/shell/EmptyState";
@@ -58,6 +59,7 @@ const BUCKET_META: Record<string, { label: string; order: number }> = {
 
 export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFeesProps) {
   const [rows, setRows] = useState<UnpaidFeeRow[] | null>(null);
+  const [recentPaid, setRecentPaid] = useState<RecentPaidFeeRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyRows, setBusyRows] = useState<Record<string, boolean>>({});
   const [isPending, startTransition] = useTransition();
@@ -65,7 +67,8 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
 
   const reload = () => {
     startTransition(async () => {
-      const r = await getUnpaidFees();
+      const [r, paid] = await Promise.all([getUnpaidFees(), getRecentPaidFees()]);
+      if (paid.success) setRecentPaid(paid.rows);
       if (r.success) {
         setRows(r.rows);
         setError(null);
@@ -73,6 +76,10 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
         setError(r.error);
       }
     });
+  };
+
+  const refreshRecentPaid = () => {
+    getRecentPaidFees().then((p) => { if (p.success) setRecentPaid(p.rows); }).catch(() => {});
   };
 
   useEffect(() => {
@@ -128,6 +135,7 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
       toast.error(r.error || "Could not mark paid.");
     } else {
       toast.success(`${fmt(row.amount)} marked paid — ${row.studentName}`);
+      refreshRecentPaid();
     }
     setBusyRows((s) => ({ ...s, [row.feeRecordId]: false }));
   };
@@ -152,6 +160,7 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
       if (row.parentPhone) window.open(waLink(row.parentPhone, text), "_blank");
       setRows((rs) => (rs ? rs.filter((x) => x.feeRecordId !== row.feeRecordId) : rs));
       toast.success("Receipt shared.");
+      refreshRecentPaid();
     } finally {
       setBusyRows((s) => ({ ...s, [row.feeRecordId]: false }));
     }
@@ -169,6 +178,26 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
     );
   }
 
+  const recentPaidList = recentPaid.length > 0 && (
+    <div className="space-y-2" data-testid="collect-fees-recent-paid">
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] uppercase tracking-wider text-ink-subtle font-medium">Recently paid</span>
+        <span className="text-[11px] text-ink-subtle">· last 14 days</span>
+      </div>
+      <ul className="divide-y divide-line rounded-xl border border-line bg-surface shadow-hairline">
+        {recentPaid.map((p) => (
+          <li key={p.feeRecordId} className="p-3 sm:px-4 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="min-w-0 flex-1 text-sm text-ink truncate">{p.studentName}</span>
+            <span className="text-sm font-semibold text-ink num">{fmt(p.amount)}</span>
+            <span className="text-[11px] text-ink-subtle">{formatMonth(p.month)}</span>
+            <span className="text-[11px] rounded-full px-2 py-0.5 bg-emerald-500/10 text-success border border-emerald-500/20">Paid</span>
+            <PaymentMethodBadge status="PAID" method={p.paymentMethod} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
   if (rows.length === 0) {
     return (
       <div className="rounded-xl border border-line bg-surface p-8 text-center">
@@ -177,6 +206,7 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
         </div>
         <p className="mt-3 text-sm font-medium text-ink">All settled</p>
         <p className="mt-1 text-[13px] text-ink-subtle">No unpaid fees in your academy right now.</p>
+        {recentPaidList && <div className="mt-6 text-left">{recentPaidList}</div>}
       </div>
     );
   }
@@ -272,6 +302,7 @@ export function CollectFees({ academyName, upiId, razorpayConnected }: CollectFe
           </ul>
         </div>
       ))}
+      {recentPaidList}
     </div>
   );
 }

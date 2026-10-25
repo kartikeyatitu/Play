@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PaymentMethodBadge } from "@/components/ui/payment-method-badge";
 import { markFeeAsPaid } from "@/app/actions/fees";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 interface BulkActionsProps {
-  students: { id: string; name: string; feeRecords: { id: string; status: string; month: string }[] }[];
+  students: { id: string; name: string; feeRecords: { id: string; status: string; month: string; paymentMethod?: string | null }[] }[];
   currentMonth: string;
 }
 
@@ -77,6 +78,7 @@ export function BulkActions({ students, currentMonth }: BulkActionsProps) {
             >
               <input type="checkbox" checked={selected.has(s.id)} readOnly className="accent-emerald-500" />
               <span className="text-sm text-white flex-1">{s.name}</span>
+              <PaymentMethodBadge status={fee?.status} method={fee?.paymentMethod} />
               <Badge variant={fee?.status === "PAID" ? "lime" : "rose"}>
                 {fee?.status || "NO FEE"}
               </Badge>
