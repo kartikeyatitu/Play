@@ -50,6 +50,7 @@ export const PERMISSIONS = {
   "payroll.manage": "Set salaries and mark payouts as paid",
   "reports.view": "See reports and analytics",
   "settings.manage": "Academy settings, payment setup and billing",
+  "community.moderate": "Hide replies and close comments on announcements",
 } as const;
 export type Permission = keyof typeof PERMISSIONS;
 export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];

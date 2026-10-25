@@ -30,6 +30,8 @@ export const FEATURES = {
   events: flag("EVENTS", false),
   /** Corporate sports programs. */
   corporate: flag("CORPORATE", false),
+  /** V7 Communities: read receipts, parent replies and moderation on announcements. */
+  communities: flag("COMMUNITIES", false),
   /** Instagram/social generators, AI "insights" that are heuristics rather than real analytics. */
   experimental: flag("EXPERIMENTAL", false),
 } as const;
