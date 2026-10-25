@@ -15,6 +15,14 @@ describe("LEAD_STATUSES", () => {
 });
 
 describe("TRIAL_STATUSES", () => {
+  it("accepts every status the UI and schema write (regression: Confirm/Mark Done threw)", () => {
+    // TrialManager sends CONFIRMED and COMPLETED; schema default is PENDING;
+    // convertTrialToStudent writes ENROLLED.
+    for (const s of ["PENDING", "CONFIRMED", "COMPLETED", "NO_SHOW", "ENROLLED"]) {
+      expect(TRIAL_STATUSES).toContain(s);
+    }
+  });
+
   it("covers every lifecycle state a trial can be in", () => {
     expect(TRIAL_STATUSES).toContain("SCHEDULED");
     expect(TRIAL_STATUSES).toContain("ATTENDED");
