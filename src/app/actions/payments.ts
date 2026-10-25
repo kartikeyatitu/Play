@@ -80,7 +80,7 @@ export async function reportFeePaid(feeRecordId: string) {
 
     const moved = await db.feeRecord.updateMany({
       where: { id: fee.id, status: { not: "PAID" } },
-      data: { status: "PENDING_VERIFICATION" },
+      data: { status: "PENDING_VERIFICATION", paymentMethod: "PARENT_REPORTED_UPI" },
     });
     if (moved.count === 0) return { success: true, status: "PAID" };
 
@@ -113,6 +113,14 @@ async function setFeeStatusAsAdmin(feeRecordId: string, status: "PAID" | "PENDIN
     });
     if (!fee || fee.student.orgId !== session.orgId) {
       return { success: false, error: "Fee record not found in your academy." };
+    }
+    // Only act on fees a parent reported as paid. This stops "reject" from
+    // flipping an already-settled (possibly gateway-verified) fee back to PENDING.
+    if (fee.status === "PAID" && status === "PAID") {
+      return { success: true, status: "PAID" as const, receipt: null };
+    }
+    if (fee.status !== "PENDING_VERIFICATION") {
+      return { success: false, error: `This fee is ${fee.status}, not awaiting confirmation.` };
     }
     // Persist the decision. Previously this function never wrote the status,
     // so "Received" was a no-op and reported payments could never be confirmed.
