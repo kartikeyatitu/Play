@@ -7,6 +7,7 @@ import Link from "next/link";
 import { MedicalForm } from "@/components/org/MedicalForm";
 import { PlayerAnalytics } from "@/components/analytics/PlayerAnalytics";
 import { formatMoney, type OrgLocale } from "@/lib/i18n";
+import { parseMedicalInfo } from "@/lib/coach";
 
 export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -40,7 +41,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
       parent: true,
       enrollments: { include: { batch: { include: { coach: true } } } },
       feeRecords: { orderBy: { month: "desc" }, take: 12 },
-      attendances: { orderBy: { sessionId: "desc" }, take: 20, include: { session: true } },
+      attendances: { orderBy: { session: { date: "desc" } }, take: 20, include: { session: true } },
       skillReports: { orderBy: { createdAt: "desc" } },
       Media: { orderBy: { createdAt: "desc" } },
       incidents: { orderBy: { createdAt: "desc" } },
@@ -59,6 +60,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
   }
 
   // Calculate attendance
+  const medical = parseMedicalInfo(student.medicalInfo);
   const totalAttended = student.attendances.filter((a) => a.isPresent).length;
   const totalSessions = student.attendances.length;
   const attendancePercentage = totalSessions > 0 ? Math.round((totalAttended / totalSessions) * 100) : 0;
@@ -77,7 +79,9 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                   <p>Parent: {student.parent?.name} ({student.parent?.phone || "No phone"})</p>
                   {student.dob && <p>DOB: {new Date(student.dob).toLocaleDateString()}</p>}
                   {student.bloodGroup && <p>Blood Group: {student.bloodGroup}</p>}
-                  {student.medicalInfo && <p className="text-rose-400">Medical: {student.medicalInfo}</p>}
+                  {medical.hasAny && (
+                    <p className={medical.severity === "alert" ? "text-rose-400" : "text-zinc-300"}>Medical: {medical.summary}</p>
+                  )}
                 </div>
               </div>
               <div className="text-right">

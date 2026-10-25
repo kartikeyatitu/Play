@@ -14,7 +14,13 @@ function getSessionSecret(): string {
   return "dev-only-secret-do-not-use-in-prod";
 }
 
-const SESSION_SECRET = getSessionSecret();
+// Resolved on first use, not at module load: `next build` imports this file while collecting
+// page data, and builds (e.g. Preview) may not have the secret. Requests still fail closed.
+let cachedSecret: string | null = null;
+function sessionSecret(): string {
+  if (!cachedSecret) cachedSecret = getSessionSecret();
+  return cachedSecret;
+}
 
 /** Cookie options shared by every place that sets the session cookie. */
 export const SESSION_COOKIE_NAME = "sportsos_session";
@@ -28,7 +34,7 @@ export const SESSION_COOKIE_OPTIONS = {
 
 export function createSignedCookie(data: any): string {
   const payload = JSON.stringify(data);
-  const signature = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("hex");
+  const signature = crypto.createHmac("sha256", sessionSecret()).update(payload).digest("hex");
   return `${payload}.${signature}`;
 }
 
@@ -41,7 +47,7 @@ export function verifySignedCookie(cookie: string): any | null {
     
     if (!payload || !signature) return null;
     
-    const expectedSignature = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("hex");
+    const expectedSignature = crypto.createHmac("sha256", sessionSecret()).update(payload).digest("hex");
     const sigBuf = Buffer.from(signature, "hex");
     const expBuf = Buffer.from(expectedSignature, "hex");
     if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
