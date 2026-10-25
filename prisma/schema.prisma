@@ -63,6 +63,7 @@ model Organization {
   users       User[]
   students    Student[]
   batches     Batch[]
+  branches    Branch[]
   subscription Subscription?
   memberships     OrgMembership[]
   staffAttendance StaffAttendance[]
@@ -151,6 +152,8 @@ model Batch {
   coach         User              @relation(fields: [coachId], references: [id])
   orgId         String?
   org           Organization?     @relation(fields: [orgId], references: [id])
+  branchId      String? // optional: which location this batch runs at
+  branch        Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
   enrollments   BatchEnrollment[]
   sessions      Session[]
   Event         Event[]
@@ -159,6 +162,7 @@ model Batch {
   waitlist      Waitlist[]
   @@index([orgId])
   @@index([coachId])
+  @@index([branchId])
 }
 
 model BatchEnrollment {
@@ -1210,4 +1214,20 @@ model Expense {
   org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@index([orgId, date])
+}
+
+/// A physical location of an academy (multi-centre academies). Plan Phase 3: academy & branch setup.
+model Branch {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  address   String?
+  city      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  batches   Batch[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
 }
