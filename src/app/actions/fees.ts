@@ -206,6 +206,44 @@ export async function getUnpaidFees(): Promise<{ success: true; rows: UnpaidFeeR
   }
 }
 
+export interface RecentPaidFeeRow {
+  feeRecordId: string;
+  studentName: string;
+  amount: number;
+  month: string;
+  paidAt: string | null;
+  paymentMethod: string | null;
+}
+
+/** ADMIN: fees paid in the last 14 days (newest first), with how each was paid. */
+export async function getRecentPaidFees(): Promise<{ success: true; rows: RecentPaidFeeRow[] } | { success: false; error: string }> {
+  const auth = await checkPermission("fees.collect");
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { session } = auth;
+  try {
+    const fees = await db.feeRecord.findMany({
+      where: { orgId: session.orgId, status: "PAID", paidAt: { gte: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) } },
+      select: { id: true, amount: true, month: true, paidAt: true, paymentMethod: true, student: { select: { name: true } } },
+      orderBy: { paidAt: "desc" },
+      take: 20,
+    });
+    return {
+      success: true,
+      rows: fees.map((f) => ({
+        feeRecordId: f.id,
+        studentName: f.student?.name || "Student",
+        amount: f.amount,
+        month: f.month,
+        paidAt: f.paidAt ? f.paidAt.toISOString() : null,
+        paymentMethod: f.paymentMethod ?? null,
+      })),
+    };
+  } catch (e: any) {
+    console.error("getRecentPaidFees failed:", e?.message || e);
+    return { success: false, error: "Couldn't load recent payments." };
+  }
+}
+
 /**
  * ADMIN: resolve the best one-tap payment option for a given fee (razorpay / upi / none), used
  * by the Collect Fees screen to build its WhatsApp reminder text with a real pay link.

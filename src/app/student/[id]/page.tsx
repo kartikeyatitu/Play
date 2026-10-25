@@ -8,6 +8,7 @@ import { MedicalForm } from "@/components/org/MedicalForm";
 import { PlayerAnalytics } from "@/components/analytics/PlayerAnalytics";
 import { formatMoney, type OrgLocale } from "@/lib/i18n";
 import { parseMedicalInfo } from "@/lib/coach";
+import { PaymentMethodBadge } from "@/components/ui/payment-method-badge";
 
 export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -169,7 +170,10 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                       <TableCell>{formatMoney(f.amount, orgLocale)}</TableCell>
                       <TableCell>
                         {f.status === "PAID" ? (
-                          <Badge variant="emerald" className="bg-emerald-900/30 text-emerald-400 border-emerald-900/50">PAID</Badge>
+                          <span className="inline-flex flex-wrap items-center gap-1.5">
+                            <Badge variant="emerald" className="bg-emerald-900/30 text-emerald-400 border-emerald-900/50">PAID</Badge>
+                            <PaymentMethodBadge status={f.status} method={f.paymentMethod} />
+                          </span>
                         ) : (
                           <Badge variant="rose" className="bg-rose-900/30 text-rose-400 border-rose-900/50">{f.status}</Badge>
                         )}
