@@ -81,10 +81,15 @@ export async function convertTrialToStudent(trialId: string) {
 
 /** Allowed lifecycle values for a TrialBooking. */
 const TRIAL_STATUSES = [
-  "SCHEDULED",
-  "ATTENDED",
+  // Lifecycle used by the admin Trials screen, coach dashboard and schema default.
+  "PENDING",
+  "CONFIRMED",
+  "COMPLETED",
   "NO_SHOW",
   "ENROLLED",
+  // Accepted for compatibility with earlier validation; nothing writes these today.
+  "SCHEDULED",
+  "ATTENDED",
   "DECLINED",
   "CANCELLED",
 ] as const;
