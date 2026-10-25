@@ -20,10 +20,15 @@ export const LEAD_STATUSES = [
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
 export const TRIAL_STATUSES = [
-  "SCHEDULED",
-  "ATTENDED",
+  // Lifecycle used by the admin Trials screen, coach dashboard and schema default.
+  "PENDING",
+  "CONFIRMED",
+  "COMPLETED",
   "NO_SHOW",
   "ENROLLED",
+  // Accepted for compatibility with earlier validation; nothing writes these today.
+  "SCHEDULED",
+  "ATTENDED",
   "DECLINED",
   "CANCELLED",
 ] as const;
