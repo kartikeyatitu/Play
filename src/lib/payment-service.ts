@@ -92,7 +92,7 @@ export async function finalizePayment(a: {
 
       await tx.feeRecord.updateMany({
         where: { id: payment.feeRecordId, status: { not: "PAID" } },
-        data: { status: "PAID", paidAt: now },
+        data: { status: "PAID", paidAt: now, paymentMethod: "ONLINE_VERIFIED" },
       });
       await tx.auditLog.create({
         data: {

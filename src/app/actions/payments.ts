@@ -27,13 +27,13 @@ export async function markFeePaid(studentId: string, month: string, paymentId: s
     if (fee) {
       await db.feeRecord.update({
         where: { id: fee.id },
-        data: { status: "PAID", paidAt: new Date(), orgId: fee.orgId ?? session.orgId },
+        data: { status: "PAID", paidAt: new Date(), orgId: fee.orgId ?? session.orgId, paymentMethod: "OFFLINE_RECORDED" },
       });
       feeAmount = fee.amount;
     } else {
       feeAmount = resolveStudentFee(student, student.org?.defaultMonthlyFee);
       const created = await db.feeRecord.create({
-        data: { orgId: session.orgId, studentId, amount: feeAmount, month, status: "PAID", paidAt: new Date() },
+        data: { orgId: session.orgId, studentId, amount: feeAmount, month, status: "PAID", paidAt: new Date(), paymentMethod: "OFFLINE_RECORDED" },
       });
       feeRecordId = created.id;
     }
@@ -114,6 +114,15 @@ async function setFeeStatusAsAdmin(feeRecordId: string, status: "PAID" | "PENDIN
     if (!fee || fee.student.orgId !== session.orgId) {
       return { success: false, error: "Fee record not found in your academy." };
     }
+    // Persist the decision. Previously this function never wrote the status,
+    // so "Received" was a no-op and reported payments could never be confirmed.
+    await db.feeRecord.update({
+      where: { id: fee.id },
+      data:
+        status === "PAID"
+          ? { status: "PAID", paidAt: new Date(), paymentMethod: "ADMIN_CONFIRMED_UPI" }
+          : { status: "PENDING", paidAt: null, paymentMethod: null },
+    });
     let receiptData = null;
     if (status === "PAID") {
       try {

@@ -40,7 +40,7 @@ export async function markFeeAsPaid(studentId: string, month: string) {
   if (existing) {
     const updated = await db.feeRecord.update({
       where: { id: existing.id },
-      data: { status: "PAID", paidAt: new Date() },
+      data: { status: "PAID", paidAt: new Date(), paymentMethod: "OFFLINE_RECORDED" },
     });
     feeRecordId = updated.id;
     amount = updated.amount;
@@ -53,6 +53,7 @@ export async function markFeeAsPaid(studentId: string, month: string) {
         month,
         status: "PAID",
         paidAt: new Date(),
+        paymentMethod: "OFFLINE_RECORDED",
         amount,
       },
     });
@@ -118,7 +119,7 @@ export async function reverseFeePayment(studentId: string, month: string, reason
 
   await db.feeRecord.update({
     where: { id: existing.id },
-    data: { status: "PENDING", paidAt: null },
+    data: { status: "PENDING", paidAt: null, paymentMethod: null },
   });
 
   console.log(

@@ -578,6 +578,7 @@ model FeeRecord {
   amount    Float     @default(0)
   month     String // Format: "YYYY-MM"
   status    String    @default("PENDING") // PENDING, PAID
+  paymentMethod String? // OFFLINE_RECORDED | PARENT_REPORTED_UPI | ADMIN_CONFIRMED_UPI | ONLINE_VERIFIED (null = legacy)
   paidAt    DateTime?
   createdAt DateTime  @default(now())
 
