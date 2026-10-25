@@ -44,6 +44,14 @@ async function validateBatchCoach(userId: string, orgId: string): Promise<string
   return legacy?.id ?? null;
 }
 
+/** Returns the branch id if it belongs to the org; null for "no branch"; undefined if invalid. */
+async function resolveBranchId(raw: FormDataEntryValue | null, orgId: string): Promise<string | null | undefined> {
+  const id = typeof raw === "string" ? raw.trim() : "";
+  if (!id) return null;
+  const branch = await db.branch.findFirst({ where: { id, orgId }, select: { id: true } });
+  return branch ? branch.id : undefined;
+}
+
 export async function createBatch(formData: FormData) {
   const { session } = await requirePermission("batches.manage");
   const name = formData.get("name") as string;
@@ -62,6 +70,9 @@ export async function createBatch(formData: FormData) {
   const validatedCoachId = await validateBatchCoach(coachId, session.orgId);
   if (!validatedCoachId) throw new Error("Coach not found or not active in your academy");
 
+  const branchId = await resolveBranchId(formData.get("branchId"), session.orgId);
+  if (branchId === undefined) throw new Error("Branch not found in your academy");
+
   await db.batch.create({
     data: {
       name,
@@ -71,6 +82,7 @@ export async function createBatch(formData: FormData) {
       orgId: session.orgId,
       monthlyFee: monthlyFee ?? null,
       capacity: capacity ?? null,
+      branchId,
     },
   });
 
@@ -96,9 +108,14 @@ export async function updateBatchSettings(batchId: string, formData: FormData) {
     return { success: false, error: "Capacity must be a whole number." };
   }
 
-  const data: { monthlyFee?: number | null; capacity?: number | null } = {};
+  const data: { monthlyFee?: number | null; capacity?: number | null; branchId?: string | null } = {};
   if (monthlyFee !== undefined) data.monthlyFee = monthlyFee;
   if (capacity !== undefined) data.capacity = capacity;
+  if (formData.get("branchId") !== null) {
+    const branchId = await resolveBranchId(formData.get("branchId"), session.orgId);
+    if (branchId === undefined) return { success: false, error: "Branch not found in your academy." };
+    data.branchId = branchId;
+  }
   // Changing what a batch charges is a fee decision, not just a schedule one
   if (data.monthlyFee !== undefined && data.monthlyFee !== batch.monthlyFee && !hasPermission(membership, "fees.manage")) {
     return { success: false, error: "You don't have permission to change fees." };
