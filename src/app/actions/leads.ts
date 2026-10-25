@@ -54,9 +54,10 @@ export async function createLead(data: {
   }
 }
 
-// Lifecycle enums live in @/lib/enums (no Prisma deps) so tests can import them.
-export { LEAD_STATUSES, type LeadStatus } from "@/lib/enums";
+// Lifecycle enums live in @/lib/enums (no Prisma deps, test-safe). A "use server" file may only
+// export async functions at runtime, so the constant is imported, not re-exported; types are fine.
 import { LEAD_STATUSES as _LEAD_STATUSES, type LeadStatus as _LeadStatus } from "@/lib/enums";
+export type { LeadStatus } from "@/lib/enums";
 
 export async function updateLeadStatus(leadId: string, status: string) {
   const auth = await checkPermission("leads.manage");
