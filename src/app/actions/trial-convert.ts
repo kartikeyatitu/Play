@@ -89,7 +89,6 @@ export async function convertTrialToStudent(trialId: string) {
 // Lifecycle enums live in @/lib/enums (no Prisma deps, test-safe). A "use server" file may only
 // export async functions at runtime, so the constant is imported, not re-exported; types are fine.
 import { TRIAL_STATUSES as _TRIAL_STATUSES, type TrialStatus as _TrialStatus } from "@/lib/enums";
-export type { TrialStatus } from "@/lib/enums";
 
 export async function updateTrialStatus(trialId: string, status: string) {
   const { session } = await requirePermission("leads.manage");
