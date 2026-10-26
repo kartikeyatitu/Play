@@ -3,6 +3,8 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { coachesOfOrg, requirePermission } from "@/lib/membership";
+import { FEATURES } from "@/lib/features";
+import { convertReferralOnEnrolment } from "@/lib/referral-server";
 
 import { cleanIndianPhone } from "@/lib/import-utils";
 
@@ -72,7 +74,7 @@ export async function createStudent(formData: FormData) {
   }
 
   // Using a transaction to ensure both Parent and Student are created cleanly
-  await db.$transaction(async (tx) => {
+  const studentId = await db.$transaction(async (tx) => {
     // 1. Find or create the Parent User
     let parent = await tx.user.findUnique({
       where: { phone: parentPhone },
@@ -124,8 +126,11 @@ export async function createStudent(formData: FormData) {
         },
       });
     }
+    return student.id;
   });
 
+  // Growth tools: a family that was referred and now enrols converts that referral (never throws).
+  if (FEATURES.growthTools) await convertReferralOnEnrolment(orgId, parentPhone, studentId, session.id);
   revalidatePath("/org");
   return { success: true };
 }

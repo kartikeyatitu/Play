@@ -597,12 +597,15 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
                     {(d) => <PaymentPlans academyName={academyName} feePlans={d.feePlans} />}
                   </Deferred>
                 </div>
-                <div>
-                  <SectionHeader title="Coupons" />
-                  <Deferred promise={secondary}>
-                    {(d) => <CouponManager initialCoupons={d.coupons} />}
-                  </Deferred>
-                </div>
+                {/* Coupons are not redeemable yet: growth tools flag (default off) */}
+                {FEATURES.growthTools && (
+                  <div>
+                    <SectionHeader title="Coupons" />
+                    <Deferred promise={secondary}>
+                      {(d) => <CouponManager initialCoupons={d.coupons} />}
+                    </Deferred>
+                  </div>
+                )}
               </div>
             </div>
           )}

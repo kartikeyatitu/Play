@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { checkPermission } from "@/lib/membership";
+import { FEATURES } from "@/lib/features";
+import { convertReferralOnEnrolment } from "@/lib/referral-server";
 
 // Tenant scope: the orgId argument is ignored (untrusted) — always use the session's org.
 export async function getLeads(_orgId?: string) {
@@ -237,6 +239,8 @@ export async function convertLeadToStudent(leadId: string, batchId: string) {
       return student;
     });
 
+    // Growth tools: a family that was referred and now enrols converts that referral (never throws).
+    if (FEATURES.growthTools) await convertReferralOnEnrolment(orgId, lead.parentPhone, result.id, session.id);
     revalidatePath("/org");
     return { success: true, student: result };
   } catch (error: any) {
