@@ -185,6 +185,31 @@ export function orgToday(org?: OrgLocale | null): string {
 }
 
 /**
+ * Calendar day (YYYY-MM-DD) and minutes after local midnight of a UTC instant in the org's timezone.
+ * Used to place stored-UTC instants (court bookings) on the org's calendar. Falls back to UTC on bad zones.
+ */
+export function orgDateParts(date: Date | string, org?: OrgLocale | null): { date: string; minutes: number } {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const tz = val(org, "timezone");
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(d);
+    const get = (t: string) => parts.find((p) => p.type === t)!.value;
+    const hour = Number(get("hour")) % 24;
+    return { date: `${get("year")}-${get("month")}-${get("day")}`, minutes: hour * 60 + Number(get("minute")) };
+  } catch {
+    return { date: d.toISOString().slice(0, 10), minutes: d.getUTCHours() * 60 + d.getUTCMinutes() };
+  }
+}
+
+/**
  * Current YYYY-MM in the org's timezone.
  */
 export function orgCurrentMonth(org?: OrgLocale | null): string {

@@ -234,3 +234,74 @@ booking engine (`src/lib/turf-engine.ts`), payments (`payment-service.ts`, `rece
   a `growthTools` flag now; WhatsApp Cloud API sender ownership.
 - Next slices: `StudentGuardian`, points ledger (`PointTransaction`), referral `orgId` + conversion, structured batch
   schedule (weekday + time columns) to replace free text.
+
+---
+
+## Additions from the competitive review (founder-approved, 2026-10-26)
+
+Three feature groups added to Vertical 1. Each is behind its own flag (default OFF). Branch
+`build/v-business-payments-calendar`.
+
+### A. Unified operations calendar (extends F12, flag `opsCalendar`)
+
+| # | Item |
+|---|---|
+| 1 Purpose | One org-scoped day/week view of everything that occupies a coach or a court: batch sessions (recorded + planned), trials, court allocations, turf bookings (counter/online), academy leases, maintenance blocks (TRIQ Spaces `source=BLOCK`), holidays. |
+| 2 Roles | Read: `batches.manage` (owner/manager by default). No writes in this slice. |
+| 3 Features | Day + week view (mobile defaults to day); filters branch / coach / facility / sport; conflict highlighting: coach double-allocated (two batches of one coach overlapping on a day) and facility double-allocated (overlapping active bookings on one court, e.g. `PAID_CONFLICT`). |
+| 4 Screens | Admin → More → Calendar (`OpsCalendar.tsx`). Day chips on phones; 7-column grid on desktop. Conflicts get a red outline and a banner count. |
+| 5 Fields | Bookings show facility, time range, kind (Booking/Lease/Block/Allocation), status and the customer's first name only. Trials show the child's first name only. |
+| 6 Journey | Manager opens Calendar → filters by coach → sees "Coach conflict" on Tue → opens Batches to fix the schedule. |
+| 7 Rules | Instants are stored UTC; bookings are converted to the org timezone (`orgDateParts` in `src/lib/i18n.ts`). Batch occupancy = court allocation interval when allocated, else schedule start + 60 min (`ASSUMED_SESSION_MINUTES`, labelled "assumed"). Cancelled sessions, CANCELLED/EXPIRED bookings never conflict. Conflicts are computed before filters, so a hidden item still flags the visible one. |
+| 8 Models | Read-only over `Batch`, `Session`, `TrialBooking`, `Holiday`, `TurfBooking`, `Facility`, `BatchBranch`. No new tables. |
+| 9 API | `getOpsCalendar(start, days)` → `{ days[], unscheduledBatches[], filters{branches,coaches,facilities,sports}, conflictCount }`. Pure: `buildOpsCalendar`, `detectConflicts`, `filterCalendar` in `src/lib/ops-calendar.ts`. |
+| 10 Edge cases | Unparseable schedule → listed under "not placed"; >31 days clamped; booking crossing midnight is shown on its start day. |
+| 11 Security | orgId-scoped queries; customer phone numbers never sent to the client. |
+| 13 Acceptance | Two overlapping bookings on one court show as conflicts; filters never hide a conflict badge on a visible item. |
+| 14 Tests | `src/lib/__tests__/ops-calendar.test.ts` (conflicts, filters, timezone bucketing). |
+
+### B. GST tax invoices (flag `gstInvoices`)
+
+| # | Item |
+|---|---|
+| 1 Purpose | Indian academies registered for GST must issue tax invoices for fees received and credit notes when a payment is reversed. |
+| 2 Roles | Tax profile: `settings.manage`. Issue / list / print invoices and credit notes: `fees.collect` (view) and `fees.manage` (credit notes). |
+| 3 Features | Org tax profile; tax-inclusive vs exclusive; per-org gap-free numbering per financial year (Apr–Mar) and series (invoice / credit note); CGST+SGST vs IGST by place of supply; invoice for a PAID fee record; printable page with amount in words; credit note on reversal (automatic when `reverseFeePayment` runs with the flag on, or manual for gateway refunds). |
+| 4 Screens | Settings → "GST details"; Fees → "GST invoices" (paid fees without an invoice → Issue; issued documents → Print / Credit note); `/org/invoices/[id]` printable page. |
+| 5 Fields | Legal name (2–160); GSTIN (15 chars, state code 01–38/97, mod-36 check character); address; SAC/HSN 4–8 digits (hints 999291 coaching, 999723 fitness — never defaulted); rate in % (0–40, stored as basis points); price mode; prefixes ≤4 chars `[A-Z0-9-]`; numbers `PREFIX/YY-YY/NNNNN` ≤16 chars. |
+| 6 Journey | Owner fills GST details → accountant opens Fees → GST invoices → "Issue" on a paid fee (optionally picks the parent's state) → prints / shares. Fee reversed → credit note issued against the invoice. |
+| 7 Rules | Paise integers. Inclusive: amount received is the gross, taxable backed out, taxable+tax = gross exactly, CGST = SGST. Exclusive: tax added on top, total rounded to the rupee with a "Round off" line; the invoice shows "Amount received" and "Balance due" because fee generation does NOT add GST (pricing unchanged). Place of supply = recipient state if given, else supplier state. Invoice date = issue date in org timezone; FY from that date. Numbering: `TaxDocumentCounter` row incremented with `INSERT … ON CONFLICT DO UPDATE … RETURNING` inside the same transaction as the invoice insert → row lock serialises concurrent issuers, rollback returns the number (gap-free). Idempotent via `sourceKey` (`fee:<id>:<paidAt>`, `cn:<invoiceId>`). The fee row is locked `FOR UPDATE` and must be PAID. One credit note per invoice (full reversal). Supplier details are snapshotted on the document. |
+| 8 Models | `OrgTaxProfile` (orgId PK), `TaxDocumentCounter` (orgId, fy, series), `TaxInvoice` (kind INVOICE / CREDIT_NOTE, amounts in paise, `originalInvoiceId` for credit notes). SQL `prisma/sql/2026-10-26_gst_invoices.sql`. |
+| 9 API | `getTaxProfile`, `saveTaxProfile`, `listGstDocuments`, `issueGstInvoice(feeRecordId, placeOfSupply?)`, `issueGstCreditNote(invoiceId, reason)` in `src/app/actions/gst-invoices.ts`; service `src/lib/gst-invoice-service.ts`; pure math `src/lib/gst.ts`. |
+| 10 Edge cases | Profile missing → issue refused with a link to Settings. Fee not PAID → refused. Second click → returns the existing invoice. Prefix change mid-year keeps the same sequence. Seq > 99999 with a 4-char prefix → refused (16-char limit). |
+| 11 Security | All queries orgId-scoped; printable page checks membership + `fees.collect`; every issue/save audited (`GST_PROFILE_SAVED`, `GST_INVOICE_ISSUED`, `GST_CREDIT_NOTE_ISSUED`). |
+| 13 Acceptance | Flag off → receipts, fee totals and screens are byte-for-byte as before. Two concurrent issues produce consecutive numbers with no gap. |
+| 14 Tests | `src/lib/__tests__/gst.test.ts` (GSTIN checksum, splits, inclusive reconciliation sweep, rounding, FY boundaries, number length, words). Integration (needs DB): concurrent numbering. |
+| 16 Decisions | Should fee generation add GST in EXCLUSIVE mode (pricing change — not done)? B2B invoices with recipient GSTIN; e-invoicing (IRN) above the turnover threshold; GSTR-1 export. |
+
+### C. UPI AutoPay fee mandates (flag `upiAutopay`)
+
+| # | Item |
+|---|---|
+| 1 Purpose | Parents authorise a monthly UPI mandate once; the academy's own Razorpay account debits each month's fee. Money never passes through TRIQ. |
+| 2 Roles | Parent: set up / cancel for own child. Admin view + cancel + "create this month's debits": `fees.manage`. |
+| 3 Features | Mandate model; parent opt-in card on the fee screen with explicit consent text (stored with version, time, IP); admin mandate list; monthly charge creation with idempotency key; status sync from Razorpay; flag-gated webhook handler for `token.*` events. |
+| 4 Screens | Parent → child card → "UPI AutoPay". Admin → Fees → "UPI AutoPay mandates". |
+| 5 Fields | Max amount per debit ₹1–₹99,999 (whole rupees, ≥ current fee); frequency `monthly`; expiry 3 years. |
+| 6 Journey | Parent ticks consent → Razorpay Checkout (`recurring: "1"`) → approves in UPI app → AUTHENTICATED → `token.confirmed` → ACTIVE. On the 1st the fee is generated; admin (or the `/api/cron/autopay-charges` route) creates the debit; Razorpay sends the pre-debit notification and debits ~25h later; `payment.captured` → existing `finalizePayment` → fee PAID `ONLINE_VERIFIED`. |
+| 7 Rules | States CREATED→AUTHENTICATED→ACTIVE⇄PAUSED→CANCELLED/EXPIRED, FAILED on rejection; terminal states never move; CREATED→ACTIVE allowed for webhook-before-handler ordering. One live mandate per child. Charge only when: ACTIVE, token present, not expired, current month, not the last day of the month, fee PENDING, 0 < amount ≤ max, no charge yet for mandate+month (`FeeMandateCharge.idempotencyKey` unique), no previous debit in flight. Debits > ₹15,000 need the parent's UPI PIN (AFA). |
+| 8 Models | `FeeMandate`, `FeeMandateCharge` (+ a `Payment` row with `kind = "AUTOPAY"` per debit, so the existing reconciliation applies). SQL `prisma/sql/2026-10-26_upi_autopay.sql`. |
+| 9 API | Actions `src/app/actions/autopay.ts`: `getAutopayForStudent`, `startAutopayMandate`, `confirmAutopayAuthorisation`, `cancelAutopayMandate`, `listAutopayMandates`, `syncAutopayMandate`, `createAutopayCharges`. Razorpay REST: `POST /customers`, `POST /orders` (token block), `GET /payments/:id`, `GET /customers/:c/tokens/:t`, `PUT …/cancel`, `POST /payments/create/recurring`. Webhook: `/api/webhooks/razorpay/[orgId]` delegates `token.*` and `payment.authorized` (only when it matches a mandate) to `src/lib/autopay-webhook.ts`; signature verification and all fee/turf events unchanged. |
+| 10 Edge cases | Unknown token in webhook → 200 ignored (status recovered by sync). Razorpay unreachable while charging → charge `SUBMIT_FAILED`, retry re-submits the same order. Fee paid by cash before the debit → `finalizePayment` parks the debit as NEEDS_REVIEW (refund). |
+| 11 Security | Parent can only act on own child; checkout signature verified with the academy key secret; fee PAID only from a verified captured payment; all mutations audited (`AUTOPAY_*`). |
+| 13 Acceptance | Flag off → no new UI, webhook behaviour identical. |
+| 14 Tests | `src/lib/__tests__/autopay.test.ts` (state machine, provider mapping, charge eligibility, idempotency keys). No real Razorpay calls are exercised in CI. |
+| 16 Decisions | Authorisation amount (₹1 vs ₹0 — Razorpay docs disagree; constant `AUTH_AMOUNT_MINOR`); whether to add the cron to `vercel.json` (not done — Vercel config untouched); UPI recurring must be enabled on each academy's Razorpay account. |
+
+### Implementation status of the additions
+
+| Group | Status | Evidence |
+|---|---|---|
+| A Unified calendar | Built (flag `opsCalendar`) | `src/lib/ops-calendar.ts`, `src/app/actions/ops-calendar.ts`, `src/components/org/OpsCalendar.tsx` |
+| B GST invoices | Built (flag `gstInvoices`, SQL pending) | `src/lib/gst.ts`, `src/lib/gst-invoice-service.ts`, `src/app/actions/gst-invoices.ts`, `src/app/org/invoices/[id]/page.tsx` |
+| C UPI AutoPay | Built, untested against Razorpay (flag `upiAutopay`, SQL pending) | `src/lib/autopay.ts`, `src/lib/autopay-service.ts`, `src/lib/autopay-webhook.ts`, `src/app/actions/autopay.ts` |

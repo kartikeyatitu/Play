@@ -1,9 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { getOpsCalendar } from "@/app/actions/ops-calendar";
-import { weekStart, type CalendarDay, type CalendarItem } from "@/lib/ops-calendar";
+import {
+  filterCalendar,
+  weekStart,
+  type CalendarDay,
+  type CalendarFilterOptions,
+  type CalendarFilters,
+  type CalendarItem,
+} from "@/lib/ops-calendar";
 import { addDaysStr, formatHour, todayIstStr } from "@/lib/turf";
 
 function timeLabel(min: number | null): string {
@@ -24,7 +31,13 @@ const KIND_STYLE: Record<CalendarItem["kind"], string> = {
   PLANNED: "border-l-sky-500",
   TRIAL: "border-l-amber-500",
   ALLOCATION: "border-l-violet-500",
+  BOOKING: "border-l-zinc-400",
 };
+
+const BOOKING_STYLE = { BOOKING: "border-l-orange-500", LEASE: "border-l-fuchsia-500", BLOCK: "border-l-zinc-500" } as const;
+const BOOKING_LABEL = { BOOKING: "Booking", LEASE: "Lease", BLOCK: "Blocked" } as const;
+
+const EMPTY_FILTERS: CalendarFilterOptions = { coaches: [], sports: [], branches: [], facilities: [] };
 
 function Item({ item }: { item: CalendarItem }) {
   let title = "";
@@ -39,29 +52,66 @@ function Item({ item }: { item: CalendarItem }) {
   } else if (item.kind === "TRIAL") {
     title = `Trial: ${item.childFirstName}`;
     meta = `${item.batchName} · ${item.status.toLowerCase()}`;
-  } else {
+  } else if (item.kind === "ALLOCATION") {
     title = item.facilityName;
     meta = `${formatHour(item.startHour)} – ${formatHour(item.endHour)}${item.batchName ? ` · ${item.batchName}` : ""}`;
+  } else {
+    title = `${BOOKING_LABEL[item.bookingKind]}: ${item.facilityName}`;
+    meta = `${timeLabel(item.startMinutes)} – ${timeLabel(item.endMinutes)}${item.customerFirstName ? ` · ${item.customerFirstName}` : ""} · ${item.status.toLowerCase().replace("_", " ")}`;
   }
-  const time = item.kind === "ALLOCATION" ? "" : timeLabel(item.timeMinutes);
+  const time = item.kind === "ALLOCATION" || item.kind === "BOOKING" ? "" : timeLabel(item.timeMinutes);
+  const border = item.kind === "BOOKING" ? BOOKING_STYLE[item.bookingKind] : KIND_STYLE[item.kind];
+  const clash = item.conflicts.length > 0;
   return (
-    <li className={`rounded-md border border-line border-l-4 ${KIND_STYLE[item.kind]} bg-surface px-3 py-2`}>
+    <li className={`rounded-md border border-l-4 ${border} ${clash ? "border-red-500 ring-1 ring-red-500/40" : "border-line"} bg-surface px-3 py-2`}>
       <p className="text-sm font-medium text-ink truncate">
         {time && <span className="text-ink-subtle mr-1.5">{time}</span>}
         {title}
       </p>
       <p className="text-xs text-ink-subtle truncate">{meta}</p>
+      {item.conflicts.map((c) => (
+        <p key={c.label} className="mt-0.5 flex items-center gap-1 text-xs text-red-500">
+          <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden /> <span className="truncate">{c.label}</span>
+        </p>
+      ))}
     </li>
   );
 }
 
-/** V1 Business: week view of sessions, planned batches, trials, holidays and court allocations. */
+function FilterSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
+  if (options.length === 0) return null;
+  return (
+    <label className="flex flex-col gap-1 text-xs text-ink-subtle min-w-0">
+      {label}
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="h-9 rounded-md border border-line bg-surface px-2 text-sm text-ink">
+        <option value="">All</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/**
+ * V1 Business: unified operations calendar — sessions, planned batches, trials, holidays, court allocations,
+ * bookings, leases and blocked slots, with day/week views, filters and coach/court conflict highlighting.
+ */
 export function OpsCalendar() {
   const [start, setStart] = useState(() => weekStart(todayIstStr()));
   const [days, setDays] = useState<CalendarDay[]>([]);
   const [unscheduled, setUnscheduled] = useState<{ id: string; name: string; schedule: string | null }[]>([]);
+  const [options, setOptions] = useState<CalendarFilterOptions>(EMPTY_FILTERS);
+  const [conflictCount, setConflictCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Phones get the day view by default; the week grid needs a wide screen.
+  const [view, setView] = useState<"day" | "week">("day");
+  useEffect(() => {
+    if (window.matchMedia?.("(min-width: 1024px)").matches) setView("week");
+  }, []);
+  const [selectedDay, setSelectedDay] = useState(() => todayIstStr());
+  const [filters, setFilters] = useState<CalendarFilters>({});
 
   const load = useCallback(async (s: string) => {
     setLoading(true);
@@ -74,6 +124,8 @@ export function OpsCalendar() {
       } else {
         setDays(res.days);
         setUnscheduled(res.unscheduledBatches);
+        setOptions(res.filters);
+        setConflictCount(res.conflictCount);
       }
     } catch {
       setError("Couldn't load the calendar.");
@@ -87,6 +139,14 @@ export function OpsCalendar() {
   }, [start, load]);
 
   const today = todayIstStr();
+  const visible = useMemo(() => filterCalendar(days, filters), [days, filters]);
+  const shown = view === "day" ? visible.filter((d) => d.date === selectedDay) : visible;
+  const setFilter = (k: keyof CalendarFilters) => (v: string) => setFilters((f) => ({ ...f, [k]: v || null }));
+
+  useEffect(() => {
+    // Keep the selected day inside the loaded week.
+    if (selectedDay < start || selectedDay > addDaysStr(start, 6)) setSelectedDay(start);
+  }, [start, selectedDay]);
 
   return (
     <section className="space-y-4">
@@ -101,24 +161,82 @@ export function OpsCalendar() {
           <button type="button" aria-label="Next week" onClick={() => setStart(addDaysStr(start, 7))} className="p-2 rounded-md border border-line text-ink-muted hover:text-ink">
             <ChevronRight className="w-4 h-4" />
           </button>
-          <button type="button" onClick={() => setStart(weekStart(today))} className="px-3 py-1.5 text-xs rounded-md border border-line text-ink-muted hover:text-ink">
-            This week
+          <button
+            type="button"
+            onClick={() => {
+              setStart(weekStart(today));
+              setSelectedDay(today);
+            }}
+            className="px-3 py-1.5 text-xs rounded-md border border-line text-ink-muted hover:text-ink"
+          >
+            Today
           </button>
+          <div role="group" aria-label="View" className="flex rounded-md border border-line overflow-hidden text-xs">
+            {(["day", "week"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={view === v}
+                onClick={() => setView(v)}
+                className={`px-3 py-1.5 ${view === v ? "bg-ink text-surface" : "text-ink-muted hover:text-ink"}`}
+              >
+                {v === "day" ? "Day" : "Week"}
+              </button>
+            ))}
+          </div>
         </div>
         <ul className="flex flex-wrap gap-3 text-xs text-ink-subtle">
           <li><span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1" />Session</li>
           <li><span className="inline-block w-2 h-2 rounded-full bg-sky-500 mr-1" />Planned</li>
           <li><span className="inline-block w-2 h-2 rounded-full bg-amber-500 mr-1" />Trial</li>
           <li><span className="inline-block w-2 h-2 rounded-full bg-violet-500 mr-1" />Court</li>
+          <li><span className="inline-block w-2 h-2 rounded-full bg-orange-500 mr-1" />Booking</li>
+          <li><span className="inline-block w-2 h-2 rounded-full bg-fuchsia-500 mr-1" />Lease</li>
+          <li><span className="inline-block w-2 h-2 rounded-full bg-zinc-500 mr-1" />Blocked</li>
         </ul>
       </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <FilterSelect label="Branch" value={filters.branch ?? ""} onChange={setFilter("branch")} options={options.branches.map((b) => ({ value: b, label: b }))} />
+        <FilterSelect label="Coach" value={filters.coachId ?? ""} onChange={setFilter("coachId")} options={options.coaches.map((c) => ({ value: c.id, label: c.name }))} />
+        <FilterSelect label="Court" value={filters.facilityId ?? ""} onChange={setFilter("facilityId")} options={options.facilities.map((f) => ({ value: f.id, label: f.name }))} />
+        <FilterSelect label="Sport" value={filters.sport ?? ""} onChange={setFilter("sport")} options={options.sports.map((s) => ({ value: s, label: s }))} />
+      </div>
+
+      {conflictCount > 0 && (
+        <p className="flex items-center gap-2 rounded-md border border-red-500/40 bg-red-500/5 px-3 py-2 text-sm text-red-500">
+          <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden />
+          {conflictCount} item{conflictCount === 1 ? "" : "s"} this week clash with another coach or court booking.
+        </p>
+      )}
+
+      {view === "day" && (
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+          {visible.map((d) => {
+            const clash = d.items.some((i) => i.conflicts.length > 0);
+            return (
+              <button
+                key={d.date}
+                type="button"
+                aria-pressed={d.date === selectedDay}
+                onClick={() => setSelectedDay(d.date)}
+                className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs ${d.date === selectedDay ? "border-lime-500 text-ink" : "border-line text-ink-muted"}`}
+              >
+                <span className="block font-semibold">{d.weekday}</span>
+                <span className="block">{dayLabel(d.date)}</span>
+                {clash && <span className="block text-red-500">clash</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {error && <p className="text-sm text-red-500">{error}</p>}
       {loading ? (
         <p className="flex items-center gap-2 text-sm text-ink-subtle"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</p>
       ) : (
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-7">
-          {days.map((d) => (
+        <div className={`grid gap-3 grid-cols-1 ${view === "week" ? "sm:grid-cols-2 lg:grid-cols-7" : ""}`}>
+          {shown.map((d) => (
             <div key={d.date} className={`rounded-xl border p-3 min-w-0 ${d.date === today ? "border-lime-500/60" : "border-line"} bg-surface shadow-hairline`}>
               <p className="text-xs font-semibold uppercase text-ink-muted">
                 {d.weekday} <span className="text-ink">{dayLabel(d.date)}</span>

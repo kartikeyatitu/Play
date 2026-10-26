@@ -3,6 +3,7 @@ import { getOrgRazorpay } from "@/lib/razorpay-org";
 import { verifyRazorpayWebhookSignature } from "@/lib/gateways/razorpay";
 import { finalizePayment, failPayment, PERMANENT_PAYMENT_ERRORS } from "@/lib/payment-service";
 import { confirmPaidBooking } from "@/lib/turf-engine";
+import { handleAutopayWebhook } from "@/lib/autopay-webhook";
 import { db } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -42,6 +43,11 @@ export async function POST(
 
   try {
     const event = body?.event as string | undefined;
+
+    // 0. UPI AutoPay mandate events (flag upiAutopay; separate module). Returns null for everything else, including
+    //    every fee/turf payment event below, which is processed exactly as before.
+    const autopay = await handleAutopayWebhook(orgId, event, body);
+    if (autopay) return NextResponse.json(autopay.body, { status: autopay.status });
 
     // 1. Payment Link paid: event "payment_link.paid"
     if (event === "payment_link.paid") {

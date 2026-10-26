@@ -50,10 +50,17 @@ export const FEATURES = {
   /** V1 Business: branches (academy locations) + batch → branch. Needs prisma/sql/2026-10-25_branches.sql
    *  and 2026-10-26_batch_branches.sql applied first — the Branch tables are never queried while this is off. */
   branches: flag("BRANCHES", true),
-  /** V1 Business: operational calendar (sessions, planned batches, trials, holidays, court allocations). No SQL. */
+  /** V1 Business: unified operations calendar (sessions, planned batches, trials, holidays, court allocations,
+   *  turf bookings, leases, blocked slots; day/week, filters, coach/court conflict highlighting). Read-only. No SQL. */
   opsCalendar: flag("OPS_CALENDAR", true),
   /** V1 Business: allocate batches to courts/facilities as weekly bookings (uses the turf booking engine). No SQL. */
   facilityAllocation: flag("FACILITY_ALLOCATION", true),
+  /** V1 Business: GST tax invoices + credit notes for paid fees (org tax profile, FY numbering, CGST/SGST/IGST).
+   *  Needs prisma/sql/2026-10-26_gst_invoices.sql — the GST tables are never queried while this is off. */
+  gstInvoices: flag("GST_INVOICES", false),
+  /** V1 Business: UPI AutoPay monthly fee mandates on the academy's own Razorpay account (recurring payments).
+   *  Needs prisma/sql/2026-10-26_upi_autopay.sql and UPI recurring enabled on the academy's Razorpay account. */
+  upiAutopay: flag("UPI_AUTOPAY", false),
   /** V1 Business: monthly business report (revenue, outstanding, attendance, utilisation). No SQL. */
   businessReport: flag("BUSINESS_REPORT", true),
   /** V1/V11: audit-log viewer with filters and CSV export (owners only). No SQL. */
