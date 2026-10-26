@@ -1356,6 +1356,95 @@ model OpportunityApplication {
 
 /// Append-only status history of an application.
 model OpportunityApplicationEvent {
+// ---- V5 TRIQ Careers (additive, 2026-10-26; prisma/sql/2026-10-26_careers.sql) ----------------
+// No relations are added to existing models, so this block is purely additive.
+
+/// A user's portable professional profile (user-owned, not org-scoped).
+model ProfessionalProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  headline        String?
+  bio             String?
+  sports          String[] @default([])
+  city            String?
+  yearsExperience Int?
+  isPublic        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ProfessionalExperience {
+  id           String   @id @default(cuid())
+  userId       String
+  title        String
+  organization String
+  startYear    Int
+  endYear      Int?
+  description  String?
+  createdAt    DateTime @default(now())
+  @@index([userId])
+}
+
+/// Qualification or certification. status: SUBMITTED | REVIEWED | VERIFIED | REJECTED (src/lib/credentials.ts).
+model ProfessionalCredential {
+  id           String    @id @default(cuid())
+  userId       String
+  kind         String    // QUALIFICATION | CERTIFICATION
+  title        String
+  issuer       String?
+  issuedYear   Int?
+  evidenceUrl  String?
+  status       String    @default("SUBMITTED")
+  reviewedById String?
+  reviewedAt   DateTime?
+  verifiedById String?
+  verifiedAt   DateTime?
+  rejectReason String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  @@index([userId])
+  @@index([status])
+}
+
+/// Job posted by an organisation. status: DRAFT | OPEN | CLOSED.
+model JobListing {
+  id             String   @id @default(cuid())
+  orgId          String
+  title          String
+  role           String
+  sport          String?
+  city           String
+  employmentType String
+  description    String
+  requirements   String?
+  payMin         Int?
+  payMax         Int?
+  currency       String   @default("INR")
+  status         String   @default("DRAFT")
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@index([orgId, status])
+  @@index([status, createdAt])
+}
+
+/// status: APPLIED | SHORTLISTED | INTERVIEW | OFFERED | HIRED | REJECTED | WITHDRAWN.
+model JobApplication {
+  id          String   @id @default(cuid())
+  orgId       String
+  jobId       String
+  applicantId String
+  coverNote   String?
+  status      String   @default("APPLIED")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([jobId, applicantId])
+  @@index([orgId, jobId])
+  @@index([applicantId])
+}
+
+/// Every application status change (history shown to employer and applicant).
+model JobApplicationEvent {
   id            String   @id @default(cuid())
   orgId         String
   applicationId String
@@ -1525,4 +1614,51 @@ model Fixture {
   @@unique([competitionId, round, slot])
   @@index([orgId, scheduledAt])
   @@index([officialUserId])
+// ---- V6 TRIQ Wellness (additive, 2026-10-26; prisma/sql/2026-10-26_wellness.sql) ---------------
+
+/// A wellness professional's service profile (user-owned). credentialStatus uses src/lib/credentials.ts.
+model WellnessProvider {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  displayName          String
+  category             String    // PHYSIOTHERAPY | NUTRITION | RECOVERY | PSYCHOLOGY
+  services             String?
+  bio                  String?
+  city                 String?
+  registrationBody     String?
+  registrationNumber   String?   // never shown on discovery pages
+  credentialStatus     String    @default("SUBMITTED")
+  credentialReviewedById String?
+  credentialReviewedAt DateTime?
+  credentialVerifiedById String?
+  credentialVerifiedAt DateTime?
+  credentialRejectReason String?
+  isListed             Boolean   @default(false)
+  acceptingRequests    Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  @@index([isListed, category])
+}
+
+/// status: REQUESTED | CONFIRMED | DECLINED | COMPLETED | CANCELLED (src/lib/wellness.ts).
+/// `note` is sensitive: visible only to the requester and the provider, never audited.
+model WellnessAppointment {
+  id             String    @id @default(cuid())
+  providerId     String
+  providerUserId String
+  requesterId    String
+  category       String
+  scheduledAt    DateTime
+  note           String?
+  status         String    @default("REQUESTED")
+  confirmedAt    DateTime?
+  declinedAt     DateTime?
+  completedAt    DateTime?
+  cancelledAt    DateTime?
+  cancelledById  String?
+  cancelReason   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  @@index([providerUserId, status, scheduledAt])
+  @@index([requesterId, createdAt])
 }

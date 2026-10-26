@@ -47,6 +47,15 @@ export async function deleteAllData() {
   // Order: everything whose FKs point at the academy before the academy row itself.
   // auditLog deliberately LAST so the record of the deletion survives through most of it.
   const steps: Array<[string, () => Promise<{ count: number }>]> = [
+    // V5 Careers tables exist only once prisma/sql/2026-10-26_careers.sql is applied, which is
+    // required before the flag is turned on — so only touch them when the flag is on.
+    ...(FEATURES.careers
+      ? ([
+          ["jobApplicationEvent", () => db.jobApplicationEvent.deleteMany({ where: { orgId: oId } })],
+          ["jobApplication",      () => db.jobApplication.deleteMany({ where: { orgId: oId } })],
+          ["jobListing",          () => db.jobListing.deleteMany({ where: { orgId: oId } })],
+        ] as Array<[string, () => Promise<{ count: number }>]>)
+      : []),
     ["galleryPhoto",    () => db.galleryPhoto.deleteMany({ where: { orgId: oId } })],
     ["rSVP",            () => db.rSVP.deleteMany({ where: { orgId: oId } })],
     ["attendance",      () => db.attendance.deleteMany({ where: { session: { orgId: oId } } })],

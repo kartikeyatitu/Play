@@ -7,6 +7,8 @@ import { db } from "@/lib/db";
 import { shortStart } from "@/lib/coach";
 import { scheduleRunsOn } from "@/lib/fees";
 import { getAppUrl } from "@/lib/app-url";
+import { FEATURES } from "@/lib/features";
+import { shouldIndexCoach } from "@/lib/coach-public";
 import { BadgeCheck, MapPin, CalendarDays, Clock, Users, ChevronRight, Sparkles } from "lucide-react";
 
 // PUBLIC (no auth). Only public-safe fields are selected: no phones, emails,
@@ -99,6 +101,8 @@ export async function generateMetadata({ params }: { params: Promise<{ coachId: 
   return {
     title: `${title} | Triq`,
     description,
+    // Coach OS off: page stays reachable for shared links but is kept out of search results.
+    ...(shouldIndexCoach({ coachOS: FEATURES.coachOS, verified: coach.verified }) ? {} : { robots: { index: false, follow: false } }),
     openGraph: { title, description, type: "profile", ...(org.logo ? { images: [{ url: org.logo }] } : {}) },
     twitter: { card: "summary", title, description },
   };

@@ -1,7 +1,8 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { checkPermission } from "@/lib/membership";
+import { checkPermission, hasPermission } from "@/lib/membership";
+import { FEATURES } from "@/lib/features";
 import { resolveStudentFee, istMonthString } from "@/lib/fees";
 
 function escapeCSV(val: unknown): string {
@@ -15,6 +16,8 @@ export async function exportAllStudentsCSV(): Promise<{ success: boolean; csv?: 
     const auth = await checkPermission("reports.view");
     if (!auth.ok) return { success: false, error: auth.error };
     const { session } = auth;
+    // V6 Wellness: medical columns are exported only for holders of health.view when the flag is on.
+    const includeMedical = !FEATURES.wellness || hasPermission(auth.membership, "health.view");
 
     const orgId = session.orgId;
     const currentMonth = istMonthString();
@@ -71,8 +74,8 @@ export async function exportAllStudentsCSV(): Promise<{ success: boolean; csv?: 
       return [
         escapeCSV(s.name),
         escapeCSV(dobStr),
-        escapeCSV(s.bloodGroup || ""),
-        escapeCSV(s.medicalInfo || ""),
+        escapeCSV(includeMedical ? s.bloodGroup || "" : ""),
+        escapeCSV(includeMedical ? s.medicalInfo || "" : ""),
         escapeCSV(s.parent?.name || ""),
         escapeCSV(s.parent?.phone || ""),
         escapeCSV(s.parent?.email || ""),

@@ -10,8 +10,13 @@ import { formatMoney, type OrgLocale } from "@/lib/i18n";
 import { parseMedicalInfo } from "@/lib/coach";
 import { PaymentMethodBadge } from "@/components/ui/payment-method-badge";
 import { FEATURES } from "@/lib/features";
+<<<<<<< HEAD
 import { listAthleteRecords } from "@/app/actions/athlete";
 import { AthletePanel } from "@/components/athlete/AthletePanel";
+=======
+import { canViewMedical } from "@/lib/health";
+import { checkPermission } from "@/lib/membership";
+>>>>>>> origin/build/v-careers-wellness-creators
 
 export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -63,11 +68,17 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
     );
   }
 
+<<<<<<< HEAD
   // V2 athlete records (flag-gated; returns an error value instead of throwing if the SQL is not applied yet)
   const athleteRecords = FEATURES.athleteOS ? await listAthleteRecords(student.id) : null;
+=======
+  // V6 Wellness: with the flag on, owners/managers need health.view to see medical data.
+  const hasHealthView = FEATURES.wellness && session.role === "ADMIN" ? (await checkPermission("health.view")).ok : true;
+  const showMedical = canViewMedical({ wellness: FEATURES.wellness, appRole: session.role, hasHealthView });
+>>>>>>> origin/build/v-careers-wellness-creators
 
   // Calculate attendance
-  const medical = parseMedicalInfo(student.medicalInfo);
+  const medical = parseMedicalInfo(showMedical ? student.medicalInfo : null);
   const totalAttended = student.attendances.filter((a) => a.isPresent).length;
   const totalSessions = student.attendances.length;
   const attendancePercentage = totalSessions > 0 ? Math.round((totalAttended / totalSessions) * 100) : 0;
@@ -92,7 +103,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                 <div className="mt-2 text-zinc-400 space-y-1 text-sm">
                   <p>Parent: {student.parent?.name} ({student.parent?.phone || "No phone"})</p>
                   {student.dob && <p>DOB: {new Date(student.dob).toLocaleDateString()}</p>}
-                  {student.bloodGroup && <p>Blood Group: {student.bloodGroup}</p>}
+                  {showMedical && student.bloodGroup && <p>Blood Group: {student.bloodGroup}</p>}
                   {medical.hasAny && (
                     <p className={medical.severity === "alert" ? "text-rose-400" : "text-zinc-300"}>Medical: {medical.summary}</p>
                   )}
@@ -265,6 +276,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
           </div>
         </div>
 
+<<<<<<< HEAD
         {athleteRecords && athleteRecords.success && (
           <AthletePanel
             studentId={student.id}
@@ -283,6 +295,15 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
         <div className="mt-8">
           <MedicalForm student={{ id: student.id, name: student.name, bloodGroup: student.bloodGroup }} />
         </div>
+=======
+        {showMedical && (
+          <div className="mt-8">
+            {/* medicalInfo is passed so the form starts from the saved values (it used to start blank
+                and saving wiped the existing record). */}
+            <MedicalForm student={{ id: student.id, name: student.name, bloodGroup: student.bloodGroup, medicalInfo: student.medicalInfo }} />
+          </div>
+        )}
+>>>>>>> origin/build/v-careers-wellness-creators
       </div>
     </div>
   );

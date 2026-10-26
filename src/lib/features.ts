@@ -57,6 +57,13 @@ export const FEATURES = {
   enterprise: flag("ENTERPRISE", false),
   /** Instagram/social generators, AI "insights" that are heuristics rather than real analytics. */
   experimental: flag("EXPERIMENTAL", false),
+
+  /** V5 TRIQ Careers: professional profiles, job listings, applications, credential verification. */
+  careers: flag("CAREERS", false),
+  /** V6 TRIQ Wellness: health.* permissions on medical data, provider profiles, appointments. */
+  wellness: flag("WELLNESS", false),
+  /** V7 TRIQ Creators: creator profiles, portfolio links, discovery, reporting. */
+  creators: flag("CREATORS", false),
 } as const;
 
 export type FeatureName = keyof typeof FEATURES;

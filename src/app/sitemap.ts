@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
+import { FEATURES } from "@/lib/features";
 import { CITIES, SITE_URL, SPORTS, cityMatches, getCity, listingPath, normalizeSport, parseSports } from "@/lib/directory";
 
 export const revalidate = 3600;
@@ -31,7 +32,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         select: { slug: true, city: true, sport: true, updatedAt: true, batches: { select: { sport: true } } },
         take: 5000,
       }),
-      db.user.findMany({
+      // Coach pages are only listed when Coach OS is on (they are noindex otherwise).
+      !FEATURES.coachOS ? Promise.resolve([] as { id: string; updatedAt: Date }[]) : db.user.findMany({
         where: { verified: true, role: { in: ["COACH", "ADMIN"] }, orgId: { not: null }, org: { isActive: true } },
         select: { id: true, updatedAt: true },
         take: 5000,
