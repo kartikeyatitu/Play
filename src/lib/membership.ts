@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-import { effectivePermissions, type Permission } from "@/lib/team";
+import { effectivePermissions, membershipAllows, type Permission } from "@/lib/team";
 
 /**
  * Academies created before memberships existed only have User.orgId + User.role.
@@ -39,11 +39,15 @@ export async function requireMember(allowedAppRoles: string[] = ["ADMIN", "COACH
   return { session: { ...session, orgId: session.orgId as string }, membership };
 }
 
-/** Owner or manager who holds a specific permission in their active academy. */
+/**
+ * Any active team member (owner, manager, coach or staff) who holds a specific permission in their
+ * active academy. Access comes from the membership (role defaults plus per-person overrides), not the
+ * app role, so a receptionist with fees.collect or a coach granted fees.collect can use it too.
+ * Owners always have every permission.
+ */
 export async function requirePermission(permission: Permission) {
-  const ctx = await requireMember(["ADMIN"]);
-  const perms = effectivePermissions(ctx.membership.role, ctx.membership.staffRole, ctx.membership.permissions);
-  if (!perms.has(permission)) throw new Error("You don't have permission to do this");
+  const ctx = await requireMember(["ADMIN", "COACH", "STAFF"]);
+  if (!membershipAllows(ctx.membership, permission)) throw new Error("You don't have permission to do this");
   return ctx;
 }
 
@@ -69,8 +73,9 @@ export type PermissionCheck =
 /**
  * Same check as requirePermission, for actions that report errors as values instead of throwing.
  * Access failures come back as { ok: false, error }; Next.js redirects (signed out / wrong app) and
- * unexpected errors keep propagating exactly as before. Pass null to only require an active
- * owner/manager membership (for actions that pick the permission after loading data).
+ * unexpected errors keep propagating exactly as before. With a permission, any active member holding it
+ * passes (see requirePermission). Pass null to only require an active owner/manager membership (for
+ * actions that pick the permission after loading data).
  */
 export async function checkPermission(permission: Permission | null): Promise<PermissionCheck> {
   try {

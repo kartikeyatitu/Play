@@ -98,6 +98,28 @@ export function effectivePermissions(role: string, staffRole?: string | null, ov
   return base;
 }
 
+/** True when an ACTIVE membership holds the permission. Inactive (invited/removed) memberships hold nothing. */
+export function membershipAllows(
+  membership: { role: string; staffRole?: string | null; permissions?: string | null; status?: string | null },
+  permission: Permission,
+): boolean {
+  if (membership.status && membership.status !== "ACTIVE") return false;
+  return effectivePermissions(membership.role, membership.staffRole, membership.permissions).has(permission);
+}
+
+/**
+ * Who may mark student attendance for a batch: anyone holding attendance.mark, except that coaches
+ * (and anyone whose app role is COACH) are limited to the batches they coach.
+ */
+export function canMarkBatchAttendance(
+  membership: { role: string; staffRole?: string | null; permissions?: string | null; status?: string | null },
+  isOwnBatch: boolean,
+): boolean {
+  if (!membershipAllows(membership, "attendance.mark")) return false;
+  if (membership.role === "COACH") return isOwnBatch;
+  return true;
+}
+
 export function parsePermissionOverrides(json?: string | null): Record<string, boolean> {
   if (!json) return {};
   try {

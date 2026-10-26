@@ -2,7 +2,8 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
+import { requireMember } from "@/lib/membership";
+import { canMarkBatchAttendance } from "@/lib/team";
 import { istToday } from "@/lib/fees";
 import { ATTENDANCE_STATUSES, statusIsPresent, type AttendanceStatus } from "@/lib/coach";
 
@@ -15,16 +16,27 @@ function normaliseStatus(input: AttendanceStatus | boolean): AttendanceStatus | 
 
 /** Auth + ownership check shared by both actions. Returns the batch or an error. */
 async function authoriseBatch(batchId: string) {
-  const authSession = await requireAuth(["COACH", "ADMIN"]);
-  if (!authSession.orgId) return { error: "No academy found for your account." } as const;
+  let ctx: Awaited<ReturnType<typeof requireMember>>;
+  try {
+    ctx = await requireMember(["ADMIN", "COACH", "STAFF"]);
+  } catch (e: any) {
+    if (e?.message === "No academy found") return { error: "No academy found for your account." } as const;
+    if (e?.message === "You are not an active member of this academy") return { error: e.message as string } as const;
+    throw e;
+  }
+  const authSession = ctx.session;
 
   const batch = await db.batch.findFirst({
     where: { id: batchId, orgId: authSession.orgId },
     select: { id: true, coachId: true, orgId: true },
   });
   if (!batch) return { error: "Batch not found in your academy." } as const;
-  if (authSession.role === "COACH" && batch.coachId !== authSession.id) {
-    return { error: "You can only mark attendance for your own batches." } as const;
+  if (!canMarkBatchAttendance(ctx.membership, batch.coachId === authSession.id)) {
+    return {
+      error: ctx.membership.role === "COACH"
+        ? "You can only mark attendance for your own batches."
+        : "You don't have permission to mark attendance.",
+    } as const;
   }
   return { batch, orgId: authSession.orgId } as const;
 }
