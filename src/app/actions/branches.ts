@@ -3,9 +3,8 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { checkPermission } from "@/lib/membership";
-import { parseBranchInput } from "@/lib/branch-input";
-
-const MAX_BRANCHES = 50;
+import { parseBranchInput, BRANCHES_DISABLED_ERROR, MAX_BRANCHES } from "@/lib/branch-input";
+import { FEATURES } from "@/lib/features";
 
 async function audit(userId: string, orgId: string, action: string, details: Record<string, unknown>) {
   try {
@@ -17,6 +16,8 @@ async function audit(userId: string, orgId: string, action: string, details: Rec
 
 /** Branches of the caller's academy, with how many batches run at each. */
 export async function listBranches() {
+  // Flag off: never touch the Branch table (it may not exist in production yet).
+  if (!FEATURES.branches) return { success: false as const, error: BRANCHES_DISABLED_ERROR, branches: [] };
   const auth = await checkPermission("batches.manage");
   if (!auth.ok) return { success: false as const, error: auth.error, branches: [] };
   const branches = await db.branch.findMany({
@@ -31,6 +32,7 @@ export async function listBranches() {
 }
 
 export async function createBranch(formData: FormData) {
+  if (!FEATURES.branches) return { success: false, error: BRANCHES_DISABLED_ERROR };
   const auth = await checkPermission("settings.manage");
   if (!auth.ok) return { success: false, error: auth.error };
   const { session } = auth;
@@ -58,6 +60,7 @@ export async function createBranch(formData: FormData) {
 }
 
 export async function updateBranch(branchId: string, formData: FormData) {
+  if (!FEATURES.branches) return { success: false, error: BRANCHES_DISABLED_ERROR };
   const auth = await checkPermission("settings.manage");
   if (!auth.ok) return { success: false, error: auth.error };
   const { session } = auth;
@@ -88,6 +91,7 @@ export async function updateBranch(branchId: string, formData: FormData) {
 
 /** Deleting a branch keeps its batches; they simply become unassigned (ON DELETE SET NULL). */
 export async function deleteBranch(branchId: string) {
+  if (!FEATURES.branches) return { success: false, error: BRANCHES_DISABLED_ERROR };
   const auth = await checkPermission("settings.manage");
   if (!auth.ok) return { success: false, error: auth.error };
   const { session } = auth;

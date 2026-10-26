@@ -1,6 +1,11 @@
 /** Pure validation for branch (academy location) input. No Prisma import, so it is unit-testable. */
 export type BranchInput = { name: string; address: string | null; city: string | null };
 
+/** Most branches one academy may have. */
+export const MAX_BRANCHES = 50;
+/** Returned by every branch action while FEATURES.branches is off. */
+export const BRANCHES_DISABLED_ERROR = "Branches are not enabled for this academy yet.";
+
 const MAX_NAME = 80;
 const MAX_ADDRESS = 240;
 const MAX_CITY = 80;

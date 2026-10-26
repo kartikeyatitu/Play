@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { isOrgOwner } from "@/lib/membership";
+import { FEATURES } from "@/lib/features";
 
 /**
  * Nuclear "delete everything in my academy" — reserved for owners who want to
@@ -53,7 +54,16 @@ export async function deleteAllData() {
     ["trialBooking",    () => db.trialBooking.deleteMany({ where: { batch: { orgId: oId } } })],
     ["waitlist",        () => db.waitlist.deleteMany({ where: { orgId: oId } })],
     ["student",         () => db.student.deleteMany({ where: { orgId: oId } })],
+    // Flag-gated tables: only touched when their feature is on (the tables may not exist in production yet).
+    ...(FEATURES.branches
+      ? ([
+          ["batchBranch", () => db.batchBranch.deleteMany({ where: { orgId: oId } })],
+        ] as Array<[string, () => Promise<{ count: number }>]>)
+      : []),
     ["batch",           () => db.batch.deleteMany({ where: { orgId: oId } })],
+    ...(FEATURES.branches
+      ? ([["branch", () => db.branch.deleteMany({ where: { orgId: oId } })]] as Array<[string, () => Promise<{ count: number }>]>)
+      : []),
     ["product",         () => db.product.deleteMany({ where: { orgId: oId } })],
     ["announcement",    () => db.announcement.deleteMany({ where: { orgId: oId } })],
     ["facility",        () => db.facility.deleteMany({ where: { orgId: oId } })],

@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { createBatch } from "@/app/actions/batch";
 import { listBranches } from "@/app/actions/branches";
+import { FEATURES } from "@/lib/features";
 import { Plus } from "lucide-react";
 
 export function CreateBatchDialog({ coaches }: { coaches: any[] }) {
@@ -20,8 +21,9 @@ export function CreateBatchDialog({ coaches }: { coaches: any[] }) {
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
 
   // Load branches when the dialog opens; the picker is hidden for single-centre academies.
+  // Only when the branches feature is on: the Branch table may not exist in production otherwise.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !FEATURES.branches) return;
     listBranches()
       .then((r) => setBranches(r.success ? r.branches : []))
       .catch(() => setBranches([]));
@@ -96,7 +98,7 @@ export function CreateBatchDialog({ coaches }: { coaches: any[] }) {
               </select>
             </div>
 
-            {branches.length > 0 && (
+            {FEATURES.branches && branches.length > 0 && (
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-zinc-400 uppercase">Branch</label>
                 <select

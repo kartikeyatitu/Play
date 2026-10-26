@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { checkPermission, hasPermission, requirePermission } from "@/lib/membership";
+import { FEATURES } from "@/lib/features";
 
 /** Parse an optional non-negative integer form value. Empty → null. Invalid → undefined. */
 function parseOptionalInt(value: FormDataEntryValue | null): number | null | undefined {
@@ -44,12 +45,40 @@ async function validateBatchCoach(userId: string, orgId: string): Promise<string
   return legacy?.id ?? null;
 }
 
-/** Returns the branch id if it belongs to the org; null for "no branch"; undefined if invalid. */
+/**
+ * Returns the branch id if it belongs to the org; null for "no branch"; undefined if invalid.
+ * Only called when FEATURES.branches is on — the Branch table may not exist in production otherwise.
+ */
 async function resolveBranchId(raw: FormDataEntryValue | null, orgId: string): Promise<string | null | undefined> {
   const id = typeof raw === "string" ? raw.trim() : "";
   if (!id) return null;
   const branch = await db.branch.findFirst({ where: { id, orgId }, select: { id: true } });
   return branch ? branch.id : undefined;
+}
+
+/** Point a batch at a branch (or none). Flag-gated by callers; writes BatchBranch and an audit row. */
+async function setBatchBranch(batchId: string, orgId: string, userId: string, branchId: string | null) {
+  const current = await db.batchBranch.findUnique({ where: { batchId }, select: { branchId: true } });
+  if ((current?.branchId ?? null) === branchId) return;
+  if (branchId) {
+    await db.batchBranch.upsert({
+      where: { batchId },
+      create: { batchId, orgId, branchId },
+      update: { branchId },
+    });
+  } else {
+    await db.batchBranch.deleteMany({ where: { batchId, orgId } });
+  }
+  await db.auditLog
+    .create({
+      data: {
+        userId,
+        orgId,
+        action: "BATCH_BRANCH_SET",
+        details: JSON.stringify({ batchId, from: current?.branchId ?? null, to: branchId }),
+      },
+    })
+    .catch(() => {});
 }
 
 export async function createBatch(formData: FormData) {
@@ -70,10 +99,15 @@ export async function createBatch(formData: FormData) {
   const validatedCoachId = await validateBatchCoach(coachId, session.orgId);
   if (!validatedCoachId) throw new Error("Coach not found or not active in your academy");
 
-  const branchId = await resolveBranchId(formData.get("branchId"), session.orgId);
-  if (branchId === undefined) throw new Error("Branch not found in your academy");
+  // Branch is honoured only when the branches feature is on (its tables may not exist otherwise).
+  let branchId: string | null = null;
+  if (FEATURES.branches) {
+    const resolved = await resolveBranchId(formData.get("branchId"), session.orgId);
+    if (resolved === undefined) throw new Error("Branch not found in your academy");
+    branchId = resolved;
+  }
 
-  await db.batch.create({
+  const created = await db.batch.create({
     data: {
       name,
       sport,
@@ -82,9 +116,10 @@ export async function createBatch(formData: FormData) {
       orgId: session.orgId,
       monthlyFee: monthlyFee ?? null,
       capacity: capacity ?? null,
-      branchId,
     },
+    select: { id: true },
   });
+  if (branchId) await setBatchBranch(created.id, session.orgId, session.id, branchId);
 
   revalidatePath("/admin");
   revalidatePath("/org");
@@ -108,13 +143,13 @@ export async function updateBatchSettings(batchId: string, formData: FormData) {
     return { success: false, error: "Capacity must be a whole number." };
   }
 
-  const data: { monthlyFee?: number | null; capacity?: number | null; branchId?: string | null } = {};
+  const data: { monthlyFee?: number | null; capacity?: number | null } = {};
   if (monthlyFee !== undefined) data.monthlyFee = monthlyFee;
   if (capacity !== undefined) data.capacity = capacity;
-  if (formData.get("branchId") !== null) {
-    const branchId = await resolveBranchId(formData.get("branchId"), session.orgId);
-    if (branchId === undefined) return { success: false, error: "Branch not found in your academy." };
-    data.branchId = branchId;
+  let branchChange: string | null | undefined;
+  if (FEATURES.branches && formData.get("branchId") !== null) {
+    branchChange = await resolveBranchId(formData.get("branchId"), session.orgId);
+    if (branchChange === undefined) return { success: false, error: "Branch not found in your academy." };
   }
   // Changing what a batch charges is a fee decision, not just a schedule one
   if (data.monthlyFee !== undefined && data.monthlyFee !== batch.monthlyFee && !hasPermission(membership, "fees.manage")) {
@@ -122,6 +157,7 @@ export async function updateBatchSettings(batchId: string, formData: FormData) {
   }
 
   await db.batch.update({ where: { id: batch.id }, data });
+  if (branchChange !== undefined) await setBatchBranch(batch.id, session.orgId, session.id, branchChange);
   revalidatePath("/org");
   return { success: true };
 }
