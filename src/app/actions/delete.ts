@@ -61,6 +61,20 @@ export async function deleteAllData() {
     ["attendance",      () => db.attendance.deleteMany({ where: { session: { orgId: oId } } })],
     ["session",         () => db.session.deleteMany({ where: { orgId: oId } })],
     ["skillReport",     () => db.skillReport.deleteMany({ where: { orgId: oId } })],
+    // V1 UPI AutoPay (flag upiAutopay, 2026-10-26_upi_autopay.sql). Live mandates are cancelled at Razorpay first
+    // (best effort) so parents can't be debited by an academy that no longer exists in TRIQ.
+    ...(FEATURES.upiAutopay
+      ? ([
+          ["feeMandateRevoke", () => ifTableExists(async () => {
+            const { cancelMandate } = await import("@/lib/autopay-service");
+            const live = await db.feeMandate.findMany({ where: { orgId: oId, status: { in: ["CREATED", "AUTHENTICATED", "ACTIVE", "PAUSED"] } } });
+            for (const m of live) await cancelMandate(m, session.id, "academy-deleted").catch(() => null);
+            return { count: live.length };
+          })],
+          ["feeMandateCharge", () => ifTableExists(() => db.feeMandateCharge.deleteMany({ where: { orgId: oId } }))],
+          ["feeMandate",       () => ifTableExists(() => db.feeMandate.deleteMany({ where: { orgId: oId } }))],
+        ] as Array<[string, () => Promise<{ count: number }>]>)
+      : []),
     // V1 GST invoices (flag gstInvoices, 2026-10-26_gst_invoices.sql). Note: GST law requires keeping tax invoices
     // for years — owners deleting a GST-registered academy should export them first.
     ...(FEATURES.gstInvoices

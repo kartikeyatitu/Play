@@ -28,7 +28,7 @@ type RazorpayCtor = new (options: Record<string, unknown>) => RazorpayInstance;
 let razorpayLoader: Promise<void> | null = null;
 
 /** Lazy-loads Razorpay Checkout exactly once per page (shared promise guards double insert). */
-function loadRazorpay(): Promise<void> {
+export function loadRazorpay(): Promise<void> {
   if (typeof window === "undefined") return Promise.reject(new Error("no window"));
   if ((window as any).Razorpay) return Promise.resolve();
   if (razorpayLoader) return razorpayLoader;

@@ -222,3 +222,26 @@ export const MANDATE_STATUS_LABELS: Record<MandateStatus, string> = {
   EXPIRED: "Expired",
   FAILED: "Failed",
 };
+
+// ─── Shapes returned by src/app/actions/autopay.ts (types can't live in a "use server" file) ───
+
+export type AutopayParentView = {
+  available: boolean;
+  academyName: string;
+  studentName: string;
+  currentFeeMinor: number;
+  suggestedMaxRupees: number;
+  consentPreview: string;
+  mandate: null | { id: string; status: string; statusLabel: string; maxAmountMinor: number; createdAt: string };
+};
+
+export type AutopayAdminRow = {
+  id: string;
+  studentName: string;
+  parentName: string | null;
+  status: string;
+  statusLabel: string;
+  maxAmountMinor: number;
+  createdAt: string;
+  lastCharge: null | { id: string; month: string; amountMinor: number; status: string; paymentStatus: string | null; failureReason: string | null };
+};

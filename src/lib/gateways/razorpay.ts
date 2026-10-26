@@ -118,6 +118,108 @@ export async function cancelRazorpayPaymentLink(creds: RazorpayCreds, linkId: st
   await rzp(creds, `/payment_links/${encodeURIComponent(linkId)}/cancel`, { method: "POST" }).catch(() => {});
 }
 
+// ─── Recurring payments (UPI AutoPay mandates) — used only by src/lib/autopay-service.ts (flag upiAutopay) ───
+
+/** Create (or, with fail_existing "0", return the existing) Razorpay customer for a parent. */
+export async function createRazorpayCustomer(
+  creds: RazorpayCreds,
+  a: { name: string; contact?: string; email?: string; notes?: Record<string, string> }
+): Promise<{ id: string }> {
+  const r = await rzp<{ id?: string }>(creds, "/customers", {
+    method: "POST",
+    body: { name: a.name.slice(0, 50), contact: a.contact, email: a.email, fail_existing: "0", notes: a.notes ?? {} },
+  });
+  if (r.status !== 200 || !r.data.id) fail("Razorpay customer creation", r);
+  return { id: r.data.id! };
+}
+
+/** Order that registers a UPI mandate (Recurring Payments: method upi + token block). */
+export async function createRazorpayMandateOrder(
+  creds: RazorpayCreds,
+  a: { amountMinor: number; customerId: string; maxAmountMinor: number; expireAt: number; receipt: string; notes?: Record<string, string> }
+): Promise<{ id: string }> {
+  const r = await rzp<{ id?: string }>(creds, "/orders", {
+    method: "POST",
+    body: {
+      amount: a.amountMinor,
+      currency: "INR",
+      customer_id: a.customerId,
+      method: "upi",
+      receipt: a.receipt.slice(0, 40),
+      notes: a.notes ?? {},
+      token: { max_amount: a.maxAmountMinor, expire_at: a.expireAt, frequency: "monthly" },
+    },
+  });
+  if (r.status !== 200 || !r.data.id) fail("Razorpay mandate order creation", r);
+  return { id: r.data.id! };
+}
+
+/** Order for one subsequent (monthly) debit. Auto-captured. */
+export async function createRazorpayChargeOrder(
+  creds: RazorpayCreds,
+  a: { amountMinor: number; receipt: string; notes?: Record<string, string> }
+): Promise<{ id: string }> {
+  if (!Number.isInteger(a.amountMinor) || a.amountMinor <= 0) throw new Error("Invalid amount for Razorpay order");
+  const r = await rzp<{ id?: string }>(creds, "/orders", {
+    method: "POST",
+    body: { amount: a.amountMinor, currency: "INR", payment_capture: true, receipt: a.receipt.slice(0, 40), notes: a.notes ?? {} },
+  });
+  if (r.status !== 200 || !r.data.id) fail("Razorpay charge order creation", r);
+  return { id: r.data.id! };
+}
+
+/** Subsequent debit on a confirmed token. Razorpay sends the pre-debit notification and debits ~25h later. */
+export async function createRazorpayRecurringPayment(
+  creds: RazorpayCreds,
+  a: { amountMinor: number; orderId: string; customerId: string; tokenId: string; email: string; contact: string; description: string; notes?: Record<string, string> }
+): Promise<{ paymentId: string | null }> {
+  const r = await rzp<{ razorpay_payment_id?: string }>(creds, "/payments/create/recurring", {
+    method: "POST",
+    body: {
+      email: a.email,
+      contact: a.contact,
+      amount: a.amountMinor,
+      currency: "INR",
+      order_id: a.orderId,
+      customer_id: a.customerId,
+      token: a.tokenId,
+      recurring: true,
+      description: a.description.slice(0, 255),
+      notes: a.notes ?? {},
+    },
+  });
+  if (r.status !== 200) fail("Razorpay recurring payment", r);
+  return { paymentId: r.data.razorpay_payment_id ?? null };
+}
+
+export async function fetchRazorpayPayment(creds: RazorpayCreds, paymentId: string): Promise<{ id: string; orderId: string | null; tokenId: string | null; status: string; customerId: string | null }> {
+  const r = await rzp<any>(creds, `/payments/${encodeURIComponent(paymentId)}`);
+  if (r.status !== 200) fail("Razorpay payment fetch", r);
+  return {
+    id: String(r.data.id || paymentId),
+    orderId: r.data.order_id ? String(r.data.order_id) : null,
+    tokenId: r.data.token_id ? String(r.data.token_id) : null,
+    status: String(r.data.status || ""),
+    customerId: r.data.customer_id ? String(r.data.customer_id) : null,
+  };
+}
+
+export async function fetchRazorpayToken(creds: RazorpayCreds, customerId: string, tokenId: string): Promise<{ status: string | null; maxAmount: number | null; expiredAt: number | null }> {
+  const r = await rzp<any>(creds, `/customers/${encodeURIComponent(customerId)}/tokens/${encodeURIComponent(tokenId)}`);
+  if (r.status !== 200) fail("Razorpay token fetch", r);
+  return {
+    status: r.data?.recurring_details?.status ? String(r.data.recurring_details.status) : null,
+    maxAmount: typeof r.data?.max_amount === "number" ? r.data.max_amount : null,
+    expiredAt: typeof r.data?.expired_at === "number" ? r.data.expired_at : null,
+  };
+}
+
+/** Cancel the UPI mandate at NPCI (status becomes cancellation_initiated → cancelled). */
+export async function cancelRazorpayToken(creds: RazorpayCreds, customerId: string, tokenId: string): Promise<void> {
+  const r = await rzp(creds, `/customers/${encodeURIComponent(customerId)}/tokens/${encodeURIComponent(tokenId)}/cancel`, { method: "PUT" });
+  if (r.status !== 200) fail("Razorpay token cancel", r);
+}
+
 function safeEqualHex(expectedHex: string, given: string): boolean {
   if (typeof given !== "string") return false;
   const a = Buffer.from(expectedHex);

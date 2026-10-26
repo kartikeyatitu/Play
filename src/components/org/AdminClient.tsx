@@ -95,6 +95,7 @@ const AuditLogPanel = dynamic(() => import("@/components/org/AuditLogPanel").the
 const EnterpriseReport = dynamic(() => import("@/components/org/EnterpriseReport").then((m) => m.EnterpriseReport), { loading: sectionLoading });
 const FacilityAllocation = dynamic(() => import("@/components/org/FacilityAllocation").then((m) => m.FacilityAllocation), { loading: sectionLoading });
 const GstInvoicesPanel = dynamic(() => import("@/components/org/GstInvoicesPanel").then((m) => m.GstInvoicesPanel), { loading: sectionLoading });
+const AutopayMandatesPanel = dynamic(() => import("@/components/org/AutopayMandatesPanel").then((m) => m.AutopayMandatesPanel), { loading: sectionLoading });
 const GstSettingsCard = dynamic(() => import("@/components/org/GstSettingsCard").then((m) => m.GstSettingsCard), { loading: sectionLoading });
 const CollectFees = dynamic(() => import("@/components/org/CollectFees").then((m) => m.CollectFees), { loading: sectionLoading });
 
@@ -539,6 +540,12 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
                 )}
                 <PendingPayments items={pendingVerification} />
               </div>
+              {FEATURES.upiAutopay && (
+                <div>
+                  <SectionHeader title="UPI AutoPay" description="Monthly fee mandates parents approved in their UPI app" />
+                  <AutopayMandatesPanel />
+                </div>
+              )}
               {FEATURES.gstInvoices && (
                 <div>
                   <SectionHeader title="GST invoices" description="Tax invoices for paid fees, credit notes for reversals" />

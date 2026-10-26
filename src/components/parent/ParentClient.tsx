@@ -23,6 +23,7 @@ const GamificationWidget = dynamic(() => import('@/components/parent/Gamificatio
 const ChatWindow = dynamic(() => import('@/components/chat/ChatWindow').then((m) => m.ChatWindow), { loading: sectionLoading });
 const AttendanceStats = dynamic(() => import('@/components/parent/AttendanceStats').then((m) => m.AttendanceStats), { loading: sectionLoading });
 const FeeHistory = dynamic(() => import('@/components/parent/FeeHistory').then((m) => m.FeeHistory), { loading: sectionLoading });
+const AutopayCard = dynamic(() => import('@/components/parent/AutopayCard').then((m) => m.AutopayCard), { loading: sectionLoading });
 const ProgressTimeline = dynamic(() => import('@/components/parent/ProgressTimeline').then((m) => m.ProgressTimeline), { loading: sectionLoading });
 const ReferralWidget = dynamic(() => import('@/components/parent/ReferralWidget').then((m) => m.ReferralWidget), { loading: sectionLoading });
 const FeedbackWidget = dynamic(() => import('@/components/parent/FeedbackWidget').then((m) => m.FeedbackWidget), { loading: sectionLoading });
@@ -268,6 +269,7 @@ export function ParentClient({
                     </div>
                     
                     <FeeHistory studentId={child.id} />
+                    {FEATURES.upiAutopay && <AutopayCard studentId={child.id} />}
                     
                     <ProgressTimeline reports={child.skillReports as any} />
                     

@@ -2017,3 +2017,65 @@ model TaxInvoice {
   @@index([feeRecordId])
   @@index([originalInvoiceId])
 }
+
+// ==========================================
+// V1 BUSINESS: UPI AUTOPAY FEE MANDATES (additive, flag `upiAutopay`)
+// SQL: prisma/sql/2026-10-26_upi_autopay.sql. Never queried while the flag is off.
+// Razorpay Recurring Payments on the ACADEMY'S OWN account; rules in src/lib/autopay.ts.
+// ==========================================
+
+/// A parent's UPI AutoPay mandate for one child's monthly fee.
+model FeeMandate {
+  id                 String    @id @default(cuid())
+  orgId              String
+  studentId          String
+  parentId           String
+  provider           String    @default("RAZORPAY")
+  providerCustomerId String
+  authOrderId        String    @unique // Razorpay order used for the mandate authorisation
+  authPaymentId      String?
+  providerTokenId    String?   // Razorpay token (the mandate) once authorised
+  providerStatus     String?   // last seen token recurring_details.status
+  status             String    @default("CREATED") // CREATED | AUTHENTICATED | ACTIVE | PAUSED | CANCELLED | EXPIRED | FAILED
+  maxAmountMinor     Int
+  frequency          String    @default("monthly")
+  currency           String    @default("INR")
+  expireAt           DateTime
+  consentText        String
+  consentVersion     String
+  consentAt          DateTime
+  consentIp          String?
+  failureReason      String?
+  cancelledAt        DateTime?
+  cancelledById      String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([orgId, status])
+  @@index([studentId])
+  @@index([providerTokenId])
+}
+
+/// One monthly debit attempt for a mandate. idempotencyKey = autopay:<mandateId>:<YYYY-MM>.
+/// The money side is a normal Payment row (kind AUTOPAY) so the existing verified webhook path marks the fee PAID.
+model FeeMandateCharge {
+  id                String   @id @default(cuid())
+  orgId             String
+  mandateId         String
+  feeRecordId       String
+  month             String
+  idempotencyKey    String   @unique
+  amountMinor       Int
+  providerOrderId   String?  @unique
+  providerPaymentId String?
+  paymentRowId      String?  // Payment.id
+  status            String   @default("PENDING_SUBMIT") // PENDING_SUBMIT | SUBMITTED | SUBMIT_FAILED
+  failureReason     String?
+  attempts          Int      @default(0)
+  createdById       String?  // null when created by the scheduled job
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([mandateId, feeRecordId])
+  @@index([orgId, month])
+}
