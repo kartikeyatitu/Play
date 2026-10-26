@@ -50,6 +50,9 @@ export const PERMISSIONS = {
   "payroll.manage": "Set salaries and mark payouts as paid",
   "reports.view": "See reports and analytics",
   "settings.manage": "Academy settings, payment setup and billing",
+  "careers.manage": "Post jobs and manage applicants",
+  "health.view": "See students' medical information",
+  "health.manage": "Edit students' medical information",
 } as const;
 export type Permission = keyof typeof PERMISSIONS;
 export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
@@ -58,7 +61,7 @@ const STAFF_DEFAULTS: Record<StaffRole, Permission[]> = {
   RECEPTIONIST: ["students.manage", "leads.manage", "fees.collect"],
   ACCOUNTANT: ["fees.collect", "fees.manage", "payroll.view", "payroll.manage", "reports.view"],
   GROUNDSMAN: ["bookings.manage"],
-  PHYSIO: [],
+  PHYSIO: ["health.view", "health.manage"],
   OTHER: [],
 };
 
