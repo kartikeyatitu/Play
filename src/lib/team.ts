@@ -51,19 +51,13 @@ export const PERMISSIONS = {
   "payroll.manage": "Set salaries and mark payouts as paid",
   "reports.view": "See reports and analytics",
   "settings.manage": "Academy settings, payment setup and billing",
-<<<<<<< HEAD
-<<<<<<< HEAD
   "community.moderate": "Hide replies and close comments on announcements",
-=======
   "careers.manage": "Post jobs and manage applicants",
   "health.view": "See students' medical information",
   "health.manage": "Edit students' medical information",
->>>>>>> origin/build/v-careers-wellness-creators
-=======
   "store.manage": "Manage kit store products and orders",
   "sponsorship.manage": "Manage sponsors, campaigns, proposals and deliverables",
   "funding.approve": "Approve sponsorship money commitments and scholarship budgets",
->>>>>>> origin/build/v-commerce-brand
 } as const;
 export type Permission = keyof typeof PERMISSIONS;
 export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];

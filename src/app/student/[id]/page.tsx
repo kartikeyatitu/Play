@@ -10,13 +10,10 @@ import { formatMoney, type OrgLocale } from "@/lib/i18n";
 import { parseMedicalInfo } from "@/lib/coach";
 import { PaymentMethodBadge } from "@/components/ui/payment-method-badge";
 import { FEATURES } from "@/lib/features";
-<<<<<<< HEAD
 import { listAthleteRecords } from "@/app/actions/athlete";
 import { AthletePanel } from "@/components/athlete/AthletePanel";
-=======
 import { canViewMedical } from "@/lib/health";
 import { checkPermission } from "@/lib/membership";
->>>>>>> origin/build/v-careers-wellness-creators
 
 export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -68,14 +65,11 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
     );
   }
 
-<<<<<<< HEAD
   // V2 athlete records (flag-gated; returns an error value instead of throwing if the SQL is not applied yet)
   const athleteRecords = FEATURES.athleteOS ? await listAthleteRecords(student.id) : null;
-=======
   // V6 Wellness: with the flag on, owners/managers need health.view to see medical data.
   const hasHealthView = FEATURES.wellness && session.role === "ADMIN" ? (await checkPermission("health.view")).ok : true;
   const showMedical = canViewMedical({ wellness: FEATURES.wellness, appRole: session.role, hasHealthView });
->>>>>>> origin/build/v-careers-wellness-creators
 
   // Calculate attendance
   const medical = parseMedicalInfo(showMedical ? student.medicalInfo : null);
@@ -276,7 +270,6 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
           </div>
         </div>
 
-<<<<<<< HEAD
         {athleteRecords && athleteRecords.success && (
           <AthletePanel
             studentId={student.id}
@@ -292,10 +285,6 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
           <p className="text-sm text-zinc-500">Achievements &amp; goals: {athleteRecords.error}</p>
         )}
 
-        <div className="mt-8">
-          <MedicalForm student={{ id: student.id, name: student.name, bloodGroup: student.bloodGroup }} />
-        </div>
-=======
         {showMedical && (
           <div className="mt-8">
             {/* medicalInfo is passed so the form starts from the saved values (it used to start blank
@@ -303,7 +292,6 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
             <MedicalForm student={{ id: student.id, name: student.name, bloodGroup: student.bloodGroup, medicalInfo: student.medicalInfo }} />
           </div>
         )}
->>>>>>> origin/build/v-careers-wellness-creators
       </div>
     </div>
   );

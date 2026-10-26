@@ -37,12 +37,9 @@ const CreateBatchDialog = dynamic(() => import("@/components/admin/CreateBatchDi
 const CreateCoachDialog = dynamic(() => import("@/components/org/CreateCoachDialog").then((m) => m.CreateCoachDialog), { loading: inlineLoading });
 const CreateStudentDialog = dynamic(() => import("@/components/org/CreateStudentDialog").then((m) => m.CreateStudentDialog), { loading: inlineLoading });
 const BroadcastTab = dynamic(() => import("@/components/org/BroadcastTab").then((m) => m.BroadcastTab), { loading: sectionLoading });
-<<<<<<< HEAD
 const InstitutionPanel = dynamic(() => import("@/components/org/InstitutionPanel").then((m) => m.InstitutionPanel), { loading: sectionLoading });
 const OpportunitiesPanel = dynamic(() => import("@/components/org/OpportunitiesPanel").then((m) => m.OpportunitiesPanel), { loading: sectionLoading });
-=======
 const BrandStudioPanel = dynamic(() => import("@/components/org/BrandStudioPanel").then((m) => m.BrandStudioPanel), { loading: sectionLoading });
->>>>>>> origin/build/v-commerce-brand
 const StoreManager = dynamic(() => import("@/components/org/StoreManager").then((m) => m.StoreManager), { loading: sectionLoading });
 const InboxTab = dynamic(() => import("@/components/org/InboxTab").then((m) => m.InboxTab), { loading: sectionLoading });
 const FacilitiesTab = dynamic(() => import("@/components/org/FacilitiesTab").then((m) => m.FacilitiesTab), { loading: sectionLoading });
@@ -226,15 +223,12 @@ const HIDDEN_TABS = new Set<string>([
   ...(FEATURES.experimental ? [] : ["ai", "marketing"]),
   ...(FEATURES.events ? [] : ["events"]),
   ...(FEATURES.bookings ? [] : ["bookings"]),
-<<<<<<< HEAD
   ...(FEATURES.opportunities ? [] : ["opportunities"]),
   ...(FEATURES.education ? [] : ["institution"]),
   ...(FEATURES.opsCalendar ? [] : ["calendar"]),
   ...(FEATURES.businessReport ? [] : ["report"]),
-=======
   ...(FEATURES.marketplace ? [] : ["store"]),
   ...(FEATURES.sponsorship || FEATURES.inclusive ? [] : ["brand"]),
->>>>>>> origin/build/v-commerce-brand
 ]);
 
 /** Demo-data loader is a development tool: Settings only, never in production. */
