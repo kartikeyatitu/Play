@@ -163,7 +163,20 @@ Identity/permissions (`src/lib/membership.ts`, `src/lib/team.ts`), audit log, fe
 | Payment for orders | Missing | `Payment.feeRecordId` required; webhook has no order branch (`src/app/api/webhooks/razorpay/[orgId]/route.ts`) |
 | Cancellations / refunds | Missing (before) | — |
 | Search, categories, reviews, settlements, external sellers | Missing | archived `Brand`/`WholesaleProduct` comment blocks in `prisma/schema.prisma` |
-| **This branch** | v2 store behind `marketplace` | `src/lib/store.ts`, `src/app/actions/store.ts`, `StoreOrdersPanel.tsx`, `StoreManager.tsx`, `ProShop.tsx`, `prisma/sql/2026-10-26_store_orders.sql` — see §16 for what is still pending |
+
+After this branch (`build/v-commerce-brand`), with `FEATURES.marketplace` on and the SQL applied:
+
+| Feature group | Status | Evidence |
+|---|---|---|
+| Store gating | Complete | `AdminClient.tsx` (tab + HIDDEN_TABS), `ParentClient.tsx`, every action in `src/app/actions/store.ts` checks the flag |
+| Catalogue create/edit with validation, explicit stock | Complete (no images/sizes/archive) | `createProduct`, `updateProduct`; `validateProductInput` in `src/lib/store.ts`; `StoreManager.tsx` |
+| Atomic stock reservation, restock on cancel/returned refund | Complete in code; concurrency verified by reasoning + pure test only (no DB in sandbox) | `placeStoreOrder`, `applyTransition` |
+| Price snapshot | Complete | `StoreOrderDetail.unitPricePaise/amountPaise`, `priceSnapshot` |
+| Order state machine + history + audit | Complete | `ORDER_TRANSITIONS`, `StoreOrderEvent`, `STORE_ORDER_<STATUS>` audit actions; `src/lib/__tests__/store.test.ts` |
+| Seller order management | Complete (v1) | `src/components/org/StoreOrdersPanel.tsx`, `listStoreOrders`, `transitionStoreOrder` |
+| Parent ordering (child, qty), history, cancel, refund request | Complete (v1) | `src/components/parent/ProShop.tsx`, `listMyStoreOrders`, `cancelMyStoreOrder`, `requestStoreRefund` |
+| Payment | Partial: pay-at-academy recorded by staff at hand-over; no online checkout (intentional) | `paymentStatus` on `StoreOrderDetail` |
+| Search, categories, reviews, settlements, external sellers, online checkout | Missing | — |
 
 ## 16. Release dependencies and unresolved decisions
 

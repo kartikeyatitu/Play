@@ -140,7 +140,20 @@ Identity/permissions, audit log, feature flags, Students (V1), monthly fee gener
 | Scholarship / CSR / concessions | Missing (before) | `Student.feeOverride` read by `resolveFeeAmount` (`src/lib/fees.ts`) but never written; 0 = "not set" so a full waiver is impossible |
 | Coupons | Mocked (UI only) | `src/app/actions/coupons.ts` creates coupons, nothing redeems them |
 | Performance reporting | Missing | — |
-| **This branch** | v1 behind `sponsorship` / `inclusive` | `src/lib/brand-studio.ts`, `src/lib/concessions.ts`, `src/app/actions/brand-studio.ts`, `src/app/actions/concessions.ts`, `src/components/org/BrandStudioPanel.tsx`, fee generators, `prisma/sql/2026-10-26_brand_studio.sql` |
+
+After this branch (`build/v-commerce-brand`), flags on and SQL applied:
+
+| Feature group | Status | Evidence |
+|---|---|---|
+| Sponsor profiles (org-scoped) | Complete (no logo upload) | `SponsorProfile`; `saveSponsorProfile`, `setSponsorArchived` in `src/app/actions/brand-studio.ts`; `BrandStudioPanel.tsx` |
+| Campaigns with objective, audience, budget, deliverables summary, status | Complete | `SponsorshipCampaign`; `saveCampaign`, `setCampaignStatus` |
+| Proposal submit → review → accept/reject/withdraw with history | Complete (admin UI); coach-side screen Missing (`listOpenCampaigns` + `submitProposal` allow any member) | `SponsorshipProposal`, `SponsorshipStatusEvent` |
+| Authorised financial commitment | Complete: `funding.approve` + re-typed amount + atomic budget UPDATE + DB CHECK | `acceptProposal`; `checkCommitment` in `src/lib/brand-studio.ts` |
+| Deliverables & milestones | Complete (no reminders) | `SponsorshipDeliverable`; `addDeliverable`, `setDeliverableStatus` |
+| Scholarship / CSR programs with approval | Complete | `ScholarshipProgram`; `setProgramStatus` (ACTIVE needs `funding.approve`) |
+| Fee concessions applied by fee generation | Complete in code; verified by pure tests only | `FeeConcession`; `src/lib/concessions.ts`; `auto-fees.ts`, `generateMonthlyFeesForOrg`, and ad-hoc fee creation in `fees.ts`, `payments.ts`, `payment-links.ts` via `src/lib/concession-fees.ts` |
+| Performance reporting | Partial: deliverable progress, committed vs budget, foregone-this-month | `deliverableProgress`, `listScholarships().summary` |
+| Cross-org discovery, agreements/e-sign, sponsor income in P&L | Missing | — |
 
 Also found (V1 Business, not fixed here): `generateMonthlyFeesForOrg(orgId, month)` is exported from a `"use server"` file without any auth check, so it is callable as a server action for any orgId.
 
