@@ -1852,3 +1852,66 @@ model FeeConcession {
   program      ScholarshipProgram? @relation(fields: [programId], references: [id], onDelete: SetNull)
   @@index([orgId, studentId])
 }
+
+// ---- V7 TRIQ Creators (additive, 2026-10-26; prisma/sql/2026-10-26_creators.sql) ---------------
+
+/// Creator identity (user-owned). linkedOrgId is a reference only, allowed when the creator is an
+/// ACTIVE member of that org at save time.
+model CreatorProfile {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  handle        String    @unique
+  displayName   String
+  bio           String?
+  city          String?
+  sports        String[]  @default([])
+  categories    String[]  @default([])
+  linkCoachPage Boolean   @default(false)
+  linkedOrgId   String?
+  isPublic      Boolean   @default(false)
+  hiddenAt      DateTime?
+  hiddenById    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  @@index([isPublic, updatedAt])
+}
+
+/// A link to content hosted elsewhere (no uploads). url passed safeHttpUrl.
+model CreatorPortfolioItem {
+  id          String    @id @default(cuid())
+  creatorId   String
+  title       String
+  url         String
+  platform    String
+  description String?
+  hiddenAt    DateTime?
+  hiddenById  String?
+  createdAt   DateTime  @default(now())
+  @@index([creatorId, createdAt])
+}
+
+/// One row per recorded profile view (owner views are not recorded). No IP is stored.
+model CreatorProfileView {
+  id        String   @id @default(cuid())
+  creatorId String
+  viewerId  String?
+  createdAt DateTime @default(now())
+  @@index([creatorId, createdAt])
+}
+
+/// targetType: CREATOR_PROFILE | PORTFOLIO_ITEM. status: OPEN | ACTIONED | DISMISSED.
+model ContentReport {
+  id           String    @id @default(cuid())
+  targetType   String
+  targetId     String
+  creatorId    String
+  reporterId   String
+  reason       String
+  details      String?
+  status       String    @default("OPEN")
+  resolvedById String?
+  resolvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  @@unique([targetType, targetId, reporterId])
+  @@index([status, createdAt])
+}
