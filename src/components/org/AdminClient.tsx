@@ -86,6 +86,8 @@ const AcademySettings = dynamic(() => import("@/components/org/AcademySettings")
 const TrialManager = dynamic(() => import("@/components/org/TrialManager").then((m) => m.TrialManager), { loading: sectionLoading });
 const PendingPayments = dynamic(() => import("@/components/org/PendingPayments").then((m) => m.PendingPayments), { loading: sectionLoading });
 const BatchFeeEditor = dynamic(() => import("@/components/org/BatchFeeEditor").then((m) => m.BatchFeeEditor), { loading: inlineLoading });
+const OpsCalendar = dynamic(() => import("@/components/org/OpsCalendar").then((m) => m.OpsCalendar), { loading: sectionLoading });
+const FacilityAllocation = dynamic(() => import("@/components/org/FacilityAllocation").then((m) => m.FacilityAllocation), { loading: sectionLoading });
 const CollectFees = dynamic(() => import("@/components/org/CollectFees").then((m) => m.CollectFees), { loading: sectionLoading });
 
 /** Warm the chunks of the most-used tabs once the browser is idle (no effect on first paint). */
@@ -182,6 +184,7 @@ const moreGroups: NavGroup[] = [
       { id: "team", label: "Team", icon: NAV_ICONS.people },
       { id: "payroll", label: "Payroll", icon: NAV_ICONS.wallet },
       { id: "batches", label: "Batches", icon: NAV_ICONS.batches },
+      ...(FEATURES.opsCalendar ? [{ id: "calendar", label: "Calendar", icon: NAV_ICONS.today }] : []),
       { id: "leads", label: "Leads", icon: NAV_ICONS.people },
       { id: "communication", label: "Messages", icon: NAV_ICONS.communication },
       { id: "analytics", label: "Analytics", icon: NAV_ICONS.analytics },
@@ -211,6 +214,7 @@ const HIDDEN_TABS = new Set<string>([
   ...(FEATURES.experimental ? [] : ["ai", "marketing"]),
   ...(FEATURES.events ? [] : ["events"]),
   ...(FEATURES.bookings ? [] : ["bookings"]),
+  ...(FEATURES.opsCalendar ? [] : ["calendar"]),
 ]);
 
 /** Demo-data loader is a development tool: Settings only, never in production. */
@@ -735,9 +739,18 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {activeTab === "team" && <TeamPanel />}
           {activeTab === "payroll" && <PayrollPanel onOpenTeam={() => go("team")} />}
 
+          {/* CALENDAR (V1 Business, flag opsCalendar) */}
+          {activeTab === "calendar" && FEATURES.opsCalendar && (
+            <div className="space-y-6">
+              <SectionHeader title="Calendar" description="Sessions, planned batches, trials, holidays and court allocations" />
+              <OpsCalendar />
+            </div>
+          )}
+
           {/* OPERATIONS */}
           {activeTab === "operations" && (
             <div className="space-y-6">
+              {FEATURES.facilityAllocation && <FacilityAllocation />}
               <div>
                 <SectionHeader title="Facilities & Equipment" />
                 <Deferred promise={secondary}>
