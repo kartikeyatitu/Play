@@ -52,18 +52,24 @@ export const PERMISSIONS = {
   "reports.view": "See reports and analytics",
   "settings.manage": "Academy settings, payment setup and billing",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "community.moderate": "Hide replies and close comments on announcements",
 =======
   "careers.manage": "Post jobs and manage applicants",
   "health.view": "See students' medical information",
   "health.manage": "Edit students' medical information",
 >>>>>>> origin/build/v-careers-wellness-creators
+=======
+  "store.manage": "Manage kit store products and orders",
+  "sponsorship.manage": "Manage sponsors, campaigns, proposals and deliverables",
+  "funding.approve": "Approve sponsorship money commitments and scholarship budgets",
+>>>>>>> origin/build/v-commerce-brand
 } as const;
 export type Permission = keyof typeof PERMISSIONS;
 export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
 
 const STAFF_DEFAULTS: Record<StaffRole, Permission[]> = {
-  RECEPTIONIST: ["students.manage", "leads.manage", "fees.collect"],
+  RECEPTIONIST: ["students.manage", "leads.manage", "fees.collect", "store.manage"],
   ACCOUNTANT: ["fees.collect", "fees.manage", "payroll.view", "payroll.manage", "reports.view"],
   GROUNDSMAN: ["bookings.manage"],
   PHYSIO: ["health.view", "health.manage"],
@@ -76,7 +82,8 @@ export function defaultPermissions(role: TeamRole, staffRole?: StaffRole | null)
     case "OWNER":
       return [...ALL_PERMISSIONS];
     case "MANAGER":
-      return ALL_PERMISSIONS.filter((p) => p !== "settings.manage");
+      // Money commitments (funding.approve) stay with the owner unless granted to a person explicitly.
+      return ALL_PERMISSIONS.filter((p) => p !== "settings.manage" && p !== "funding.approve");
     case "COACH":
       return ["attendance.mark"];
     case "STAFF":

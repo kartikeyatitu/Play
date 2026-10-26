@@ -22,7 +22,12 @@ export const FEATURES = {
 
   /** Public coach profiles / creator pages / coaching registry (Coach OS). Hidden for launch. */
   coachOS: flag("COACH_OS", false),
-  /** Public academy & coach directory / marketplace. Hidden for launch. */
+  /**
+   * TRIQ Commerce (V8): the academy Kit Store (admin "Kit Store" tab + parent "Pro Shop") with
+   * stock reservation, price snapshots and the order lifecycle. Pay at academy only — no online
+   * checkout. Requires prisma/sql/2026-10-26_store_orders.sql. (The public /academies directory is
+   * not gated by this flag.)
+   */
   marketplace: flag("MARKETPLACE", false),
   /** Athlete profiles, assessments, rankings (Athlete OS). */
   athleteOS: flag("ATHLETE_OS", false),
@@ -55,6 +60,13 @@ export const FEATURES = {
   auditLogViewer: flag("AUDIT_LOG_VIEWER", false),
   /** V11 Enterprise: consolidated report across academies (and branches) the viewer may report on. No SQL. */
   enterprise: flag("ENTERPRISE", false),
+  /** TRIQ Brand Studio (V9): sponsors, campaigns, proposals, deliverables. Needs 2026-10-26_brand_studio.sql. */
+  sponsorship: flag("SPONSORSHIP", false),
+  /**
+   * TRIQ Brand Studio (V9): scholarship / CSR programs and fee concessions. Changes billing — monthly
+   * fee generation applies active concessions when on. Needs 2026-10-26_brand_studio.sql.
+   */
+  inclusive: flag("INCLUSIVE", false),
   /** Instagram/social generators, AI "insights" that are heuristics rather than real analytics. */
   experimental: flag("EXPERIMENTAL", false),
 

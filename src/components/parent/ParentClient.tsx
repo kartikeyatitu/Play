@@ -69,7 +69,7 @@ export function ParentClient({
     { id: 'home', label: 'Home', icon: NAV_ICONS.home },
     { id: 'children', label: 'My Children', icon: NAV_ICONS.students },
     { id: 'chat', label: 'Messages', icon: NAV_ICONS.communication },
-    { id: 'shop', label: 'Pro Shop', icon: NAV_ICONS.shop },
+    ...(FEATURES.marketplace ? [{ id: 'shop', label: 'Pro Shop', icon: NAV_ICONS.shop }] : []),
     { id: 'coaches', label: 'Coaches', icon: NAV_ICONS.people },
     { id: 'more', label: 'More', icon: NAV_ICONS.star },
   ];
@@ -369,10 +369,14 @@ export function ParentClient({
             </div>
           )}
 
-          {activeTab === 'shop' && (
+          {activeTab === 'shop' && FEATURES.marketplace && (
             <div className="space-y-6">
               <SectionHeader title="Pro Shop" />
-              <ProShop products={products} studentId={children?.[0]?.id} />
+              <ProShop
+                products={products}
+                studentId={children?.[0]?.id}
+                kids={(children || []).map((c: any) => ({ id: c.id, name: c.name }))}
+              />
             </div>
           )}
 

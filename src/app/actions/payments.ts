@@ -1,4 +1,5 @@
 "use server";
+import { concessionAdjustedFee } from "@/lib/concession-fees";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
@@ -31,7 +32,7 @@ export async function markFeePaid(studentId: string, month: string, paymentId: s
       });
       feeAmount = fee.amount;
     } else {
-      feeAmount = resolveStudentFee(student, student.org?.defaultMonthlyFee);
+      feeAmount = await concessionAdjustedFee(student, student.org?.defaultMonthlyFee, month);
       const created = await db.feeRecord.create({
         data: { orgId: session.orgId, studentId, amount: feeAmount, month, status: "PAID", paidAt: new Date(), paymentMethod: "OFFLINE_RECORDED" },
       });

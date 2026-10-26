@@ -1,4 +1,5 @@
 "use server";
+import { concessionAdjustedFee } from "@/lib/concession-fees";
 
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
@@ -35,8 +36,11 @@ export async function createFeePaymentLink(studentId: string, month: string): Pr
 
     let fee = await db.feeRecord.findFirst({ where: { studentId, month } });
     if (!fee) {
-      const amount = resolveStudentFee(student, student.org?.defaultMonthlyFee);
-      if (!(amount > 0)) return { success: false, error: "Set a fee for this student's batch first." };
+      const amount = await concessionAdjustedFee(student, student.org?.defaultMonthlyFee, month);
+      if (!(amount > 0)) {
+        const base = resolveStudentFee(student, student.org?.defaultMonthlyFee);
+        return { success: false, error: base > 0 ? "Nothing to collect: this student has a full fee waiver for this month." : "Set a fee for this student's batch first." };
+      }
       fee = await db.feeRecord.create({ data: { orgId: session.orgId, studentId, amount, month, status: "PENDING" } });
     }
     if (fee.status === "PAID") return { success: false, error: "This fee is already paid." };
