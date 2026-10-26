@@ -40,7 +40,7 @@ export const FEATURES = {
   /** Tournaments / brackets. TRIQ Play competitions — apply prisma/sql/2026-10-26_competitions.sql first. */
   events: flag("EVENTS", true),
   /** TRIQ Spaces operator tools: blocked slots, reschedule, cancellation policy, utilisation, booking history. */
-  spacesOps: flag("SPACES_OPS", false),
+  spacesOps: flag("SPACES_OPS", true),
   /** TRIQ Spaces public venue discovery listing at /venues. */
   spacesDiscovery: flag("SPACES_DISCOVERY", true),
   /** Corporate sports programs. */
@@ -57,10 +57,10 @@ export const FEATURES = {
   facilityAllocation: flag("FACILITY_ALLOCATION", true),
   /** V1 Business: GST tax invoices + credit notes for paid fees (org tax profile, FY numbering, CGST/SGST/IGST).
    *  Needs prisma/sql/2026-10-26_gst_invoices.sql — the GST tables are never queried while this is off. */
-  gstInvoices: flag("GST_INVOICES", false),
+  gstInvoices: flag("GST_INVOICES", true),
   /** V1 Business: UPI AutoPay monthly fee mandates on the academy's own Razorpay account (recurring payments).
    *  Needs prisma/sql/2026-10-26_upi_autopay.sql and UPI recurring enabled on the academy's Razorpay account. */
-  upiAutopay: flag("UPI_AUTOPAY", false),
+  upiAutopay: flag("UPI_AUTOPAY", true),
   /** V1 Business: monthly business report (revenue, outstanding, attendance, utilisation). No SQL. */
   businessReport: flag("BUSINESS_REPORT", true),
   /** V1/V11: audit-log viewer with filters and CSV export (owners only). No SQL. */
@@ -76,7 +76,7 @@ export const FEATURES = {
    * TRIQ Brand Studio (V9): scholarship / CSR programs and fee concessions. Changes billing — monthly
    * fee generation applies active concessions when on. Needs 2026-10-26_brand_studio.sql.
    */
-  inclusive: flag("INCLUSIVE", false),
+  inclusive: flag("INCLUSIVE", true),
   /** Instagram/social generators, AI "insights" that are heuristics rather than real analytics. */
   experimental: flag("EXPERIMENTAL", false),
 
