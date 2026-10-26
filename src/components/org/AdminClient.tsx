@@ -64,7 +64,7 @@ const PhotoGallery = dynamic(() => import("@/components/org/PhotoGallery").then(
 const LeadPipeline = dynamic(() => import("@/components/org/LeadPipeline").then((m) => m.LeadPipeline), { loading: sectionLoading });
 const AddLeadForm = dynamic(() => import("@/components/org/AddLeadForm").then((m) => m.AddLeadForm), { loading: inlineLoading });
 const TransportManager = dynamic(() => import("@/components/org/TransportManager").then((m) => m.TransportManager), { loading: sectionLoading });
-const TournamentBracket = dynamic(() => import("@/components/org/TournamentBracket").then((m) => m.TournamentBracket), { loading: sectionLoading });
+const CompetitionManager = dynamic(() => import("@/components/org/CompetitionManager").then((m) => m.CompetitionManager), { loading: sectionLoading });
 const CertificateGenerator = dynamic(() => import("@/components/org/CertificateGenerator").then((m) => m.CertificateGenerator), { loading: sectionLoading });
 const AttendanceInsights = dynamic(() => import("@/components/org/AttendanceInsights").then((m) => m.AttendanceInsights), { loading: sectionLoading });
 const BatchHealthReport = dynamic(() => import("@/components/org/BatchHealthReport").then((m) => m.BatchHealthReport), { loading: sectionLoading });
@@ -688,9 +688,11 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {/* EVENTS */}
           {activeTab === "events" && FEATURES.events && (
             <div className="space-y-6">
-              <SectionHeader title="Tournaments & Certificates" />
+              <SectionHeader title="Competitions & Certificates" />
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <TournamentBracket />
+                <div className="lg:col-span-2">
+                  <CompetitionManager batches={batches.map((b: any) => ({ id: b.id, name: b.name }))} />
+                </div>
                 <CertificateGenerator students={students.map((s: any) => ({ id: s.id, name: s.name }))} />
               </div>
             </div>

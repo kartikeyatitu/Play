@@ -69,6 +69,7 @@ model Organization {
   staffAttendance StaffAttendance[]
   staffPayouts    StaffPayout[]
   expenses        Expense[]
+  competitions    Competition[]
 }
 
 // ==========================================
@@ -135,6 +136,7 @@ model Student {
   Media        Media[]
   incidents    Incident[]
   receipts     Receipt[]
+  competitionEntries CompetitionEntry[]
   @@index([orgId])
   @@index([parentId])
 }
@@ -1294,6 +1296,38 @@ model Opportunity {
   updatedAt    DateTime  @updatedAt
 
   applications OpportunityApplication[]
+// TRIQ Play (additive, prisma/sql/2026-10-26_competitions.sql). Read only when FEATURES.events is on.
+// Rules live in src/lib/competition.ts; standings are always computed, never stored.
+// ==========================================
+
+model Competition {
+  id              String    @id @default(cuid())
+  orgId           String
+  name            String
+  sport           String?
+  format          String    // LEAGUE | KNOCKOUT
+  entryType       String    @default("TEAM") // TEAM | INDIVIDUAL
+  legs            Int       @default(1) // LEAGUE: 1 or 2
+  status          String    @default("DRAFT") // DRAFT | OPEN | SCHEDULED | COMPLETED | CANCELLED
+  startDate       DateTime?
+  endDate         DateTime?
+  venue           String?
+  maxEntries      Int
+  minAge          Int?
+  maxAge          Int?
+  ageCutoffDate   DateTime?
+  eligibleBatchId String?
+  pointsWin       Int       @default(3)
+  pointsDraw      Int       @default(1)
+  pointsLoss      Int       @default(0)
+  allowDraws      Boolean   @default(true)
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org      Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  entries  CompetitionEntry[]
+  fixtures Fixture[]
 
   @@index([orgId, status])
 }
@@ -1439,4 +1473,56 @@ model BatchBranch {
 
   @@index([orgId])
   @@index([branchId])
+model CompetitionEntry {
+  id             String   @id @default(cuid())
+  orgId          String
+  competitionId  String
+  name           String
+  studentId      String?  // INDIVIDUAL entries
+  batchId        String?  // optional source batch for TEAM entries
+  seed           Int?
+  status         String   @default("REGISTERED") // REGISTERED | WITHDRAWN
+  registeredById String
+  createdAt      DateTime @default(now())
+
+  competition  Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  student      Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  homeFixtures Fixture[]   @relation("FixtureHome")
+  awayFixtures Fixture[]   @relation("FixtureAway")
+  wonFixtures  Fixture[]   @relation("FixtureWinner")
+
+  @@unique([competitionId, name])
+  @@unique([competitionId, studentId])
+  @@index([orgId])
+}
+
+model Fixture {
+  id             String    @id @default(cuid())
+  orgId          String
+  competitionId  String
+  round          Int
+  slot           Int
+  homeEntryId    String?
+  awayEntryId    String?
+  scheduledAt    DateTime?
+  venue          String?
+  status         String    @default("SCHEDULED") // SCHEDULED | COMPLETED | BYE | POSTPONED | CANCELLED
+  homeScore      Int?
+  awayScore      Int?
+  winnerEntryId  String?
+  officialUserId String?   // coach/staff allowed to record this fixture's result
+  resultById     String?
+  resultAt       DateTime?
+  version        Int       @default(0) // optimistic concurrency: every write must match and bump it
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  competition Competition       @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  home        CompetitionEntry? @relation("FixtureHome", fields: [homeEntryId], references: [id], onDelete: SetNull)
+  away        CompetitionEntry? @relation("FixtureAway", fields: [awayEntryId], references: [id], onDelete: SetNull)
+  winner      CompetitionEntry? @relation("FixtureWinner", fields: [winnerEntryId], references: [id], onDelete: SetNull)
+
+  @@unique([competitionId, round, slot])
+  @@index([orgId, scheduledAt])
+  @@index([officialUserId])
 }

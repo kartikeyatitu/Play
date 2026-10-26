@@ -32,8 +32,12 @@ export const FEATURES = {
   opportunities: flag("OPPORTUNITIES", false),
   /** V10: schools / colleges / universities — institution profile, programs, teams, participation. Needs 2026-10-26_education.sql. */
   education: flag("EDUCATION", false),
-  /** Tournaments / brackets. */
+  /** Tournaments / brackets. TRIQ Play competitions — apply prisma/sql/2026-10-26_competitions.sql first. */
   events: flag("EVENTS", false),
+  /** TRIQ Spaces operator tools: blocked slots, reschedule, cancellation policy, utilisation, booking history. */
+  spacesOps: flag("SPACES_OPS", false),
+  /** TRIQ Spaces public venue discovery listing at /venues. */
+  spacesDiscovery: flag("SPACES_DISCOVERY", false),
   /** Corporate sports programs. */
   corporate: flag("CORPORATE", false),
   /** V7 Communities: read receipts, parent replies and moderation on announcements. */
