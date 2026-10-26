@@ -69,6 +69,11 @@ export async function deleteAllData() {
     ["opportunity",                 () => ifTableExists(() => db.opportunity.deleteMany({ where: { orgId: oId } }))],
     ["athleteAchievement",          () => ifTableExists(() => db.athleteAchievement.deleteMany({ where: { orgId: oId } }))],
     ["athleteGoal",                 () => ifTableExists(() => db.athleteGoal.deleteMany({ where: { orgId: oId } }))],
+    // V10 Education (flag-gated tables; see prisma/sql/2026-10-26_education.sql)
+    ["participationRecord",         () => ifTableExists(() => db.participationRecord.deleteMany({ where: { orgId: oId } }))],
+    ["programTeam",                 () => ifTableExists(() => db.programTeam.deleteMany({ where: { orgId: oId } }))],
+    ["sportsProgram",               () => ifTableExists(() => db.sportsProgram.deleteMany({ where: { orgId: oId } }))],
+    ["institutionProfile",          () => ifTableExists(() => db.institutionProfile.deleteMany({ where: { orgId: oId } }))],
     ["student",         () => db.student.deleteMany({ where: { orgId: oId } })],
     ["batch",           () => db.batch.deleteMany({ where: { orgId: oId } })],
     ["product",         () => db.product.deleteMany({ where: { orgId: oId } })],

@@ -1332,3 +1332,79 @@ model OpportunityApplicationEvent {
   @@index([applicationId, createdAt])
   @@index([orgId])
 }
+
+// ==========================================
+// V10 TRIQ EDUCATION (additive, flag education)
+// SQL: prisma/sql/2026-10-26_education.sql. An institution is an Organization with an
+// InstitutionProfile row; teams/squads reuse existing Batches (roster, coach, sessions, attendance).
+// ==========================================
+
+/// Marks an organization as a school / college / university.
+model InstitutionProfile {
+  id          String   @id @default(cuid())
+  orgId       String   @unique
+  kind        String   // SCHOOL | COLLEGE | UNIVERSITY
+  affiliation String?  // board / university, e.g. "CBSE"
+  levels      String?  // e.g. "Grades 1-12"
+  website     String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// A sports department / program inside an institution, e.g. "Football".
+model SportsProgram {
+  id          String   @id @default(cuid())
+  orgId       String
+  name        String
+  sport       String
+  description String?
+  status      String   @default("ACTIVE") // ACTIVE | ARCHIVED
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teams          ProgramTeam[]
+  participations ParticipationRecord[]
+
+  @@index([orgId, status])
+}
+
+/// Maps an existing Batch onto a program as a team / squad. A batch belongs to at most one program.
+model ProgramTeam {
+  id        String   @id @default(cuid())
+  orgId     String
+  programId String
+  batchId   String   @unique
+  squadType String   @default("TEAM") // TEAM | SQUAD | CLUB
+  ageGroup  String?
+  gender    String?  // BOYS | GIRLS | MIXED
+  createdAt DateTime @default(now())
+
+  program   SportsProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([programId])
+}
+
+/// A student's participation beyond routine training attendance: events, competitions, selections.
+model ParticipationRecord {
+  id           String   @id @default(cuid())
+  orgId        String
+  programId    String
+  studentId    String
+  teamId       String?
+  kind         String   // TRAINING | EVENT | COMPETITION | SELECTION | ACHIEVEMENT
+  title        String
+  date         DateTime
+  role         String?
+  result       String?
+  notes        String?
+  recordedById String
+  createdAt    DateTime @default(now())
+
+  program      SportsProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, programId, date])
+  @@index([studentId])
+}
