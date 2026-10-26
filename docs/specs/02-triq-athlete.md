@@ -112,7 +112,7 @@ Parents can edit/delete only their own SUBMITTED/REJECTED entries. Verified entr
 
 **Opportunity status**: DRAFT → OPEN → CLOSED; CLOSED → OPEN allowed if `applyBy` still in future. Applications only while OPEN and before end of `applyBy` day.
 
-**Application status** (`canTransitionApplication`): APPLIED → SHORTLISTED | NOT_SELECTED | WITHDRAWN; SHORTLISTED → SELECTED | NOT_SELECTED | WITHDRAWN; SELECTED, NOT_SELECTED, WITHDRAWN terminal (admin may reopen NOT_SELECTED → SHORTLISTED). WITHDRAWN only by parent. Each transition writes one `OpportunityApplicationEvent`.
+**Application status** (`canTransitionApplication`): APPLIED → SHORTLISTED | NOT_SELECTED | WITHDRAWN; SHORTLISTED → SELECTED | NOT_SELECTED | WITHDRAWN; SELECTED, NOT_SELECTED, WITHDRAWN terminal (admin may reopen NOT_SELECTED → SHORTLISTED). WITHDRAWN only by parent (from APPLIED/SHORTLISTED); a guardian may re-apply after withdrawing while the opportunity is open (new consent recorded). Each transition writes one `OpportunityApplicationEvent`.
 
 **Eligibility**: child belongs to org; enrolled in target batch (or batch null); age from `Student.dob` within `ageMin/ageMax` on `startDate ?? applyBy` (if dob missing and an age band exists, application allowed but flagged "age not on file").
 
@@ -134,11 +134,12 @@ All added to `deleteAllData` order (`src/app/actions/delete.ts`) before `student
 
 ## 9. API contracts (server actions)
 
+Monthly report: server-rendered in `src/app/student/[id]/report/page.tsx` (no action; reads `Session`, `Attendance`, `SkillReport` with the profile access filter from `src/lib/athlete-access.ts`).
+
 `src/app/actions/athlete.ts` ("use server", all return `{ success: boolean; error?: string; ... }`, all refuse when flag off):
 
 | Action | Input | Auth |
 |---|---|---|
-| `getMonthlyProgressReport(studentId, month)` | ids | profile access |
 | `listAthleteRecords(studentId)` | | profile access → `{ achievements, goals, canReview, canVerify, canSetGoals }` |
 | `submitAchievement(studentId, input)` / `updateAchievement(id, input)` / `deleteAchievement(id)` | | parent own child, coach scope, admin |
 | `reviewAchievement(id, action, reason?)` action ∈ review, verify, reject, unverify | | review: coach scope or admin; others `students.manage` |
@@ -206,7 +207,13 @@ Identity/membership (`src/lib/membership.ts`), permissions (`src/lib/team.ts`), 
 | Saved opportunities | Missing | — |
 | Development timeline | Missing | — |
 | Guardian consent | Missing → **Partial** | consent on applications only |
-| Flag | `athleteOS` defined in `src/lib/features.ts`, previously unread; `progressReport`, `opportunities` added |
+| Flags | `athleteOS` (previously unread) now gates achievements/goals; `progressReport`, `opportunities` added in `src/lib/features.ts` |
+
+Built on branch `build/v-athlete-education` (all default OFF):
+- `progressReport`: `src/lib/progress-report.ts`, `src/app/student/[id]/report/page.tsx`, `src/components/athlete/ReportActions.tsx`, links in `src/app/student/[id]/page.tsx` and `src/components/parent/ParentClient.tsx`.
+- `athleteOS`: `src/lib/athlete.ts`, `src/app/actions/athlete.ts`, `src/components/athlete/AthletePanel.tsx` (on the profile page).
+- `opportunities`: `src/lib/opportunities.ts`, `src/app/actions/opportunities.ts`, `src/components/org/OpportunitiesPanel.tsx` (Admin More), `src/components/parent/OpportunitiesCard.tsx` (Parent More).
+- Shared: `src/lib/athlete-access.ts`, `src/lib/schema-pending.ts`; deletion order in `src/app/actions/delete.ts`.
 
 ## 16. Release dependencies and unresolved decisions
 

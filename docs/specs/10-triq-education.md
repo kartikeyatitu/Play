@@ -173,6 +173,8 @@ Org/membership/permissions (V1 + shared), batches/sessions/attendance (V1), oppo
 | Institution reports | Missing → **Partial** | program metrics only |
 | Guardian permissions | Partial | parent access is own-child only (existing pattern); no consent flow |
 
+Built on branch `build/v-athlete-education` (flag `education`, default OFF): `src/lib/education.ts`, `src/app/actions/education.ts`, `src/components/org/InstitutionPanel.tsx` (Admin More → Institution), schema + `prisma/sql/2026-10-26_education.sql`, deletion order in `src/app/actions/delete.ts`. Coach-side recording UI not built (action already allows coaches of a linked batch). Parents do not yet see participation records.
+
 ## 16. Release dependencies and unresolved decisions
 
 - Apply `prisma/sql/2026-10-26_education.sql` before enabling `NEXT_PUBLIC_FEATURE_EDUCATION`.
