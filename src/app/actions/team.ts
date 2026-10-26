@@ -9,6 +9,7 @@ import { istToday } from "@/lib/fees";
 import { backfillOrgMemberships, getMembership, requireMember, requirePermission } from "@/lib/membership";
 import {
   appRoleFor,
+  belongsToOtherAcademy,
   effectivePermissions,
   isPayType,
   isPermission,
@@ -105,8 +106,9 @@ async function getTeamImpl() {
 }
 
 /**
- * Add a coach or staff member by phone. A coach who already works at another academy keeps their
- * login and gets this academy added to their list; parents and other academies' owners are refused.
+ * Add a coach or staff member by phone. Someone who already works at another academy is only
+ * invited: the membership stays INVITED (no access, no login switch) until they accept it from their
+ * own login. Parents and other academies' owners are refused.
  */
 async function addTeamMemberImpl(input: TeamMemberInput) {
   const { session } = await requirePermission("team.manage");
@@ -135,8 +137,13 @@ async function addTeamMemberImpl(input: TeamMemberInput) {
     if (ownsOtherAcademy) throw new Error("This number owns another academy on Triq");
 
     const here = existing.memberships.find((m) => m.orgId === orgId);
+    if (here?.status === "INVITED") throw new Error("This person has already been invited. They need to accept it from their own login.");
     if (here && here.status !== "REMOVED") throw new Error("This person is already in your team");
   }
+
+  // Someone who works at another academy must agree before they join this one
+  const needsConsent = !!existing && belongsToOtherAcademy(existing, orgId);
+  const status = needsConsent ? "INVITED" : "ACTIVE";
 
   const appRole = appRoleFor(role);
   await db.$transaction(async (tx) => {
@@ -144,20 +151,47 @@ async function addTeamMemberImpl(input: TeamMemberInput) {
     if (!userId) {
       const user = await tx.user.create({ data: { name, phone, role: appRole, orgId } });
       userId = user.id;
-    } else if (!existing!.orgId) {
+    } else if (!existing!.orgId && !needsConsent) {
       // No active academy yet (e.g. first job, or removed from their last one): make this one active
       await tx.user.update({ where: { id: userId }, data: { orgId, role: appRole } });
     }
     await tx.orgMembership.upsert({
       where: { userId_orgId: { userId, orgId } },
-      create: { userId, orgId, role, staffRole, title, ...pay },
-      update: { role, staffRole, title, ...pay, status: "ACTIVE", removedAt: null, joinedAt: new Date() },
+      create: { userId, orgId, role, staffRole, title, ...pay, status },
+      update: { role, staffRole, title, ...pay, status, removedAt: null, joinedAt: new Date() },
     });
   });
 
-  await audit(session.id, orgId, "TEAM_MEMBER_ADDED", { phone: `******${phone.slice(-4)}`, role, staffRole });
+  await audit(session.id, orgId, needsConsent ? "TEAM_MEMBER_INVITED" : "TEAM_MEMBER_ADDED", { phone: `******${phone.slice(-4)}`, role, staffRole });
   revalidatePath("/org");
-  return { success: true, joinedOtherAcademy: !!existing?.orgId && existing.orgId !== orgId };
+  return { success: true, invited: needsConsent, joinedOtherAcademy: false };
+}
+
+/** Pending invitations for the signed-in person to join other academies. */
+export async function getMyInvites() {
+  const session = await requireAuth(["ADMIN", "COACH", "STAFF"]);
+  const invites = await db.orgMembership.findMany({
+    where: { userId: session.id, status: "INVITED" },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, role: true, staffRole: true, title: true, org: { select: { name: true, city: true } } },
+  });
+  return invites.map((i) => ({ id: i.id, role: i.role, staffRole: i.staffRole, title: i.title, academyName: i.org.name, city: i.org.city }));
+}
+
+/** The invited person accepts or declines an invitation to join another academy. */
+async function respondToInviteImpl(membershipId: string, accept: boolean) {
+  const session = await requireAuth(["ADMIN", "COACH", "STAFF"]);
+  const invite = await db.orgMembership.findFirst({ where: { id: String(membershipId), userId: session.id, status: "INVITED" } });
+  if (!invite) throw new Error("Invitation not found");
+  if (invite.role === "OWNER") throw new Error("Invitation not found");
+  await db.orgMembership.update({
+    where: { id: invite.id },
+    data: accept ? { status: "ACTIVE", joinedAt: new Date(), removedAt: null } : { status: "REMOVED", removedAt: new Date() },
+  });
+  await audit(session.id, invite.orgId, accept ? "TEAM_INVITE_ACCEPTED" : "TEAM_INVITE_DECLINED", { membershipId: invite.id, role: invite.role });
+  revalidatePath("/coach");
+  revalidatePath("/staff");
+  return { success: true };
 }
 
 /** Change someone's role, title, pay or individual permissions. */
@@ -386,6 +420,10 @@ export async function selfCheckIn() {
 
 export async function selfCheckOut() {
   return attempt(() => selfCheckOutImpl(), "team");
+}
+
+export async function respondToInvite(membershipId: string, accept: boolean) {
+  return attempt(() => respondToInviteImpl(membershipId, accept), "team");
 }
 
 export async function switchAcademy(orgId: string) {

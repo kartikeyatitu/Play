@@ -187,6 +187,9 @@ export function TeamPanel() {
                       {roleLabel(m.role, m.staffRole)}
                     </span>
                     {m.title && <span className="text-[13px] text-ink-subtle">{m.title}</span>}
+                    {m.status === "INVITED" && (
+                      <span className="text-[12px] font-medium px-1.5 py-px rounded-md border border-line text-ink-subtle">Invite pending</span>
+                    )}
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-subtle">
                     {m.phone && (
@@ -229,7 +232,7 @@ export function TeamPanel() {
               </div>
 
               {/* Today's attendance */}
-              {can("team.manage") && (
+              {can("team.manage") && m.status !== "INVITED" && (
                 <div className="mt-3 sm:ml-[52px] flex items-center gap-3">
                   <span className="text-[13px] text-ink-subtle">Today</span>
                   <div className="inline-flex rounded-lg border border-line p-0.5" role="radiogroup" aria-label={`Today's attendance for ${m.name}`}>
@@ -349,8 +352,8 @@ function MemberDialog({
       } else {
         const name = String(form.get("name") || "");
         const res = unwrap(await addTeamMember({ ...base, name, phone: String(form.get("phone") || "") }));
-        track("team_member_added", { role: String(base.role), staff_role: base.staffRole ? String(base.staffRole) : null, joined_other_academy: Boolean(res.joinedOtherAcademy) });
-        await onSaved(res.joinedOtherAcademy ? `${name} added. They also work at another academy and can switch between them.` : `${name} added to your team`);
+        track("team_member_added", { role: String(base.role), staff_role: base.staffRole ? String(base.staffRole) : null, joined_other_academy: Boolean(res.invited) });
+        await onSaved(res.invited ? `${name} works at another academy, so we've sent them an invite. They'll join once they accept it.` : `${name} added to your team`);
       }
     } catch (e: any) {
       toast.error(e?.message || "Couldn't save");

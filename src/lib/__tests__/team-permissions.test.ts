@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ALL_PERMISSIONS, canMarkBatchAttendance, membershipAllows } from "@/lib/team";
+import { ALL_PERMISSIONS, belongsToOtherAcademy, canMarkBatchAttendance, membershipAllows } from "@/lib/team";
 
 const m = (role: string, extra: { staffRole?: string; permissions?: Record<string, boolean>; status?: string } = {}) => ({
   role,
@@ -77,5 +77,33 @@ describe("canMarkBatchAttendance", () => {
   it("staff need an explicit grant", () => {
     expect(canMarkBatchAttendance(m("STAFF", { staffRole: "RECEPTIONIST" }), false)).toBe(false);
     expect(canMarkBatchAttendance(m("STAFF", { staffRole: "RECEPTIONIST", permissions: { "attendance.mark": true } }), false)).toBe(true);
+  });
+});
+
+describe("belongsToOtherAcademy", () => {
+  const A = "org_a";
+  const B = "org_b";
+
+  it("a brand-new or single-academy person does not need consent", () => {
+    expect(belongsToOtherAcademy({ orgId: null, memberships: [] }, A)).toBe(false);
+    expect(belongsToOtherAcademy({ orgId: A, memberships: [{ orgId: A, status: "ACTIVE" }] }, A)).toBe(false);
+  });
+
+  it("an active membership elsewhere counts", () => {
+    expect(belongsToOtherAcademy({ orgId: A, memberships: [{ orgId: A, status: "ACTIVE" }, { orgId: B, status: "ACTIVE" }] }, A)).toBe(true);
+  });
+
+  it("legacy users whose active academy is elsewhere count even without a membership row", () => {
+    expect(belongsToOtherAcademy({ orgId: B, memberships: [] }, A)).toBe(true);
+  });
+
+  it("removed memberships elsewhere do not count", () => {
+    expect(belongsToOtherAcademy({ orgId: null, memberships: [{ orgId: B, status: "REMOVED" }] }, A)).toBe(false);
+  });
+
+  it("pending invites elsewhere count only when asked (login links)", () => {
+    const u = { orgId: A, memberships: [{ orgId: A, status: "ACTIVE" }, { orgId: B, status: "INVITED" }] };
+    expect(belongsToOtherAcademy(u, A)).toBe(false);
+    expect(belongsToOtherAcademy(u, A, { countInvites: true })).toBe(true);
   });
 });
