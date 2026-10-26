@@ -219,16 +219,16 @@ booking engine (`src/lib/turf-engine.ts`), payments (`payment-service.ts`, `rece
 | F9 Trials & conversion | Partial | `trial.ts` (4.F non-atomic), `trial-convert.ts` (CAS), `leads.ts` (4.C) |
 | F10 Fees, receipts, outstanding | Complete | `fees.ts`, `auto-fees.ts`, `receipt-service.ts`, `PendingPayments.tsx`, `payment-method.ts` |
 | F11 Facility allocation | Partial → built (flag `facilityAllocation`) | before: `bookFacility` in `facilities.ts` writes `Booking` but no UI and no conflict check (Broken/unused). Now: `facility-allocation.ts` via `reserveSlot` |
-| F12 Operational calendar | Missing → built (flag `opsCalendar`) | before: `CalendarExport.tsx` exports a fake ICS with "now" as start (Mocked). Now: `ops-calendar.ts` |
+| F12 Operational calendar | Partial (flag `opsCalendar`) | `src/lib/ops-calendar.ts`, `src/app/actions/ops-calendar.ts`, `OpsCalendar.tsx` (academy sessions/plans/trials/holidays/allocations). Ownership moved to another builder for the unified academy + turf calendar; not extended here |
 | F13 Communications | Partial | `announcements.ts` (now audited, group-c), `coach-session.ts`, `chat.ts`, `BroadcastTab.tsx`, `InboxTab.tsx`; WhatsApp = `wa.me` deep links; community rules `src/lib/community.ts` (flag `communities`, no UI yet) |
 | F14 Dashboard & reports | Partial → report built (flag `businessReport`) | `src/lib/today.ts`, `AnalyticsDashboard.tsx`; AI Insights heuristic (flag `experimental`) |
 | F15 Settings & audit | Partial → viewer built (flag `auditLogViewer`) | `getAuditLog` existed; `AuditLogViewer.tsx` was never mounted; now `AuditLogPanel.tsx` + CSV |
-| F16 Growth tools (ex-Rewards) | Partial / Broken, ungated | `points.ts` (overwrites balance), `gamification.ts` (+10, no audit), `referral.ts`+`referrals.ts` (no orgId, never converts), `coupons.ts` (global code, no redemption), `store.ts` |
+| F16 Growth tools (ex-Rewards) | Partial (flag `growthTools`) | Referrals: `src/lib/referral-rules.ts`, `src/lib/referral-server.ts` — validated, de-duplicated, org-scoped via referrer, audited, convert on enrolment (`createStudent`, `convertTrialToStudent`, `convertLeadToStudent`). No reward granted (no fee-credit model). Coupons: create/list audited but still not redeemable; `Coupon.code` still globally unique. Points: `points.ts` overwrite + `gamification.ts` unaudited +10 — unchanged (Broken), needs `PointTransaction` ledger. Parent widget and coupon UI were live and ungated; now behind the flag |
 
 ## 16. Release dependencies and unresolved decisions
 
 - Apply `2026-10-25_branches.sql` + `2026-10-26_batch_branches.sql`, then set `NEXT_PUBLIC_FEATURE_BRANCHES=1`.
-- Calendar, report, facility allocation and audit viewer need no SQL — they can be enabled independently.
+- Calendar, report, facility allocation, audit viewer and growth tools need no SQL — they can be enabled independently.
 - Decisions: multi-guardian and cross-academy parents; Program above Batch; growth tools — points→fee credit?
   per-org coupon codes (not purely additive: `Coupon.code @unique`); should the ungated referral/coupon UI be put behind
   a `growthTools` flag now; WhatsApp Cloud API sender ownership.
