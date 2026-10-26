@@ -327,3 +327,19 @@ export function formatMinorINR(minor: number): string {
   const r = Math.floor(abs / 100).toLocaleString("en-IN");
   return `${sign}₹${r}.${String(abs % 100).padStart(2, "0")}`;
 }
+
+// ─── Shapes returned by src/app/actions/gst-invoices.ts (types can't live in a "use server" file) ───
+
+export type GstDocRow = {
+  id: string;
+  kind: string;
+  number: string;
+  issueDay: string;
+  studentName: string | null;
+  recipientName: string;
+  totalMinor: number;
+  originalInvoiceId: string | null;
+  credited: boolean;
+};
+
+export type UninvoicedFeeRow = { feeRecordId: string; studentName: string; month: string; amount: number; paidAt: string | null };

@@ -1937,3 +1937,83 @@ model TurfBookingEvent {
   @@index([bookingId, createdAt])
   @@index([orgId, createdAt])
 }
+
+// ==========================================
+// V1 BUSINESS: GST TAX INVOICES (additive, flag `gstInvoices`)
+// SQL: prisma/sql/2026-10-26_gst_invoices.sql. Never queried while the flag is off.
+// ==========================================
+
+/// The academy's GST registration details used on tax invoices.
+model OrgTaxProfile {
+  orgId            String   @id
+  legalName        String
+  gstin            String
+  stateCode        String   // first two digits of the GSTIN
+  address          String
+  sacCode          String   // SAC/HSN, configured by the academy (e.g. 999291)
+  rateBps          Int      // GST rate in basis points (1800 = 18%)
+  priceMode        String   @default("INCLUSIVE") // INCLUSIVE | EXCLUSIVE
+  invoicePrefix    String   @default("INV")
+  creditNotePrefix String   @default("CN")
+  updatedById      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+/// Gap-free sequence per academy, financial year and series. Incremented in the same transaction as the document.
+model TaxDocumentCounter {
+  orgId     String
+  fy        String   // "2026-27"
+  series    String   // INVOICE | CREDIT_NOTE
+  lastSeq   Int      @default(0)
+  updatedAt DateTime @default(now())
+
+  @@id([orgId, fy, series])
+}
+
+/// A GST tax invoice or credit note. Amounts are integer paise; supplier details are snapshotted at issue.
+model TaxInvoice {
+  id                  String   @id @default(cuid())
+  orgId               String
+  kind                String   // INVOICE | CREDIT_NOTE
+  number              String   // e.g. INV/26-27/00001
+  fy                  String
+  seq                 Int
+  sourceKey           String   // idempotency: fee:<feeRecordId>:<paidAt ms> | cn:<invoiceId>
+  issueDate           DateTime @default(now())
+  issueDay            String   // YYYY-MM-DD in the academy's timezone
+  feeRecordId         String?
+  studentId           String?
+  originalInvoiceId   String?  // credit notes: the invoice being reversed
+  supplierLegalName   String
+  supplierGstin       String
+  supplierStateCode   String
+  supplierAddress     String
+  recipientName       String
+  recipientPhone      String?
+  studentName         String?
+  description         String
+  placeOfSupply       String   // state code
+  sacCode             String
+  rateBps             Int
+  priceMode           String
+  taxableMinor        Int
+  cgstMinor           Int      @default(0)
+  sgstMinor           Int      @default(0)
+  igstMinor           Int      @default(0)
+  roundOffMinor       Int      @default(0)
+  totalMinor          Int
+  amountReceivedMinor Int      @default(0)
+  currency            String   @default("INR")
+  paidAt              DateTime?
+  reason              String?  // credit notes
+  createdById         String
+  createdAt           DateTime @default(now())
+
+  @@unique([orgId, kind, fy, seq])
+  @@unique([orgId, kind, number])
+  @@unique([orgId, sourceKey])
+  @@index([orgId, createdAt])
+  @@index([feeRecordId])
+  @@index([originalInvoiceId])
+}

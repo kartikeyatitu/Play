@@ -61,6 +61,15 @@ export async function deleteAllData() {
     ["attendance",      () => db.attendance.deleteMany({ where: { session: { orgId: oId } } })],
     ["session",         () => db.session.deleteMany({ where: { orgId: oId } })],
     ["skillReport",     () => db.skillReport.deleteMany({ where: { orgId: oId } })],
+    // V1 GST invoices (flag gstInvoices, 2026-10-26_gst_invoices.sql). Note: GST law requires keeping tax invoices
+    // for years — owners deleting a GST-registered academy should export them first.
+    ...(FEATURES.gstInvoices
+      ? ([
+          ["taxInvoice",         () => ifTableExists(() => db.taxInvoice.deleteMany({ where: { orgId: oId } }))],
+          ["taxDocumentCounter", () => ifTableExists(() => db.taxDocumentCounter.deleteMany({ where: { orgId: oId } }))],
+          ["orgTaxProfile",      () => ifTableExists(() => db.orgTaxProfile.deleteMany({ where: { orgId: oId } }))],
+        ] as Array<[string, () => Promise<{ count: number }>]>)
+      : []),
     ["feeRecord",       () => db.feeRecord.deleteMany({ where: { orgId: oId } })],
     // V8 Commerce tables exist only once 2026-10-26_store_orders.sql is applied (flag on).
     ...(FEATURES.marketplace

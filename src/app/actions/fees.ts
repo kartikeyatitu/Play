@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { checkPermission } from "@/lib/membership";
 import { resolveStudentFee, istToday } from "@/lib/fees";
+import { FEATURES } from "@/lib/features";
 
 /**
  * Mark a student's fee for `month` as PAID. Idempotent — returns success if already paid.
@@ -126,6 +127,23 @@ export async function reverseFeePayment(studentId: string, month: string, reason
   console.log(
     `[fees] reverseFeePayment orgId=${session.orgId} studentId=${studentId} month=${month} by=${session.id} reason="${reason.trim()}"`,
   );
+  // Audit trail for the reversal (previously only logged to the console).
+  await db.auditLog
+    .create({
+      data: {
+        userId: session.id,
+        orgId: session.orgId,
+        action: "REVERSE_FEE_PAYMENT",
+        details: JSON.stringify({ feeRecordId: existing.id, studentId, month, amount: existing.amount, reason: reason.trim().slice(0, 300) }),
+      },
+    })
+    .catch(() => {});
+
+  // GST (flag gstInvoices): a reversed payment gets a credit note against its invoice. Never blocks the reversal.
+  if (FEATURES.gstInvoices) {
+    const { creditNoteForReversedFee } = await import("@/lib/gst-invoice-service");
+    await creditNoteForReversedFee({ orgId: session.orgId, feeRecordId: existing.id, userId: session.id, reason: reason.trim() });
+  }
 
   revalidatePath("/org");
   return { success: true, newStatus: "PENDING" as const };

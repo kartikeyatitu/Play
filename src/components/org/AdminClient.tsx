@@ -94,6 +94,8 @@ const BusinessReport = dynamic(() => import("@/components/org/BusinessReport").t
 const AuditLogPanel = dynamic(() => import("@/components/org/AuditLogPanel").then((m) => m.AuditLogPanel), { loading: sectionLoading });
 const EnterpriseReport = dynamic(() => import("@/components/org/EnterpriseReport").then((m) => m.EnterpriseReport), { loading: sectionLoading });
 const FacilityAllocation = dynamic(() => import("@/components/org/FacilityAllocation").then((m) => m.FacilityAllocation), { loading: sectionLoading });
+const GstInvoicesPanel = dynamic(() => import("@/components/org/GstInvoicesPanel").then((m) => m.GstInvoicesPanel), { loading: sectionLoading });
+const GstSettingsCard = dynamic(() => import("@/components/org/GstSettingsCard").then((m) => m.GstSettingsCard), { loading: sectionLoading });
 const CollectFees = dynamic(() => import("@/components/org/CollectFees").then((m) => m.CollectFees), { loading: sectionLoading });
 
 /** Warm the chunks of the most-used tabs once the browser is idle (no effect on first paint). */
@@ -537,6 +539,12 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
                 )}
                 <PendingPayments items={pendingVerification} />
               </div>
+              {FEATURES.gstInvoices && (
+                <div>
+                  <SectionHeader title="GST invoices" description="Tax invoices for paid fees, credit notes for reversals" />
+                  <GstInvoicesPanel onOpenSettings={() => setActiveTab("settings")} />
+                </div>
+              )}
               <div>
                 <SectionHeader
                   title="Monthly Fees"
@@ -831,6 +839,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
             <div className="space-y-6">
               <SectionHeader title="Academy Settings" description="Manage your academy profile" />
               {org && <AcademySettings org={org} />}
+              {FEATURES.gstInvoices && <GstSettingsCard />}
               <ThemePicker />
               {FEATURES.auditLogViewer && <AuditLogPanel />}
               <div>
