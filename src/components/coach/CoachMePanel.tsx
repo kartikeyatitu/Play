@@ -5,6 +5,7 @@ import { FeeKhataSheet } from "@/components/coach/FeeKhataSheet";
 import type { CoachStudentFee } from "@/components/coach/CoachFeeKhata";
 import { scheduleRunsOn } from "@/lib/fees";
 import { shortStart } from "@/lib/coach";
+import { FEATURES } from "@/lib/features";
 import { BadgeCheck, LogOut, Users, Layers, ArrowLeft } from "lucide-react";
 
 const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
@@ -84,7 +85,7 @@ export function CoachMePanel({ coach, isAdmin, orgName, totalStudents, batches, 
             </div>
           </div>
         </div>
-        <CoachShareProfileButton coachId={coach.id} coachName={coach.name} academyName={orgName} />
+        {FEATURES.coachOS && <CoachShareProfileButton coachId={coach.id} coachName={coach.name} academyName={orgName} />}
       </section>
 
       {/* Verification — only while not verified */}
