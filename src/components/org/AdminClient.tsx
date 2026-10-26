@@ -37,6 +37,7 @@ const CreateBatchDialog = dynamic(() => import("@/components/admin/CreateBatchDi
 const CreateCoachDialog = dynamic(() => import("@/components/org/CreateCoachDialog").then((m) => m.CreateCoachDialog), { loading: inlineLoading });
 const CreateStudentDialog = dynamic(() => import("@/components/org/CreateStudentDialog").then((m) => m.CreateStudentDialog), { loading: inlineLoading });
 const BroadcastTab = dynamic(() => import("@/components/org/BroadcastTab").then((m) => m.BroadcastTab), { loading: sectionLoading });
+const BrandStudioPanel = dynamic(() => import("@/components/org/BrandStudioPanel").then((m) => m.BrandStudioPanel), { loading: sectionLoading });
 const StoreManager = dynamic(() => import("@/components/org/StoreManager").then((m) => m.StoreManager), { loading: sectionLoading });
 const InboxTab = dynamic(() => import("@/components/org/InboxTab").then((m) => m.InboxTab), { loading: sectionLoading });
 const FacilitiesTab = dynamic(() => import("@/components/org/FacilitiesTab").then((m) => m.FacilitiesTab), { loading: sectionLoading });
@@ -194,6 +195,7 @@ const moreGroups: NavGroup[] = [
       ...(FEATURES.experimental ? [{ id: "marketing", label: "Marketing", icon: NAV_ICONS.send }] : []),
       { id: "gallery", label: "Gallery", icon: NAV_ICONS.heart },
       ...(FEATURES.marketplace ? [{ id: "store", label: "Kit Store", icon: NAV_ICONS.shop }] : []),
+      ...(FEATURES.sponsorship || FEATURES.inclusive ? [{ id: "brand", label: "Brand Studio", icon: NAV_ICONS.star }] : []),
       ...(FEATURES.events ? [{ id: "events", label: "Events", icon: NAV_ICONS.ticket }] : []),
     ],
   },
@@ -212,6 +214,7 @@ const HIDDEN_TABS = new Set<string>([
   ...(FEATURES.events ? [] : ["events"]),
   ...(FEATURES.bookings ? [] : ["bookings"]),
   ...(FEATURES.marketplace ? [] : ["store"]),
+  ...(FEATURES.sponsorship || FEATURES.inclusive ? [] : ["brand"]),
 ]);
 
 /** Demo-data loader is a development tool: Settings only, never in production. */
@@ -700,6 +703,14 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
               <Deferred promise={secondary}>
                 {(d) => <StoreManager products={d.products} orders={d.orders} />}
               </Deferred>
+            </div>
+          )}
+
+          {/* BRAND STUDIO (V9) */}
+          {activeTab === "brand" && (FEATURES.sponsorship || FEATURES.inclusive) && (
+            <div className="space-y-6">
+              <SectionHeader title="Brand Studio" description="Sponsors, sponsorship campaigns and scholarship programs" />
+              <BrandStudioPanel />
             </div>
           )}
 
