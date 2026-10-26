@@ -10,6 +10,8 @@ import { formatMoney, type OrgLocale } from "@/lib/i18n";
 import { parseMedicalInfo } from "@/lib/coach";
 import { PaymentMethodBadge } from "@/components/ui/payment-method-badge";
 import { FEATURES } from "@/lib/features";
+import { listAthleteRecords } from "@/app/actions/athlete";
+import { AthletePanel } from "@/components/athlete/AthletePanel";
 
 export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -32,7 +34,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
   const org = session.orgId
     ? await db.organization.findUnique({
         where: { id: session.orgId },
-        select: { country: true, currency: true, timezone: true, locale: true, phoneCountry: true },
+        select: { name: true, country: true, currency: true, timezone: true, locale: true, phoneCountry: true },
       })
     : null;
   const orgLocale: OrgLocale = org ?? {};
@@ -60,6 +62,9 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
       </div>
     );
   }
+
+  // V2 athlete records (flag-gated; returns an error value instead of throwing if the SQL is not applied yet)
+  const athleteRecords = FEATURES.athleteOS ? await listAthleteRecords(student.id) : null;
 
   // Calculate attendance
   const medical = parseMedicalInfo(student.medicalInfo);
@@ -259,6 +264,21 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
             </Card>
           </div>
         </div>
+
+        {athleteRecords && athleteRecords.success && (
+          <AthletePanel
+            studentId={student.id}
+            academyName={org?.name ?? "academy"}
+            canReview={athleteRecords.canReview}
+            canVerify={athleteRecords.canVerify}
+            canSetGoals={athleteRecords.canSetGoals}
+            achievements={JSON.parse(JSON.stringify(athleteRecords.achievements))}
+            goals={JSON.parse(JSON.stringify(athleteRecords.goals))}
+          />
+        )}
+        {athleteRecords && !athleteRecords.success && (
+          <p className="text-sm text-zinc-500">Achievements &amp; goals: {athleteRecords.error}</p>
+        )}
 
         <div className="mt-8">
           <MedicalForm student={{ id: student.id, name: student.name, bloodGroup: student.bloodGroup }} />

@@ -4,6 +4,17 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { isOrgOwner } from "@/lib/membership";
+import { isMissingTableError } from "@/lib/schema-pending";
+
+/** Tables added by flag-gated verticals may not exist yet in a database; treat that as nothing to delete. */
+async function ifTableExists(run: () => Promise<{ count: number }>): Promise<{ count: number }> {
+  try {
+    return await run();
+  } catch (e) {
+    if (isMissingTableError(e)) return { count: 0 };
+    throw e;
+  }
+}
 
 /**
  * Nuclear "delete everything in my academy" — reserved for owners who want to
@@ -52,6 +63,12 @@ export async function deleteAllData() {
     ["event",           () => db.event.deleteMany({ where: { orgId: oId } })],
     ["trialBooking",    () => db.trialBooking.deleteMany({ where: { batch: { orgId: oId } } })],
     ["waitlist",        () => db.waitlist.deleteMany({ where: { orgId: oId } })],
+    // V2 Athlete (flag-gated tables; see prisma/sql/2026-10-26_athlete_vertical.sql)
+    ["opportunityApplicationEvent", () => ifTableExists(() => db.opportunityApplicationEvent.deleteMany({ where: { orgId: oId } }))],
+    ["opportunityApplication",      () => ifTableExists(() => db.opportunityApplication.deleteMany({ where: { orgId: oId } }))],
+    ["opportunity",                 () => ifTableExists(() => db.opportunity.deleteMany({ where: { orgId: oId } }))],
+    ["athleteAchievement",          () => ifTableExists(() => db.athleteAchievement.deleteMany({ where: { orgId: oId } }))],
+    ["athleteGoal",                 () => ifTableExists(() => db.athleteGoal.deleteMany({ where: { orgId: oId } }))],
     ["student",         () => db.student.deleteMany({ where: { orgId: oId } })],
     ["batch",           () => db.batch.deleteMany({ where: { orgId: oId } })],
     ["product",         () => db.product.deleteMany({ where: { orgId: oId } })],

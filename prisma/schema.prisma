@@ -1211,3 +1211,124 @@ model Expense {
 
   @@index([orgId, date])
 }
+
+// ==========================================
+// V2 TRIQ ATHLETE (additive, flags athleteOS / opportunities)
+// SQL: prisma/sql/2026-10-26_athlete_vertical.sql. Foreign keys to Student/Organization/User live in
+// the SQL only (no back-relations on existing models, so existing queries are untouched).
+// ==========================================
+
+/// An achievement or competition result. Status is explicit: SUBMITTED -> REVIEWED -> VERIFIED (or REJECTED).
+/// Only academy staff with students.manage can set VERIFIED. Rules: src/lib/athlete.ts.
+model AthleteAchievement {
+  id              String    @id @default(cuid())
+  orgId           String
+  studentId       String
+  kind            String    @default("ACHIEVEMENT") // ACHIEVEMENT | COMPETITION
+  title           String
+  competition     String?
+  level           String    @default("OTHER") // CLUB | SCHOOL | DISTRICT | STATE | NATIONAL | INTERNATIONAL | OTHER
+  result          String?
+  eventDate       DateTime
+  evidenceUrl     String?
+  notes           String?
+  status          String    @default("SUBMITTED") // SUBMITTED | REVIEWED | VERIFIED | REJECTED
+  submittedById   String
+  submittedByRole String    // PARENT | COACH | ADMIN
+  reviewedById    String?
+  reviewedAt      DateTime?
+  verifiedById    String?
+  verifiedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([orgId, status])
+  @@index([studentId, eventDate])
+}
+
+/// A development goal a coach sets for an athlete.
+model AthleteGoal {
+  id         String    @id @default(cuid())
+  orgId      String
+  studentId  String
+  setById    String
+  title      String
+  metric     String?
+  baseline   Float?
+  target     Float?
+  dueDate    DateTime?
+  status     String    @default("ACTIVE") // ACTIVE | ACHIEVED | DROPPED
+  notes      String?
+  achievedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([orgId])
+  @@index([studentId, status])
+}
+
+/// A trial, scholarship, camp or recruitment opportunity an academy shares with its families.
+model Opportunity {
+  id           String    @id @default(cuid())
+  orgId        String
+  title        String
+  kind         String    @default("TRIAL") // TRIAL | SCHOLARSHIP | CAMP | TOURNAMENT | RECRUITMENT | OTHER
+  sport        String?
+  location     String?
+  startDate    DateTime?
+  endDate      DateTime?
+  applyBy      DateTime
+  ageMin       Int?
+  ageMax       Int?
+  url          String?
+  description  String?
+  batchId      String?   // null = whole academy
+  status       String    @default("DRAFT") // DRAFT | OPEN | CLOSED
+  createdById  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  applications OpportunityApplication[]
+
+  @@index([orgId, status])
+}
+
+/// A guardian-consented application for one athlete to one opportunity.
+model OpportunityApplication {
+  id              String   @id @default(cuid())
+  orgId           String
+  opportunityId   String
+  studentId       String
+  parentId        String
+  status          String   @default("APPLIED") // APPLIED | SHORTLISTED | SELECTED | NOT_SELECTED | WITHDRAWN
+  guardianConsent Boolean  @default(false)
+  consentAt       DateTime?
+  note            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  events          OpportunityApplicationEvent[]
+
+  @@unique([opportunityId, studentId])
+  @@index([orgId, status])
+  @@index([studentId])
+}
+
+/// Append-only status history of an application.
+model OpportunityApplicationEvent {
+  id            String   @id @default(cuid())
+  orgId         String
+  applicationId String
+  fromStatus    String?
+  toStatus      String
+  actorId       String
+  note          String?
+  createdAt     DateTime @default(now())
+
+  application   OpportunityApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt])
+  @@index([orgId])
+}
