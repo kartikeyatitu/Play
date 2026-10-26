@@ -1250,3 +1250,150 @@ model Expense {
 
   @@index([orgId, date])
 }
+
+// ───────────────────────────────────────────────────────────────────────────────
+// V9 TRIQ Brand Studio (additive, prisma/sql/2026-10-26_brand_studio.sql).
+// Org-scoped replacements for the archived Brand/BrandSponsorship ideas (which had no orgId).
+// Read only when FEATURES.sponsorship (sponsors/campaigns) or FEATURES.inclusive (programs/concessions).
+// Money is stored in integer paise (INR). Nothing here moves money; it records authorised commitments.
+// ───────────────────────────────────────────────────────────────────────────────
+
+model SponsorProfile {
+  id           String    @id @default(cuid())
+  orgId        String
+  name         String
+  kind         String    @default("BRAND") // BRAND | LOCAL_BUSINESS | CSR_FOUNDATION | INDIVIDUAL | OTHER
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  website      String?
+  about        String?
+  archivedAt   DateTime?
+  createdById  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  campaigns    SponsorshipCampaign[]
+  programs     ScholarshipProgram[]
+  @@index([orgId])
+}
+
+model SponsorshipCampaign {
+  id                  String    @id @default(cuid())
+  orgId               String
+  sponsorId           String?
+  title               String
+  scope               String    // ATHLETE | TEAM | ACADEMY | EVENT
+  objective           String
+  targetAudience      String?
+  budgetPaise         Int       @default(0)
+  committedPaise      Int       @default(0) // sum of accepted proposals; never > budgetPaise
+  currency            String    @default("INR")
+  deliverablesSummary String?
+  startDate           DateTime?
+  endDate             DateTime?
+  status              String    @default("DRAFT") // DRAFT | OPEN | CLOSED | COMPLETED | CANCELLED
+  createdById         String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  sponsor             SponsorProfile?       @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
+  proposals           SponsorshipProposal[]
+  @@index([orgId, status])
+}
+
+model SponsorshipProposal {
+  id            String    @id @default(cuid())
+  orgId         String
+  campaignId    String
+  applicantType String    // ATHLETE | TEAM | ACADEMY | EVENT | ORGANIZER
+  applicantName String
+  studentId     String?   // optional in-org athlete; staff-only, never public
+  pitch         String
+  askPaise      Int       @default(0)
+  approvedPaise Int?
+  status        String    @default("SUBMITTED") // SUBMITTED | UNDER_REVIEW | ACCEPTED | REJECTED | WITHDRAWN
+  submittedById String
+  decidedById   String?
+  decidedAt     DateTime?
+  decisionNote  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  campaign      SponsorshipCampaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  deliverables  SponsorshipDeliverable[]
+  @@index([orgId, status])
+  @@index([campaignId])
+}
+
+model SponsorshipDeliverable {
+  id           String    @id @default(cuid())
+  orgId        String
+  proposalId   String
+  title        String
+  kind         String    @default("DELIVERABLE") // DELIVERABLE | MILESTONE
+  dueDate      DateTime?
+  status       String    @default("PENDING") // PENDING | IN_PROGRESS | DELIVERED | VERIFIED | MISSED
+  evidenceUrl  String?
+  note         String?
+  completedAt  DateTime?
+  verifiedById String?
+  createdById  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  proposal     SponsorshipProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  @@index([orgId])
+  @@index([proposalId])
+}
+
+/// Status history for campaigns, proposals, deliverables and scholarship programs.
+model SponsorshipStatusEvent {
+  id         String   @id @default(cuid())
+  orgId      String
+  entityType String   // CAMPAIGN | PROPOSAL | DELIVERABLE | PROGRAM
+  entityId   String
+  fromStatus String?
+  toStatus   String
+  actorId    String
+  note       String?
+  createdAt  DateTime @default(now())
+  @@index([orgId, entityType, entityId])
+}
+
+model ScholarshipProgram {
+  id                 String    @id @default(cuid())
+  orgId              String
+  sponsorId          String?
+  name               String
+  kind               String    @default("SCHOLARSHIP") // SCHOLARSHIP | CSR | HARDSHIP | OTHER
+  description        String?
+  monthlyBudgetPaise Int?
+  status             String    @default("DRAFT") // DRAFT | ACTIVE | CLOSED
+  approvedById       String?
+  approvedAt         DateTime?
+  createdById        String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  sponsor            SponsorProfile? @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
+  concessions        FeeConcession[]
+  @@index([orgId, status])
+}
+
+/// A scholarship / CSR / hardship concession applied by monthly fee generation (FEATURES.inclusive).
+/// Exactly one of percentOff (1..100; 100 = full waiver) / amountOff (whole ₹ per month) is set.
+model FeeConcession {
+  id           String    @id @default(cuid())
+  orgId        String
+  studentId    String
+  programId    String?
+  category     String    // SCHOLARSHIP | CSR | SIBLING | HARDSHIP | MERIT | STAFF_CHILD | OTHER
+  percentOff   Int?
+  amountOff    Int?
+  startMonth   String    // "YYYY-MM"
+  endMonth     String?   // inclusive; null = until revoked
+  reason       String?   // staff-only
+  approvedById String
+  revokedAt    DateTime?
+  revokedById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  program      ScholarshipProgram? @relation(fields: [programId], references: [id], onDelete: SetNull)
+  @@index([orgId, studentId])
+}

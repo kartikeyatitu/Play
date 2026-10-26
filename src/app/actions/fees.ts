@@ -1,5 +1,8 @@
 "use server";
+import { concessionAdjustedFee } from "@/lib/concession-fees";
 import { db } from "@/lib/db";
+import { billedAmount, concessionsByStudent } from "@/lib/concessions";
+import { FEATURES } from "@/lib/features";
 import { revalidatePath } from "next/cache";
 import { checkPermission } from "@/lib/membership";
 import { resolveStudentFee, istToday } from "@/lib/fees";
@@ -45,7 +48,7 @@ export async function markFeeAsPaid(studentId: string, month: string) {
     feeRecordId = updated.id;
     amount = updated.amount;
   } else {
-    amount = resolveStudentFee(student, student.org?.defaultMonthlyFee);
+    amount = await concessionAdjustedFee(student, student.org?.defaultMonthlyFee, month);
     const created = await db.feeRecord.create({
       data: {
         orgId: session.orgId,
@@ -283,9 +286,14 @@ export async function generateMonthlyFeesForOrg(orgId: string, month: string) {
     where: { orgId },
     include: { enrollments: { include: { batch: true } } },
   });
+  // V9 Brand Studio: scholarship / CSR concessions; a 100% waiver resolves to 0 and is skipped below.
+  const concessions = FEATURES.inclusive
+    ? concessionsByStudent(await db.feeConcession.findMany({ where: { orgId, revokedAt: null } }))
+    : null;
   let feesCreated = 0;
   for (const student of students) {
-    const amount = resolveStudentFee(student, org.defaultMonthlyFee);
+    const base = resolveStudentFee(student, org.defaultMonthlyFee);
+    const amount = concessions ? billedAmount(base, concessions.get(student.id), month) : base;
     if (amount <= 0) continue;
     const existing = await db.feeRecord.findUnique({
       where: { studentId_month: { studentId: student.id, month } },

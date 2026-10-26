@@ -60,6 +60,18 @@ export async function deleteAllData() {
     ["event",           () => db.event.deleteMany({ where: { orgId: oId } })],
     ["trialBooking",    () => db.trialBooking.deleteMany({ where: { batch: { orgId: oId } } })],
     ["waitlist",        () => db.waitlist.deleteMany({ where: { orgId: oId } })],
+    // V9 Brand Studio tables exist only once 2026-10-26_brand_studio.sql is applied (either flag on).
+    ...(FEATURES.sponsorship || FEATURES.inclusive
+      ? ([
+          ["feeConcession",          () => db.feeConcession.deleteMany({ where: { orgId: oId } })],
+          ["sponsorshipDeliverable", () => db.sponsorshipDeliverable.deleteMany({ where: { orgId: oId } })],
+          ["sponsorshipProposal",    () => db.sponsorshipProposal.deleteMany({ where: { orgId: oId } })],
+          ["sponsorshipCampaign",    () => db.sponsorshipCampaign.deleteMany({ where: { orgId: oId } })],
+          ["scholarshipProgram",     () => db.scholarshipProgram.deleteMany({ where: { orgId: oId } })],
+          ["sponsorProfile",         () => db.sponsorProfile.deleteMany({ where: { orgId: oId } })],
+          ["sponsorshipStatusEvent", () => db.sponsorshipStatusEvent.deleteMany({ where: { orgId: oId } })],
+        ] as Array<[string, () => Promise<{ count: number }>]>)
+      : []),
     ["student",         () => db.student.deleteMany({ where: { orgId: oId } })],
     ["batch",           () => db.batch.deleteMany({ where: { orgId: oId } })],
     ["product",         () => db.product.deleteMany({ where: { orgId: oId } })],

@@ -3,6 +3,8 @@ import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { requirePermission } from "@/lib/membership";
 import { resolveStudentFee, istMonthString } from "@/lib/fees";
+import { FEATURES } from "@/lib/features";
+import { billedAmount, concessionsByStudent } from "@/lib/concessions";
 
 /**
  * Creates this month's PENDING fee records for the admin's academy only.
@@ -18,9 +20,14 @@ export async function generateMonthlyFees() {
   })
   const currentMonth = istMonthString()
   let count = 0
+  // V9 Brand Studio: scholarship / CSR concessions (FeeConcession table exists only once the flag's SQL is applied).
+  const concessions = FEATURES.inclusive
+    ? concessionsByStudent(await db.feeConcession.findMany({ where: { orgId: session.orgId, revokedAt: null } }))
+    : null
 
   for (const student of students) {
-    const amount = resolveStudentFee(student, org?.defaultMonthlyFee)
+    const base = resolveStudentFee(student, org?.defaultMonthlyFee)
+    const amount = concessions ? billedAmount(base, concessions.get(student.id), currentMonth) : base
     if (amount <= 0) continue // fee not set — admin must set batch/default fee first
     await db.feeRecord.upsert({
       where: {
