@@ -29,6 +29,7 @@ const FeedbackWidget = dynamic(() => import('@/components/parent/FeedbackWidget'
 const AttendanceStreak = dynamic(() => import('@/components/parent/AttendanceStreak').then((m) => m.AttendanceStreak), { loading: sectionLoading });
 const MonthlyReport = dynamic(() => import('@/components/parent/MonthlyReport').then((m) => m.MonthlyReport), { loading: sectionLoading });
 const AttendanceCalendar = dynamic(() => import('@/components/parent/AttendanceCalendar').then((m) => m.AttendanceCalendar), { loading: sectionLoading });
+const OpportunitiesCard = dynamic(() => import('@/components/parent/OpportunitiesCard').then((m) => m.OpportunitiesCard), { loading: sectionLoading });
 const CoachDirectory = dynamic(() => import('@/components/parent/CoachDirectory').then((m) => m.CoachDirectory), { loading: sectionLoading });
 
 export function ParentClient({
@@ -384,6 +385,7 @@ export function ParentClient({
           {activeTab === 'more' && (
             <div className="space-y-6">
               <SectionHeader title="More Actions" />
+              {FEATURES.opportunities && <OpportunitiesCard academyName={org?.name} />}
               <ReferralWidget userId={parent.id} />
               <FeedbackWidget parentId={parent.id} existingFeedback={existingFeedback} />
             </div>

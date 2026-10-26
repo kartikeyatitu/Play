@@ -37,6 +37,7 @@ const CreateBatchDialog = dynamic(() => import("@/components/admin/CreateBatchDi
 const CreateCoachDialog = dynamic(() => import("@/components/org/CreateCoachDialog").then((m) => m.CreateCoachDialog), { loading: inlineLoading });
 const CreateStudentDialog = dynamic(() => import("@/components/org/CreateStudentDialog").then((m) => m.CreateStudentDialog), { loading: inlineLoading });
 const BroadcastTab = dynamic(() => import("@/components/org/BroadcastTab").then((m) => m.BroadcastTab), { loading: sectionLoading });
+const OpportunitiesPanel = dynamic(() => import("@/components/org/OpportunitiesPanel").then((m) => m.OpportunitiesPanel), { loading: sectionLoading });
 const StoreManager = dynamic(() => import("@/components/org/StoreManager").then((m) => m.StoreManager), { loading: sectionLoading });
 const InboxTab = dynamic(() => import("@/components/org/InboxTab").then((m) => m.InboxTab), { loading: sectionLoading });
 const FacilitiesTab = dynamic(() => import("@/components/org/FacilitiesTab").then((m) => m.FacilitiesTab), { loading: sectionLoading });
@@ -195,6 +196,7 @@ const moreGroups: NavGroup[] = [
       { id: "gallery", label: "Gallery", icon: NAV_ICONS.heart },
       { id: "store", label: "Kit Store", icon: NAV_ICONS.shop },
       ...(FEATURES.events ? [{ id: "events", label: "Events", icon: NAV_ICONS.ticket }] : []),
+      ...(FEATURES.opportunities ? [{ id: "opportunities", label: "Opportunities", icon: NAV_ICONS.trophy }] : []),
     ],
   },
   {
@@ -211,6 +213,7 @@ const HIDDEN_TABS = new Set<string>([
   ...(FEATURES.experimental ? [] : ["ai", "marketing"]),
   ...(FEATURES.events ? [] : ["events"]),
   ...(FEATURES.bookings ? [] : ["bookings"]),
+  ...(FEATURES.opportunities ? [] : ["opportunities"]),
 ]);
 
 /** Demo-data loader is a development tool: Settings only, never in production. */
@@ -734,6 +737,13 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {/* TEAM: coaches, staff, roles, daily attendance */}
           {activeTab === "team" && <TeamPanel />}
           {activeTab === "payroll" && <PayrollPanel onOpenTeam={() => go("team")} />}
+
+          {activeTab === "opportunities" && FEATURES.opportunities && (
+            <div className="space-y-4">
+              <SectionHeader title="Trials & scholarships" />
+              <OpportunitiesPanel />
+            </div>
+          )}
 
           {/* OPERATIONS */}
           {activeTab === "operations" && (
