@@ -548,3 +548,14 @@ function dedupe(ids: string[]): string[] {
   const seen = new Set<string>();
   return ids.filter((id) => (seen.has(id) ? false : (seen.add(id), true)));
 }
+
+/**
+ * Parses a `YYYY-MM-DDTHH:mm` value typed in the academy's local time (IST, same convention as
+ * src/lib/turf.ts) into a UTC instant. Empty → null; anything malformed → "bad".
+ */
+export function parseFixtureTime(v: unknown): Date | null | "bad" {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) return "bad";
+  const d = new Date(`${v}:00+05:30`);
+  return Number.isNaN(d.getTime()) ? "bad" : d;
+}

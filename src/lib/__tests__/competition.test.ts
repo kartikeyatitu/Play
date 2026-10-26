@@ -294,3 +294,12 @@ describe("validateCompetitionConfig", () => {
     expect(validateCompetitionConfig({ ...base, minAge: 10, startDate: "2026-12-01" }).ok).toBe(false);
   });
 });
+
+describe("parseFixtureTime", () => {
+  it("reads IST wall time", async () => {
+    const { parseFixtureTime } = await import("@/lib/competition");
+    expect((parseFixtureTime("2026-11-01T17:30") as Date).toISOString()).toBe("2026-11-01T12:00:00.000Z");
+    expect(parseFixtureTime("")).toBeNull();
+    expect(parseFixtureTime("2026-11-01")).toBe("bad");
+  });
+});

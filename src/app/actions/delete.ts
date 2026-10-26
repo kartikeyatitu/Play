@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { isOrgOwner } from "@/lib/membership";
+import { FEATURES } from "@/lib/features";
 
 /**
  * Nuclear "delete everything in my academy" — reserved for owners who want to
@@ -50,6 +51,14 @@ export async function deleteAllData() {
     ["referral",        () => db.referral.deleteMany({ where: { referrer: { orgId: oId } } })],
     ["batchEnrollment", () => db.batchEnrollment.deleteMany({ where: { batch: { orgId: oId } } })],
     ["event",           () => db.event.deleteMany({ where: { orgId: oId } })],
+    // TRIQ Play tables exist only once prisma/sql/2026-10-26_competitions.sql is applied (flag `events`).
+    ...(FEATURES.events
+      ? ([
+          ["fixture",          () => db.fixture.deleteMany({ where: { orgId: oId } })],
+          ["competitionEntry", () => db.competitionEntry.deleteMany({ where: { orgId: oId } })],
+          ["competition",      () => db.competition.deleteMany({ where: { orgId: oId } })],
+        ] as Array<[string, () => Promise<{ count: number }>]>)
+      : []),
     ["trialBooking",    () => db.trialBooking.deleteMany({ where: { batch: { orgId: oId } } })],
     ["waitlist",        () => db.waitlist.deleteMany({ where: { orgId: oId } })],
     ["student",         () => db.student.deleteMany({ where: { orgId: oId } })],

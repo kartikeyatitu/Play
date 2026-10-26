@@ -45,6 +45,7 @@ export const PERMISSIONS = {
   "fees.manage": "Change fee plans, discounts and dues",
   "leads.manage": "Handle enquiries, trials and admissions",
   "bookings.manage": "Manage facilities and court bookings",
+  "competitions.manage": "Run competitions, fixtures and results",
   "team.manage": "Add team members and mark staff attendance",
   "payroll.view": "See salaries and payouts",
   "payroll.manage": "Set salaries and mark payouts as paid",
