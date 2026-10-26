@@ -22,6 +22,21 @@ async function ownedBatch(batchId: string) {
   return { session, batch, orgId: session.orgId } as const;
 }
 
+async function logAnnouncementPosted(userId: string, orgId: string, a: { id: string; batchId: string | null; kind: string | null }) {
+  try {
+    await db.auditLog.create({
+      data: {
+        userId,
+        orgId,
+        action: "ANNOUNCEMENT_POSTED",
+        details: JSON.stringify({ announcementId: a.id, batchId: a.batchId, kind: a.kind }),
+      },
+    });
+  } catch {
+    // Audit logging must never block the main action
+  }
+}
+
 function refresh() {
   revalidatePath("/coach");
   revalidatePath("/parent");
@@ -42,7 +57,7 @@ export async function cancelTodaySession(batchId: string, reason: string, notify
   });
 
   if (notifyParents) {
-    await db.announcement.create({
+    const created = await db.announcement.create({
       data: {
         orgId: auth.orgId,
         batchId,
@@ -52,6 +67,7 @@ export async function cancelTodaySession(batchId: string, reason: string, notify
         message: `Reason: ${cleanReason}. Sorry for the inconvenience — see you at the next session!`,
       },
     });
+    await logAnnouncementPosted(auth.session.id, auth.orgId, created);
   }
 
   refresh();
@@ -89,7 +105,7 @@ export async function saveSessionRecap(batchId: string, recap: string, shareWith
   });
 
   if (shareWithParents) {
-    await db.announcement.create({
+    const created = await db.announcement.create({
       data: {
         orgId: auth.orgId,
         batchId,
@@ -99,6 +115,7 @@ export async function saveSessionRecap(batchId: string, recap: string, shareWith
         message: text,
       },
     });
+    await logAnnouncementPosted(auth.session.id, auth.orgId, created);
   }
 
   refresh();
@@ -113,9 +130,10 @@ export async function broadcastToBatch(batchId: string, title: string, message: 
   const m = (message || "").trim().slice(0, 2000);
   if (!t || !m) return { success: false, error: "Title and message are required." };
 
-  await db.announcement.create({
+  const created = await db.announcement.create({
     data: { orgId: auth.orgId, batchId, kind: "GENERAL", authorId: auth.session.id, title: t, message: m },
   });
+  await logAnnouncementPosted(auth.session.id, auth.orgId, created);
   refresh();
   return { success: true };
 }

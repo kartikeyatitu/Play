@@ -36,6 +36,21 @@ export const FEATURES = {
   events: flag("EVENTS", false),
   /** Corporate sports programs. */
   corporate: flag("CORPORATE", false),
+  /** V7 Communities: read receipts, parent replies and moderation on announcements. */
+  communities: flag("COMMUNITIES", false),
+  /** V1 Business: branches (academy locations) + batch → branch. Needs prisma/sql/2026-10-25_branches.sql
+   *  and 2026-10-26_batch_branches.sql applied first — the Branch tables are never queried while this is off. */
+  branches: flag("BRANCHES", false),
+  /** V1 Business: operational calendar (sessions, planned batches, trials, holidays, court allocations). No SQL. */
+  opsCalendar: flag("OPS_CALENDAR", false),
+  /** V1 Business: allocate batches to courts/facilities as weekly bookings (uses the turf booking engine). No SQL. */
+  facilityAllocation: flag("FACILITY_ALLOCATION", false),
+  /** V1 Business: monthly business report (revenue, outstanding, attendance, utilisation). No SQL. */
+  businessReport: flag("BUSINESS_REPORT", false),
+  /** V1/V11: audit-log viewer with filters and CSV export (owners only). No SQL. */
+  auditLogViewer: flag("AUDIT_LOG_VIEWER", false),
+  /** V11 Enterprise: consolidated report across academies (and branches) the viewer may report on. No SQL. */
+  enterprise: flag("ENTERPRISE", false),
   /** Instagram/social generators, AI "insights" that are heuristics rather than real analytics. */
   experimental: flag("EXPERIMENTAL", false),
 } as const;

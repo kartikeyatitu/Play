@@ -63,6 +63,7 @@ model Organization {
   users       User[]
   students    Student[]
   batches     Batch[]
+  branches    Branch[]
   subscription Subscription?
   memberships     OrgMembership[]
   staffAttendance StaffAttendance[]
@@ -151,6 +152,9 @@ model Batch {
   coach         User              @relation(fields: [coachId], references: [id])
   orgId         String?
   org           Organization?     @relation(fields: [orgId], references: [id])
+  // Which branch (location) this batch runs at lives in BatchBranch, NOT a Batch column: Prisma selects
+  // every Batch scalar on every batch query, so a new column would break production before its SQL is applied.
+  branchLink    BatchBranch?
   enrollments   BatchEnrollment[]
   sessions      Session[]
   Event         Event[]
@@ -1407,4 +1411,32 @@ model ParticipationRecord {
 
   @@index([orgId, programId, date])
   @@index([studentId])
+/// A physical location of an academy (multi-centre academies). Plan Phase 3: academy & branch setup.
+model Branch {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  address   String?
+  city      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  batches   BatchBranch[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
+}
+
+/// V1 Business (additive, flag `branches`): which branch a batch runs at (at most one).
+/// Read and written only when FEATURES.branches is on (SQL: prisma/sql/2026-10-26_batch_branches.sql).
+model BatchBranch {
+  batchId   String   @id
+  orgId     String
+  branchId  String
+  createdAt DateTime @default(now())
+  batch     Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([branchId])
 }

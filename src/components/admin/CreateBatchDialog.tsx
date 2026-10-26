@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,11 +11,23 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { createBatch } from "@/app/actions/batch";
+import { listBranches } from "@/app/actions/branches";
+import { FEATURES } from "@/lib/features";
 import { Plus } from "lucide-react";
 
 export function CreateBatchDialog({ coaches }: { coaches: any[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+
+  // Load branches when the dialog opens; the picker is hidden for single-centre academies.
+  // Only when the branches feature is on: the Branch table may not exist in production otherwise.
+  useEffect(() => {
+    if (!isOpen || !FEATURES.branches) return;
+    listBranches()
+      .then((r) => setBranches(r.success ? r.branches : []))
+      .catch(() => setBranches([]));
+  }, [isOpen]);
 
   async function onSubmit(formData: FormData) {
     setLoading(true);
@@ -85,6 +97,22 @@ export function CreateBatchDialog({ coaches }: { coaches: any[] }) {
                 ))}
               </select>
             </div>
+
+            {FEATURES.branches && branches.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-zinc-400 uppercase">Branch</label>
+                <select
+                  name="branchId"
+                  defaultValue=""
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-50 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:ring-offset-2 focus:ring-offset-zinc-950"
+                >
+                  <option value="">No branch</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="pt-4 flex justify-end space-x-2">
               <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>

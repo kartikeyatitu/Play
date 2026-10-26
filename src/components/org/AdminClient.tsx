@@ -88,6 +88,10 @@ const AcademySettings = dynamic(() => import("@/components/org/AcademySettings")
 const TrialManager = dynamic(() => import("@/components/org/TrialManager").then((m) => m.TrialManager), { loading: sectionLoading });
 const PendingPayments = dynamic(() => import("@/components/org/PendingPayments").then((m) => m.PendingPayments), { loading: sectionLoading });
 const BatchFeeEditor = dynamic(() => import("@/components/org/BatchFeeEditor").then((m) => m.BatchFeeEditor), { loading: inlineLoading });
+const OpsCalendar = dynamic(() => import("@/components/org/OpsCalendar").then((m) => m.OpsCalendar), { loading: sectionLoading });
+const BusinessReport = dynamic(() => import("@/components/org/BusinessReport").then((m) => m.BusinessReport), { loading: sectionLoading });
+const AuditLogPanel = dynamic(() => import("@/components/org/AuditLogPanel").then((m) => m.AuditLogPanel), { loading: sectionLoading });
+const FacilityAllocation = dynamic(() => import("@/components/org/FacilityAllocation").then((m) => m.FacilityAllocation), { loading: sectionLoading });
 const CollectFees = dynamic(() => import("@/components/org/CollectFees").then((m) => m.CollectFees), { loading: sectionLoading });
 
 /** Warm the chunks of the most-used tabs once the browser is idle (no effect on first paint). */
@@ -184,9 +188,11 @@ const moreGroups: NavGroup[] = [
       { id: "team", label: "Team", icon: NAV_ICONS.people },
       { id: "payroll", label: "Payroll", icon: NAV_ICONS.wallet },
       { id: "batches", label: "Batches", icon: NAV_ICONS.batches },
+      ...(FEATURES.opsCalendar ? [{ id: "calendar", label: "Calendar", icon: NAV_ICONS.today }] : []),
       { id: "leads", label: "Leads", icon: NAV_ICONS.people },
       { id: "communication", label: "Messages", icon: NAV_ICONS.communication },
       { id: "analytics", label: "Analytics", icon: NAV_ICONS.analytics },
+      ...(FEATURES.businessReport ? [{ id: "report", label: "Business report", icon: NAV_ICONS.analytics }] : []),
       ...(FEATURES.experimental ? [{ id: "ai", label: "AI Insights", icon: NAV_ICONS.trophy }] : []),
     ],
   },
@@ -217,6 +223,8 @@ const HIDDEN_TABS = new Set<string>([
   ...(FEATURES.bookings ? [] : ["bookings"]),
   ...(FEATURES.opportunities ? [] : ["opportunities"]),
   ...(FEATURES.education ? [] : ["institution"]),
+  ...(FEATURES.opsCalendar ? [] : ["calendar"]),
+  ...(FEATURES.businessReport ? [] : ["report"]),
 ]);
 
 /** Demo-data loader is a development tool: Settings only, never in production. */
@@ -755,9 +763,26 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
             </div>
           )}
 
+          {/* BUSINESS REPORT (V1 Business, flag businessReport) */}
+          {activeTab === "report" && FEATURES.businessReport && (
+            <div className="space-y-6">
+              <SectionHeader title="Business report" description="Revenue, outstanding fees, attendance and utilisation from your real records" />
+              <BusinessReport currentMonth={currentMonth} />
+            </div>
+          )}
+
+          {/* CALENDAR (V1 Business, flag opsCalendar) */}
+          {activeTab === "calendar" && FEATURES.opsCalendar && (
+            <div className="space-y-6">
+              <SectionHeader title="Calendar" description="Sessions, planned batches, trials, holidays and court allocations" />
+              <OpsCalendar />
+            </div>
+          )}
+
           {/* OPERATIONS */}
           {activeTab === "operations" && (
             <div className="space-y-6">
+              {FEATURES.facilityAllocation && <FacilityAllocation />}
               <div>
                 <SectionHeader title="Facilities & Equipment" />
                 <Deferred promise={secondary}>
@@ -779,6 +804,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
               <SectionHeader title="Academy Settings" description="Manage your academy profile" />
               {org && <AcademySettings org={org} />}
               <ThemePicker />
+              {FEATURES.auditLogViewer && <AuditLogPanel />}
               <div>
                 <SectionHeader title="Import Data" description="Import students from WhatsApp, Excel or CSV" />
                 <div className="mb-4">

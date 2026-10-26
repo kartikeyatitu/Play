@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { RazorpayConnect } from "@/components/org/RazorpayConnect";
 import { PhotoPicker } from "@/components/ui/photo-picker";
+import { BranchesCard } from "@/components/org/BranchesCard";
+import { FEATURES } from "@/lib/features";
 import { COUNTRY_OPTIONS } from "@/lib/i18n";
 import { Camera, Globe } from "lucide-react";
 
@@ -145,6 +147,8 @@ export function AcademySettings({ org }: { org: any }) {
         </div>
         <PhotoPicker mode="auto" photos={photos} onChange={setPhotos} maxPhotos={6} />
       </section>
+
+      {FEATURES.branches && <BranchesCard />}
 
       {/* ────────── Country, currency, timezone, locale ────────── */}
       <section className="rounded-xl border border-line bg-surface shadow-hairline p-6">
