@@ -26,8 +26,12 @@ export const FEATURES = {
   marketplace: flag("MARKETPLACE", false),
   /** Athlete profiles, assessments, rankings (Athlete OS). */
   athleteOS: flag("ATHLETE_OS", false),
-  /** Tournaments / brackets. */
+  /** Tournaments / brackets. TRIQ Play competitions — apply prisma/sql/2026-10-26_competitions.sql first. */
   events: flag("EVENTS", false),
+  /** TRIQ Spaces operator tools: blocked slots, reschedule, cancellation policy, utilisation, booking history. */
+  spacesOps: flag("SPACES_OPS", false),
+  /** TRIQ Spaces public venue discovery listing at /venues. */
+  spacesDiscovery: flag("SPACES_DISCOVERY", false),
   /** Corporate sports programs. */
   corporate: flag("CORPORATE", false),
   /** Instagram/social generators, AI "insights" that are heuristics rather than real analytics. */
