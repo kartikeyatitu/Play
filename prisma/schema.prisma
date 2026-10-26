@@ -63,12 +63,12 @@ model Organization {
   users       User[]
   students    Student[]
   batches     Batch[]
-  branches    Branch[]
   subscription Subscription?
   memberships     OrgMembership[]
   staffAttendance StaffAttendance[]
   staffPayouts    StaffPayout[]
   expenses        Expense[]
+  branches    Branch[]
   competitions    Competition[]
 }
 
@@ -136,9 +136,9 @@ model Student {
   Media        Media[]
   incidents    Incident[]
   receipts     Receipt[]
-  competitionEntries CompetitionEntry[]
   @@index([orgId])
   @@index([parentId])
+  competitionEntries CompetitionEntry[]
 }
 
 model Batch {
@@ -154,9 +154,6 @@ model Batch {
   coach         User              @relation(fields: [coachId], references: [id])
   orgId         String?
   org           Organization?     @relation(fields: [orgId], references: [id])
-  // Which branch (location) this batch runs at lives in BatchBranch, NOT a Batch column: Prisma selects
-  // every Batch scalar on every batch query, so a new column would break production before its SQL is applied.
-  branchLink    BatchBranch?
   enrollments   BatchEnrollment[]
   sessions      Session[]
   Event         Event[]
@@ -165,6 +162,7 @@ model Batch {
   waitlist      Waitlist[]
   @@index([orgId])
   @@index([coachId])
+  branchLink    BatchBranch?
 }
 
 model BatchEnrollment {
@@ -677,44 +675,6 @@ model Order {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   orgId       String?
   detail      StoreOrderDetail? // V8 Commerce: price snapshot + payment (null on legacy orders)
-}
-
-/// V8 TRIQ Commerce (additive, 2026-10-26_store_orders.sql): price snapshot, quantity and
-/// pay-at-academy payment state for a Kit Store order. Order.status holds the lifecycle
-/// (PLACED/CONFIRMED/FULFILLED/CANCELLED/REFUND_REQUESTED/REFUNDED, see src/lib/store.ts).
-/// Read only when FEATURES.marketplace is on.
-model StoreOrderDetail {
-  id               String    @id @default(cuid())
-  orgId            String
-  orderId          String    @unique
-  quantity         Int
-  unitPricePaise   Int
-  amountPaise      Int
-  currency         String    @default("INR")
-  paymentMode      String    @default("PAY_AT_ACADEMY")
-  paymentStatus    String    @default("UNPAID") // UNPAID | PAID_AT_ACADEMY | REFUNDED
-  paidAt           DateTime?
-  paidRecordedById String?
-  placedById       String
-  note             String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  order            Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  @@index([orgId, createdAt])
-}
-
-/// V8 TRIQ Commerce: status history of a Kit Store order (one row per accepted transition).
-model StoreOrderEvent {
-  id         String   @id @default(cuid())
-  orgId      String
-  orderId    String
-  fromStatus String?
-  toStatus   String
-  actorId    String
-  note       String?
-  createdAt  DateTime @default(now())
-  @@index([orderId, createdAt])
-  @@index([orgId, createdAt])
 }
 
 model Message {
@@ -1335,9 +1295,154 @@ model Opportunity {
   updatedAt    DateTime  @updatedAt
 
   applications OpportunityApplication[]
-// TRIQ Play (additive, prisma/sql/2026-10-26_competitions.sql). Read only when FEATURES.events is on.
-// Rules live in src/lib/competition.ts; standings are always computed, never stored.
+
+  @@index([orgId, status])
+}
+
+/// A guardian-consented application for one athlete to one opportunity.
+model OpportunityApplication {
+  id              String   @id @default(cuid())
+  orgId           String
+  opportunityId   String
+  studentId       String
+  parentId        String
+  status          String   @default("APPLIED") // APPLIED | SHORTLISTED | SELECTED | NOT_SELECTED | WITHDRAWN
+  guardianConsent Boolean  @default(false)
+  consentAt       DateTime?
+  note            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  events          OpportunityApplicationEvent[]
+
+  @@unique([opportunityId, studentId])
+  @@index([orgId, status])
+  @@index([studentId])
+}
+
+/// Append-only status history of an application.
+model OpportunityApplicationEvent {
+  id            String   @id @default(cuid())
+  orgId         String
+  applicationId String
+  fromStatus    String?
+  toStatus      String
+  actorId       String
+  note          String?
+  createdAt     DateTime @default(now())
+
+  application   OpportunityApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt])
+  @@index([orgId])
+}
+
 // ==========================================
+// V10 TRIQ EDUCATION (additive, flag education)
+// SQL: prisma/sql/2026-10-26_education.sql. An institution is an Organization with an
+// InstitutionProfile row; teams/squads reuse existing Batches (roster, coach, sessions, attendance).
+// ==========================================
+
+/// Marks an organization as a school / college / university.
+model InstitutionProfile {
+  id          String   @id @default(cuid())
+  orgId       String   @unique
+  kind        String   // SCHOOL | COLLEGE | UNIVERSITY
+  affiliation String?  // board / university, e.g. "CBSE"
+  levels      String?  // e.g. "Grades 1-12"
+  website     String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// A sports department / program inside an institution, e.g. "Football".
+model SportsProgram {
+  id          String   @id @default(cuid())
+  orgId       String
+  name        String
+  sport       String
+  description String?
+  status      String   @default("ACTIVE") // ACTIVE | ARCHIVED
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teams          ProgramTeam[]
+  participations ParticipationRecord[]
+
+  @@index([orgId, status])
+}
+
+/// Maps an existing Batch onto a program as a team / squad. A batch belongs to at most one program.
+model ProgramTeam {
+  id        String   @id @default(cuid())
+  orgId     String
+  programId String
+  batchId   String   @unique
+  squadType String   @default("TEAM") // TEAM | SQUAD | CLUB
+  ageGroup  String?
+  gender    String?  // BOYS | GIRLS | MIXED
+  createdAt DateTime @default(now())
+
+  program   SportsProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([programId])
+}
+
+/// A student's participation beyond routine training attendance: events, competitions, selections.
+model ParticipationRecord {
+  id           String   @id @default(cuid())
+  orgId        String
+  programId    String
+  studentId    String
+  teamId       String?
+  kind         String   // TRAINING | EVENT | COMPETITION | SELECTION | ACHIEVEMENT
+  title        String
+  date         DateTime
+  role         String?
+  result       String?
+  notes        String?
+  recordedById String
+  createdAt    DateTime @default(now())
+
+  program      SportsProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, programId, date])
+  @@index([studentId])
+}
+
+/// A physical location of an academy (multi-centre academies). Plan Phase 3: academy & branch setup.
+model Branch {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  address   String?
+  city      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  batches   BatchBranch[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
+}
+
+/// V1 Business (additive, flag `branches`): which branch a batch runs at (at most one).
+/// Read and written only when FEATURES.branches is on (SQL: prisma/sql/2026-10-26_batch_branches.sql).
+model BatchBranch {
+  batchId   String   @id
+  orgId     String
+  branchId  String
+  createdAt DateTime @default(now())
+  batch     Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([branchId])
+}
 
 model Competition {
   id              String    @id @default(cuid())
@@ -1371,32 +1476,59 @@ model Competition {
   @@index([orgId, status])
 }
 
-/// A guardian-consented application for one athlete to one opportunity.
-model OpportunityApplication {
-  id              String   @id @default(cuid())
-  orgId           String
-  opportunityId   String
-  studentId       String
-  parentId        String
-  status          String   @default("APPLIED") // APPLIED | SHORTLISTED | SELECTED | NOT_SELECTED | WITHDRAWN
-  guardianConsent Boolean  @default(false)
-  consentAt       DateTime?
-  note            String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+model CompetitionEntry {
+  id             String   @id @default(cuid())
+  orgId          String
+  competitionId  String
+  name           String
+  studentId      String?  // INDIVIDUAL entries
+  batchId        String?  // optional source batch for TEAM entries
+  seed           Int?
+  status         String   @default("REGISTERED") // REGISTERED | WITHDRAWN
+  registeredById String
+  createdAt      DateTime @default(now())
 
-  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
-  events          OpportunityApplicationEvent[]
+  competition  Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  student      Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  homeFixtures Fixture[]   @relation("FixtureHome")
+  awayFixtures Fixture[]   @relation("FixtureAway")
+  wonFixtures  Fixture[]   @relation("FixtureWinner")
 
-  @@unique([opportunityId, studentId])
-  @@index([orgId, status])
-  @@index([studentId])
+  @@unique([competitionId, name])
+  @@unique([competitionId, studentId])
+  @@index([orgId])
 }
 
-/// Append-only status history of an application.
-model OpportunityApplicationEvent {
-// ---- V5 TRIQ Careers (additive, 2026-10-26; prisma/sql/2026-10-26_careers.sql) ----------------
-// No relations are added to existing models, so this block is purely additive.
+model Fixture {
+  id             String    @id @default(cuid())
+  orgId          String
+  competitionId  String
+  round          Int
+  slot           Int
+  homeEntryId    String?
+  awayEntryId    String?
+  scheduledAt    DateTime?
+  venue          String?
+  status         String    @default("SCHEDULED") // SCHEDULED | COMPLETED | BYE | POSTPONED | CANCELLED
+  homeScore      Int?
+  awayScore      Int?
+  winnerEntryId  String?
+  officialUserId String?   // coach/staff allowed to record this fixture's result
+  resultById     String?
+  resultAt       DateTime?
+  version        Int       @default(0) // optimistic concurrency: every write must match and bump it
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  competition Competition       @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  home        CompetitionEntry? @relation("FixtureHome", fields: [homeEntryId], references: [id], onDelete: SetNull)
+  away        CompetitionEntry? @relation("FixtureAway", fields: [awayEntryId], references: [id], onDelete: SetNull)
+  winner      CompetitionEntry? @relation("FixtureWinner", fields: [winnerEntryId], references: [id], onDelete: SetNull)
+
+  @@unique([competitionId, round, slot])
+  @@index([orgId, scheduledAt])
+  @@index([officialUserId])
+}
 
 /// A user's portable professional profile (user-owned, not org-scoped).
 model ProfessionalProfile {
@@ -1492,168 +1624,9 @@ model JobApplicationEvent {
   actorId       String
   note          String?
   createdAt     DateTime @default(now())
-
-  application   OpportunityApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-
   @@index([applicationId, createdAt])
   @@index([orgId])
 }
-
-// ==========================================
-// V10 TRIQ EDUCATION (additive, flag education)
-// SQL: prisma/sql/2026-10-26_education.sql. An institution is an Organization with an
-// InstitutionProfile row; teams/squads reuse existing Batches (roster, coach, sessions, attendance).
-// ==========================================
-
-/// Marks an organization as a school / college / university.
-model InstitutionProfile {
-  id          String   @id @default(cuid())
-  orgId       String   @unique
-  kind        String   // SCHOOL | COLLEGE | UNIVERSITY
-  affiliation String?  // board / university, e.g. "CBSE"
-  levels      String?  // e.g. "Grades 1-12"
-  website     String?
-  updatedById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-/// A sports department / program inside an institution, e.g. "Football".
-model SportsProgram {
-  id          String   @id @default(cuid())
-  orgId       String
-  name        String
-  sport       String
-  description String?
-  status      String   @default("ACTIVE") // ACTIVE | ARCHIVED
-  createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  teams          ProgramTeam[]
-  participations ParticipationRecord[]
-
-  @@index([orgId, status])
-}
-
-/// Maps an existing Batch onto a program as a team / squad. A batch belongs to at most one program.
-model ProgramTeam {
-  id        String   @id @default(cuid())
-  orgId     String
-  programId String
-  batchId   String   @unique
-  squadType String   @default("TEAM") // TEAM | SQUAD | CLUB
-  ageGroup  String?
-  gender    String?  // BOYS | GIRLS | MIXED
-  createdAt DateTime @default(now())
-
-  program   SportsProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
-
-  @@index([orgId])
-  @@index([programId])
-}
-
-/// A student's participation beyond routine training attendance: events, competitions, selections.
-model ParticipationRecord {
-  id           String   @id @default(cuid())
-  orgId        String
-  programId    String
-  studentId    String
-  teamId       String?
-  kind         String   // TRAINING | EVENT | COMPETITION | SELECTION | ACHIEVEMENT
-  title        String
-  date         DateTime
-  role         String?
-  result       String?
-  notes        String?
-  recordedById String
-  createdAt    DateTime @default(now())
-
-  program      SportsProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
-
-  @@index([orgId, programId, date])
-  @@index([studentId])
-/// A physical location of an academy (multi-centre academies). Plan Phase 3: academy & branch setup.
-model Branch {
-  id        String   @id @default(cuid())
-  orgId     String
-  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  name      String
-  address   String?
-  city      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  batches   BatchBranch[]
-
-  @@unique([orgId, name])
-  @@index([orgId])
-}
-
-/// V1 Business (additive, flag `branches`): which branch a batch runs at (at most one).
-/// Read and written only when FEATURES.branches is on (SQL: prisma/sql/2026-10-26_batch_branches.sql).
-model BatchBranch {
-  batchId   String   @id
-  orgId     String
-  branchId  String
-  createdAt DateTime @default(now())
-  batch     Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
-
-  @@index([orgId])
-  @@index([branchId])
-model CompetitionEntry {
-  id             String   @id @default(cuid())
-  orgId          String
-  competitionId  String
-  name           String
-  studentId      String?  // INDIVIDUAL entries
-  batchId        String?  // optional source batch for TEAM entries
-  seed           Int?
-  status         String   @default("REGISTERED") // REGISTERED | WITHDRAWN
-  registeredById String
-  createdAt      DateTime @default(now())
-
-  competition  Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
-  student      Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  homeFixtures Fixture[]   @relation("FixtureHome")
-  awayFixtures Fixture[]   @relation("FixtureAway")
-  wonFixtures  Fixture[]   @relation("FixtureWinner")
-
-  @@unique([competitionId, name])
-  @@unique([competitionId, studentId])
-  @@index([orgId])
-}
-
-model Fixture {
-  id             String    @id @default(cuid())
-  orgId          String
-  competitionId  String
-  round          Int
-  slot           Int
-  homeEntryId    String?
-  awayEntryId    String?
-  scheduledAt    DateTime?
-  venue          String?
-  status         String    @default("SCHEDULED") // SCHEDULED | COMPLETED | BYE | POSTPONED | CANCELLED
-  homeScore      Int?
-  awayScore      Int?
-  winnerEntryId  String?
-  officialUserId String?   // coach/staff allowed to record this fixture's result
-  resultById     String?
-  resultAt       DateTime?
-  version        Int       @default(0) // optimistic concurrency: every write must match and bump it
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  competition Competition       @relation(fields: [competitionId], references: [id], onDelete: Cascade)
-  home        CompetitionEntry? @relation("FixtureHome", fields: [homeEntryId], references: [id], onDelete: SetNull)
-  away        CompetitionEntry? @relation("FixtureAway", fields: [awayEntryId], references: [id], onDelete: SetNull)
-  winner      CompetitionEntry? @relation("FixtureWinner", fields: [winnerEntryId], references: [id], onDelete: SetNull)
-
-  @@unique([competitionId, round, slot])
-  @@index([orgId, scheduledAt])
-  @@index([officialUserId])
-// ---- V6 TRIQ Wellness (additive, 2026-10-26; prisma/sql/2026-10-26_wellness.sql) ---------------
 
 /// A wellness professional's service profile (user-owned). credentialStatus uses src/lib/credentials.ts.
 model WellnessProvider {
@@ -1700,12 +1673,45 @@ model WellnessAppointment {
   updatedAt      DateTime  @updatedAt
   @@index([providerUserId, status, scheduledAt])
   @@index([requesterId, createdAt])
-// ───────────────────────────────────────────────────────────────────────────────
-// V9 TRIQ Brand Studio (additive, prisma/sql/2026-10-26_brand_studio.sql).
-// Org-scoped replacements for the archived Brand/BrandSponsorship ideas (which had no orgId).
-// Read only when FEATURES.sponsorship (sponsors/campaigns) or FEATURES.inclusive (programs/concessions).
-// Money is stored in integer paise (INR). Nothing here moves money; it records authorised commitments.
-// ───────────────────────────────────────────────────────────────────────────────
+}
+
+/// V8 TRIQ Commerce (additive, 2026-10-26_store_orders.sql): price snapshot, quantity and
+/// pay-at-academy payment state for a Kit Store order. Order.status holds the lifecycle
+/// (PLACED/CONFIRMED/FULFILLED/CANCELLED/REFUND_REQUESTED/REFUNDED, see src/lib/store.ts).
+/// Read only when FEATURES.marketplace is on.
+model StoreOrderDetail {
+  id               String    @id @default(cuid())
+  orgId            String
+  orderId          String    @unique
+  quantity         Int
+  unitPricePaise   Int
+  amountPaise      Int
+  currency         String    @default("INR")
+  paymentMode      String    @default("PAY_AT_ACADEMY")
+  paymentStatus    String    @default("UNPAID") // UNPAID | PAID_AT_ACADEMY | REFUNDED
+  paidAt           DateTime?
+  paidRecordedById String?
+  placedById       String
+  note             String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  order            Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  @@index([orgId, createdAt])
+}
+
+/// V8 TRIQ Commerce: status history of a Kit Store order (one row per accepted transition).
+model StoreOrderEvent {
+  id         String   @id @default(cuid())
+  orgId      String
+  orderId    String
+  fromStatus String?
+  toStatus   String
+  actorId    String
+  note       String?
+  createdAt  DateTime @default(now())
+  @@index([orderId, createdAt])
+  @@index([orgId, createdAt])
+}
 
 model SponsorProfile {
   id           String    @id @default(cuid())
