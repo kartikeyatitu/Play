@@ -62,10 +62,10 @@ export const FEE_STATUS = {
 } as const;
 
 /**
- * YYYY-MM-DD for "now" in the given timezone. Defaults to UTC.
+ * YYYY-MM-DD for "now" in the given timezone. Defaults to Asia/Kolkata (all current academies are in India; callers should pass the org timezone).
  * @deprecated Prefer orgToday() from i18n.ts for org-aware timezone.
  */
-export function istDateString(d: Date = new Date(), tz = "UTC"): string {
+export function istDateString(d: Date = new Date(), tz = "Asia/Kolkata"): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 }
 
@@ -73,7 +73,7 @@ export function istDateString(d: Date = new Date(), tz = "UTC"): string {
  * YYYY-MM for the current month in the given timezone.
  * @deprecated Prefer orgCurrentMonth() from i18n.ts for org-aware timezone.
  */
-export function istMonthString(d: Date = new Date(), tz = "UTC"): string {
+export function istMonthString(d: Date = new Date(), tz = "Asia/Kolkata"): string {
   return istDateString(d, tz).slice(0, 7);
 }
 
@@ -81,7 +81,7 @@ export function istMonthString(d: Date = new Date(), tz = "UTC"): string {
  * Today's date as a Date at 00:00 UTC of that calendar day.
  * @deprecated Prefer orgToday() from i18n.ts for org-aware timezone.
  */
-export function istToday(d: Date = new Date(), tz = "UTC"): Date {
+export function istToday(d: Date = new Date(), tz = "Asia/Kolkata"): Date {
   return new Date(`${istDateString(d, tz)}T00:00:00.000Z`);
 }
 
@@ -89,7 +89,7 @@ export function istToday(d: Date = new Date(), tz = "UTC"): Date {
  * Weekday short name (Mon, Tue…) for today.
  * @deprecated Prefer using org timezone from i18n.ts.
  */
-export function istWeekday(d: Date = new Date(), tz = "UTC"): string {
+export function istWeekday(d: Date = new Date(), tz = "Asia/Kolkata"): string {
   return new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" }).format(d);
 }
 
