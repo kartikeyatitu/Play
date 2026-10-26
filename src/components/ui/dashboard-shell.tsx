@@ -90,8 +90,8 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
           small ? "min-h-[36px] text-[13px]" : "min-h-[40px] text-sm"
         } ${
           isActive
-            ? "bg-zinc-850 text-ink font-medium"
-            : "text-ink-muted hover:text-ink hover:bg-zinc-850/60"
+            ? "bg-surface-2 text-ink font-medium"
+            : "text-ink-muted hover:text-ink hover:bg-surface-2/60"
         }`}
       >
         <span className={`shrink-0 ${isActive ? "text-ink" : "text-ink-subtle"}`}>{item.icon}</span>
@@ -179,7 +179,7 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
               {!grouped && (
                 <button
                   type="button"
-                  className="lg:hidden w-11 h-11 -ml-1 flex items-center justify-center rounded-xl border border-line text-zinc-300 hover:text-ink"
+                  className="lg:hidden w-11 h-11 -ml-1 flex items-center justify-center rounded-xl border border-line text-ink-muted hover:text-ink"
                   onClick={() => setMobileMenuOpen(true)}
                   aria-label="Open navigation menu"
                 >
@@ -220,7 +220,7 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
                 onClick={() => setActiveTab(tab.id)}
                 aria-current={isActive ? "page" : undefined}
                 className={`press relative flex-1 min-h-[56px] min-w-0 flex flex-col items-center justify-center gap-0.5 ${
-                  isActive ? "brand-text" : "text-ink-subtle hover:text-zinc-300"
+                  isActive ? "brand-text" : "text-ink-subtle hover:text-ink"
                 }`}
               >
                 {isActive && <span className="absolute top-0 inset-x-5 h-0.5 rounded-full brand-bar" />}
@@ -234,7 +234,7 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
               type="button"
               onClick={() => setMobileMenuOpen(true)}
               className={`relative flex-1 min-h-[56px] flex flex-col items-center justify-center gap-0.5 transition-colors ${
-                !isPrimaryActive ? "brand-text" : "text-ink-subtle hover:text-zinc-300"
+                !isPrimaryActive ? "brand-text" : "text-ink-subtle hover:text-ink"
               }`}
             >
               {!isPrimaryActive && <span className="absolute top-0 inset-x-4 h-0.5 rounded-full brand-bar" />}
