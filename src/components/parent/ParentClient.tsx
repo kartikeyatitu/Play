@@ -10,6 +10,7 @@ import { FamilyDashboard } from '@/components/parent/FamilyDashboard';
 import { enrollAdditionalChild } from '@/app/actions/enroll-child';
 import { toast } from 'sonner';
 import { AvatarRing } from '@/components/ui/avatar-ring';
+import { FEATURES } from '@/lib/features';
 
 // ── Code-splitting ──────────────────────────────────────────────────────────────
 // Only the Home tab is visible on first paint; the other tabs' components load on
@@ -244,6 +245,16 @@ export function ParentClient({
                 <Card key={child.id} className="mb-6">
                   <CardHeader>
                     <CardTitle>{child.name}</CardTitle>
+                    {(FEATURES.progressReport || FEATURES.athleteOS) && (
+                      <div className="flex flex-wrap gap-2 pt-2 text-sm">
+                        {FEATURES.progressReport && (
+                          <a href={`/student/${child.id}/report`} className="rounded-md border border-zinc-700 px-3 py-1.5 text-zinc-100 hover:bg-zinc-800">Monthly report</a>
+                        )}
+                        {FEATURES.athleteOS && (
+                          <a href={`/student/${child.id}#athlete`} className="rounded-md border border-zinc-700 px-3 py-1.5 text-zinc-100 hover:bg-zinc-800">Achievements &amp; goals</a>
+                        )}
+                      </div>
+                    )}
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

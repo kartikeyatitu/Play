@@ -26,6 +26,12 @@ export const FEATURES = {
   marketplace: flag("MARKETPLACE", false),
   /** Athlete profiles, assessments, rankings (Athlete OS). */
   athleteOS: flag("ATHLETE_OS", false),
+  /** V2: printable monthly progress report per athlete (attendance + coach skill reports). No schema. */
+  progressReport: flag("PROGRESS_REPORT", false),
+  /** V2: trials / scholarships board with guardian-consented applications. Needs 2026-10-26_athlete_vertical.sql. */
+  opportunities: flag("OPPORTUNITIES", false),
+  /** V10: schools / colleges / universities — institution profile, programs, teams, participation. Needs 2026-10-26_education.sql. */
+  education: flag("EDUCATION", false),
   /** Tournaments / brackets. */
   events: flag("EVENTS", false),
   /** Corporate sports programs. */

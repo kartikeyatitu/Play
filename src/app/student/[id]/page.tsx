@@ -9,6 +9,7 @@ import { PlayerAnalytics } from "@/components/analytics/PlayerAnalytics";
 import { formatMoney, type OrgLocale } from "@/lib/i18n";
 import { parseMedicalInfo } from "@/lib/coach";
 import { PaymentMethodBadge } from "@/components/ui/payment-method-badge";
+import { FEATURES } from "@/lib/features";
 
 export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -70,8 +71,15 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
     <div className="min-h-screen bg-zinc-950 text-zinc-50 p-8 font-sans">
       <div className="max-w-4xl mx-auto space-y-8">
         <div>
-          <a href={backHref} className="text-sky-400 hover:underline text-sm mb-4 inline-block">← Back to Dashboard</a>
-          
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <a href={backHref} className="text-sky-400 hover:underline text-sm inline-block">← Back to Dashboard</a>
+            {FEATURES.progressReport && (
+              <Link href={`/student/${student.id}/report`} className="text-sm rounded-md border border-zinc-700 px-3 py-1.5 text-zinc-100 hover:bg-zinc-800">
+                Monthly progress report →
+              </Link>
+            )}
+          </div>
+
           <div className="bg-zinc-900/40 border border-zinc-800 rounded-lg p-6">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
               <div>
