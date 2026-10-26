@@ -1,0 +1,585 @@
+TRIQ — Complete 11-Vertical Product Scope
+
+Mandatory addition to the Master Product & Engineering Plan
+
+1. Product mandate
+
+TRIQ is the Operating System for Sports.
+
+The product vision includes all 11 verticals listed below. Every vertical must be included in the master roadmap, product architecture, feature inventory, dependency map, and detailed specifications.
+
+Implementation sequencing is not scope exclusion. Claude must plan all 11 verticals from the beginning, then implement them incrementally according to dependencies, risk, customer value, and technical readiness.
+
+Do not reduce TRIQ to an academy-management SaaS product. Academy management is the initial commercial entry point into a broader sports ecosystem.
+
+The product must ultimately connect athletes, coaches, academies, clubs, gyms, schools, universities, sports facilities, competitions, employers, wellness professionals, creators, sellers, sponsors, federations, and sports institutions.
+
+Voice AI remains deferred. All verticals should be designed to support future integration with a shared assistant, without implementing voice features now.
+
+⸻
+
+2. Complete product verticals
+
+Vertical 1 — TRIQ Business
+
+Purpose: Operate sports academies, clubs, gyms, and training businesses.
+
+Required feature groups
+
+* Organization registration and onboarding.
+* Organization profiles and branding.
+* Branch and location management.
+* Staff, memberships, invitations and role-based permissions.
+* Student and athlete enrollment.
+* Coach management and assignments.
+* Batch creation and scheduling.
+* Training sessions and attendance.
+* Trial bookings and enrollment conversion.
+* Fee plans, fee records, receipts and outstanding balances.
+* Facility allocation.
+* Operational calendar.
+* Parent and student communications.
+* Operational dashboard and business reports.
+* Organization settings and audit history.
+
+Required user journeys
+
+1. Register an academy and configure its profile.
+2. Invite staff and assign permissions.
+3. Register a student and enroll them in a batch.
+4. Assign a coach and training schedule.
+5. Record attendance.
+6. Assess a trial and convert it into enrollment.
+7. Record and reconcile fee payments.
+8. Review revenue, outstanding balances, attendance and utilization.
+9. Manage staff and organization operations.
+
+Completion requirement
+
+A real academy must be able to manage its daily operations through persisted, secure, integrated workflows—not disconnected screens.
+
+Vertical 2 — TRIQ Athlete
+
+Purpose: Give athletes a persistent sporting identity and a pathway to development and opportunity.
+
+Required feature groups
+
+* Athlete identity and sporting profile.
+* Sport, position, level and experience.
+* Achievements and competition history.
+* Training history and development goals.
+* Coach feedback and progress reports.
+* Skill and fitness assessments.
+* Athlete portfolio and permitted media.
+* Profile privacy and verification status.
+* Trials, scholarships and recruitment opportunities.
+* Applications and application history.
+* Saved opportunities.
+* Athlete development timeline.
+* Guardian consent and age-appropriate access controls.
+
+Required user journeys
+
+1. Create an athlete profile.
+2. Connect to an academy or authorized coach.
+3. View training history and progress.
+4. Receive and review coach assessments.
+5. Maintain achievements and sporting history.
+6. Discover relevant trials or scholarships.
+7. Apply and track application status.
+8. Share selected profile information with authorized organizations.
+
+Completion requirement
+
+Athletes can manage their sporting identity, understand their development, and discover opportunities without exposing private information or fabricating verified achievements.
+
+Vertical 3 — TRIQ Play
+
+Purpose: Power competitions and participation across the sports ecosystem.
+
+Required feature groups
+
+* Competition and tournament discovery.
+* Competition creation and configuration.
+* League and tournament formats.
+* Team and individual registration.
+* Eligibility rules.
+* Registration fees where supported.
+* Participant management.
+* Fixtures and schedules.
+* Match officials and assignments where supported.
+* Score and result recording.
+* Standings and leaderboards.
+* Competition notifications.
+* Withdrawals, cancellations and postponements.
+* Historical results and competition profiles.
+* Organizer analytics.
+
+Required user journeys
+
+1. Organizer creates a competition.
+2. Organizer defines the format, dates, venue and eligibility.
+3. Participants or teams register.
+4. The system validates registration and capacity.
+5. Fixtures are created according to supported rules.
+6. Authorized officials record results.
+7. Standings are calculated.
+8. Participants view schedules and results.
+9. Organizers review participation and operational performance.
+
+Completion requirement
+
+Competition creation, registration, scheduling, results and standings must follow explicit rules and remain consistent under concurrent updates.
+
+Vertical 4 — TRIQ Spaces
+
+Purpose: Make sports facilities discoverable, bookable and operationally manageable.
+
+Required feature groups
+
+* Venue and facility profiles.
+* Sports and amenities.
+* Location and discovery.
+* Operating hours.
+* Pricing and slot configuration.
+* Availability calendars.
+* Booking and reservation management.
+* Booking confirmation and cancellation.
+* Rescheduling and refund policies.
+* Facility-owner dashboards.
+* Utilization reports.
+* Maintenance or unavailable-slot management.
+* Venue reviews and ratings if moderation is implemented.
+* Facility-level permissions.
+
+Required user journeys
+
+1. A venue operator creates a facility listing.
+2. The operator configures availability and pricing.
+3. A user searches for a suitable venue.
+4. The user selects an available slot.
+5. TRIQ validates availability and creates the booking.
+6. The operator manages the booking.
+7. Users can cancel or reschedule under the applicable policy.
+8. Operators review utilization and booking performance.
+
+Completion requirement
+
+Availability must be accurate, concurrent bookings must not double-book resources, and financial states must not be fabricated.
+
+Vertical 5 — TRIQ Careers & Professionals
+
+Purpose: Connect sports professionals to jobs, organizations and career opportunities.
+
+Required feature groups
+
+* Professional profiles.
+* Coaching and sports-industry job listings.
+* Experience and qualifications.
+* Skills and certifications.
+* Employer and organization profiles.
+* Job discovery and filtering.
+* Job applications.
+* Applicant management.
+* Interview or recruitment status where supported.
+* Saved jobs.
+* Credential verification status.
+* Career opportunities outside active competition.
+* Career transition resources where supported.
+
+Required user journeys
+
+1. A professional creates a profile.
+2. An employer creates a job listing.
+3. Professionals discover and apply to relevant jobs.
+4. Employers review and manage applications.
+5. Application status changes are recorded.
+6. Verified qualifications are displayed only when supported by a genuine verification process.
+
+Completion requirement
+
+Professionals and employers can manage a transparent recruitment workflow while protecting applications and personal information.
+
+Vertical 6 — TRIQ Wellness
+
+Purpose: Connect athletes and sports organizations to appropriate wellness professionals and services.
+
+Required feature groups
+
+* Provider profiles.
+* Physiotherapy and rehabilitation services.
+* Sports nutrition.
+* Recovery services.
+* Sports psychology services.
+* Service discovery.
+* Availability and appointments.
+* Provider credentials and verification status.
+* Booking history.
+* Consent and access controls.
+* Cancellation and rescheduling.
+* Relevant payment workflow where supported.
+
+Required user journeys
+
+1. A provider creates a service profile.
+2. A user discovers a relevant provider.
+3. The user requests an appointment.
+4. The provider confirms or manages availability.
+5. The appointment lifecycle is recorded.
+6. Authorized parties can view only the information necessary for their role.
+
+Completion requirement
+
+Health-related information must be protected as sensitive data. Public profiles and general organization dashboards must not expose private health records. Clinical decision-making AI is outside the initial scope.
+
+Vertical 7 — TRIQ Creators
+
+Purpose: Help sports creators, athletes and coaches build audiences and eventually monetize their work.
+
+Required feature groups
+
+* Creator profiles.
+* Sports and content categories.
+* Content portfolios.
+* Content discovery.
+* Links to relevant athlete, coach, venue or event profiles.
+* Publishing and content management where supported.
+* Engagement analytics based on actual events.
+* Audience management where justified.
+* Sponsorship and collaboration opportunities.
+* Content reporting and moderation.
+* Monetization capabilities as a later defined release.
+
+Required user journeys
+
+1. A creator creates a profile.
+2. The creator publishes or links a portfolio.
+3. Users discover relevant sports content.
+4. Organizations identify potential collaborators.
+5. Creators receive collaboration or sponsorship opportunities.
+6. Analytics show only measured, trustworthy activity.
+
+Completion requirement
+
+Creators can establish a sports identity and discover commercial opportunities. Do not fabricate followers, views, engagement or earnings.
+
+Vertical 8 — TRIQ Commerce
+
+Purpose: Connect the sports ecosystem to equipment, apparel, products and services.
+
+Required feature groups
+
+* Seller and merchant profiles.
+* Product and service listings.
+* Categories and sport-specific discovery.
+* Search and filters.
+* Inventory and availability.
+* Pricing and product details.
+* Cart and checkout when implemented.
+* Orders and order history.
+* Seller order management.
+* Cancellations and returns.
+* Refund processing.
+* Reviews and moderation where supported.
+* Payment integration and reconciliation where supported.
+* Seller settlements and commissions once the commercial model is defined.
+
+Required user journeys
+
+1. A seller creates a profile and listing.
+2. A user discovers a product.
+3. The user reviews availability, price and policies.
+4. The user places an order through a real supported checkout.
+5. The seller processes the order.
+6. Order status is updated.
+7. Cancellations, refunds and disputes follow defined policies.
+
+Completion requirement
+
+No simulated purchase should be presented as a real transaction. Inventory, payment, order and refund states must remain consistent.
+
+Vertical 9 — TRIQ Brand Studio
+
+Purpose: Connect brands, sponsors, athletes, academies, events and social-impact programs.
+
+Required feature groups
+
+* Brand and sponsor profiles.
+* Sponsorship opportunity listings.
+* Athlete and team sponsorship opportunities.
+* Academy and event sponsorship.
+* Campaign objectives and target audiences.
+* Budgets and deliverables.
+* Proposal submission and review.
+* Scholarship and CSR programs.
+* Campaign milestones.
+* Deliverable tracking.
+* Performance reporting where actual data exists.
+* Agreement and approval workflows.
+
+Required user journeys
+
+1. A sponsor creates a campaign opportunity.
+2. An eligible athlete, academy or organizer discovers it.
+3. The participant submits a proposal.
+4. The sponsor reviews and updates proposal status.
+5. Approved parties agree on deliverables.
+6. Campaign progress and completion are recorded.
+7. Results are reported using verified data.
+
+Completion requirement
+
+Sponsorship proposals, agreements, approvals and deliverables must be traceable. Financial commitments must not occur without explicit authorization.
+
+Vertical 10 — TRIQ Education
+
+Purpose: Support sports participation and development in schools, colleges, universities and educational institutions.
+
+Required feature groups
+
+* Institution profiles.
+* Sports departments and programs.
+* Teams and squads.
+* Coaches and staff.
+* Training schedules.
+* Inter-school and inter-university events.
+* Student participation records.
+* Competition results.
+* Scholarships and applications.
+* Sports internships.
+* Institution-level reports.
+* Guardian permissions and age-appropriate access.
+
+Required user journeys
+
+1. An institution establishes its sports profile.
+2. Authorized staff create programs and teams.
+3. Students join approved activities.
+4. Coaches manage schedules and participation.
+5. Institutions organize events.
+6. Students discover relevant scholarships or internships.
+7. Administrators review participation and program outcomes.
+
+Completion requirement
+
+Institutional workflows must respect school and university permissions, protect minors and keep student information appropriately scoped.
+
+Vertical 11 — TRIQ Enterprise
+
+Purpose: Provide sports federations, institutional networks, large clubs and multi-location operators with higher-level operational capabilities.
+
+Required feature groups
+
+* Multi-branch and multi-location administration.
+* Organization hierarchy.
+* Consolidated reporting.
+* Role and permission administration.
+* Federation and institutional workflows.
+* Competition administration across eligible organizations.
+* Audit trails.
+* Data exports.
+* API and webhook management.
+* Integration configuration.
+* Usage and subscription management when defined.
+* Advanced operational analytics.
+* Organization-specific configuration.
+* Enterprise support and administration.
+
+Required user journeys
+
+1. An enterprise organization is configured.
+2. Authorized administrators establish the organization hierarchy.
+3. Branches and relevant users are associated with the hierarchy.
+4. Local users operate within their permitted branch.
+5. Authorized leadership views consolidated reports.
+6. Changes are audited.
+7. External integrations exchange validated, permission-scoped data.
+
+Completion requirement
+
+Enterprise users can manage multiple organizations or branches without weakening tenant isolation. Consolidated access must be explicitly authorized and auditable.
+
+⸻
+
+3. Shared platform layer — required for all verticals
+
+Claude must design shared capabilities once and reuse them across the product.
+
+Identity and permissions
+
+* Shared account and identity model.
+* Organization membership.
+* Role and permission checks.
+* Active organization context.
+* Account recovery and session management.
+* Guardian relationships where applicable.
+* Public versus private profile visibility.
+
+Scheduling and availability
+
+* Consistent time and timezone handling.
+* Calendar and event infrastructure.
+* Booking and schedule conflict validation.
+* Cancellation and rescheduling rules.
+* Notifications for schedule changes.
+
+Payments and financial infrastructure
+
+* Payment records.
+* Provider transaction references where applicable.
+* Idempotency.
+* Refund and reconciliation workflows.
+* Financial audit history.
+* Currency and monetary precision.
+* Permission-scoped financial reporting.
+
+Each vertical must retain its own domain-specific business rules.
+
+Search and discovery
+
+* Search, filters and pagination.
+* Visibility rules.
+* Sport and location filters.
+* Relevance and sorting.
+* Performance safeguards.
+
+Notifications
+
+* In-app and email notifications as configured.
+* Delivery status.
+* Retry and duplicate prevention.
+* User preferences.
+* Organization-specific communication permissions.
+
+Verification and trust
+
+* Identity and credential verification states.
+* Moderation and reporting.
+* Audit trails.
+* Abuse prevention.
+* Appropriate guardian consent.
+* Explicit distinction between submitted, reviewed and verified information.
+
+Analytics and reporting
+
+* Shared date and timezone conventions.
+* Documented metric definitions.
+* Access-controlled reports.
+* Export permissions.
+* Actual-data-only reporting.
+* Auditability for sensitive exports.
+
+Integration foundation
+
+* Versioned API contracts where required.
+* Webhooks with signature validation and retry protection.
+* External integration credentials stored securely.
+* Integration logs that do not expose secrets.
+* Provider-independent interfaces where they offer practical value.
+
+Future AI foundation
+
+* Clean server-side business functions.
+* Explicit tool permissions.
+* Structured validation.
+* Audit logging.
+* Human approval for consequential actions.
+
+Do not implement voice AI now.
+
+⸻
+
+4. Mandatory deliverables for all 11 verticals
+
+Claude must create a specification for every vertical, not only the initial academy-management modules.
+
+Create or maintain these documents:
+
+* docs/specs/01-triq-business.md
+* docs/specs/02-triq-athlete.md
+* docs/specs/03-triq-play.md
+* docs/specs/04-triq-spaces.md
+* docs/specs/05-triq-careers-professionals.md
+* docs/specs/06-triq-wellness.md
+* docs/specs/07-triq-creators.md
+* docs/specs/08-triq-commerce.md
+* docs/specs/09-triq-brand-studio.md
+* docs/specs/10-triq-education.md
+* docs/specs/11-triq-enterprise.md
+* docs/specs/SHARED-PLATFORM.md
+* docs/PRODUCT_ROADMAP.md
+* docs/FEATURE_STATUS.md
+* docs/DEPENDENCY_MAP.md
+* docs/ARCHITECTURE.md
+* docs/SECURITY.md
+
+Each vertical specification must contain:
+
+1. Product purpose and target users.
+2. User roles and permissions.
+3. Complete feature inventory.
+4. Screen and navigation specification.
+5. Field-level definitions and validation.
+6. End-to-end user journeys.
+7. Business rules and state transitions.
+8. Database models and relationships.
+9. API contracts.
+10. Error and edge-case behavior.
+11. Security and privacy requirements.
+12. Dependencies on shared platform capabilities.
+13. Acceptance criteria.
+14. Unit, integration and end-to-end tests.
+15. Implementation status against the existing repository.
+16. Release dependencies and unresolved decisions.
+
+⸻
+
+5. Implementation policy
+
+All 11 verticals must remain in the committed product roadmap.
+
+However, Claude must deliver them through controlled increments:
+
+1. Audit the current repository.
+2. Map every vertical to existing code and identify missing functionality.
+3. Write all 11 vertical specifications and the shared-platform specification.
+4. Build or stabilize the shared foundation.
+5. Complete TRIQ Business as the first commercial release.
+6. Implement Athlete, Play and Spaces on the shared foundation.
+7. Deliver Careers, Wellness, Creators, Commerce, Brand Studio and Education.
+8. Deliver Enterprise capabilities as the shared platform and multi-organization workflows mature.
+9. Validate cross-vertical journeys, tenant isolation, data integrity and performance.
+10. Keep voice AI deferred until the core platform is stable.
+
+The exact ordering of later modules can change when dependencies or customer evidence justify it. The scope of the 11 verticals must not silently disappear from the roadmap.
+
+6. Definition of done
+
+A vertical is not complete because its route or sidebar entry exists.
+
+It is complete only when its defined workflows are functional, persist real data, enforce authorization, integrate with relevant shared services, handle errors, have appropriate tests and satisfy the documented acceptance criteria.
+
+For every release, record:
+
+* Implemented features.
+* Remaining features.
+* Tests executed and their results.
+* Known defects.
+* Database migration status.
+* Commit and branch, if created.
+* Preview and production deployment status, if verified.
+* Outstanding risks and approvals.
+
+Never claim a commit, migration or deployment occurred unless it has been confirmed.
+
+7. Immediate instruction
+
+Read this specification and the existing TRIQ master plan.
+
+First inspect the repository and build the feature inventory. Then write all 11 vertical specifications and the shared-platform specification, mapping each requirement to existing files and identifying what is complete, partial, mocked, broken or missing.
+
+After that, implement the highest-priority verified gap in small, testable increments.
+
+Do not rewrite the application, introduce voice AI, create fake data to fill screens, or perform unapproved production changes.
+
+The objective is to build the complete TRIQ sports ecosystem—not just its first vertical.
