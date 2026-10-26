@@ -87,6 +87,7 @@ const TrialManager = dynamic(() => import("@/components/org/TrialManager").then(
 const PendingPayments = dynamic(() => import("@/components/org/PendingPayments").then((m) => m.PendingPayments), { loading: sectionLoading });
 const BatchFeeEditor = dynamic(() => import("@/components/org/BatchFeeEditor").then((m) => m.BatchFeeEditor), { loading: inlineLoading });
 const OpsCalendar = dynamic(() => import("@/components/org/OpsCalendar").then((m) => m.OpsCalendar), { loading: sectionLoading });
+const BusinessReport = dynamic(() => import("@/components/org/BusinessReport").then((m) => m.BusinessReport), { loading: sectionLoading });
 const FacilityAllocation = dynamic(() => import("@/components/org/FacilityAllocation").then((m) => m.FacilityAllocation), { loading: sectionLoading });
 const CollectFees = dynamic(() => import("@/components/org/CollectFees").then((m) => m.CollectFees), { loading: sectionLoading });
 
@@ -188,6 +189,7 @@ const moreGroups: NavGroup[] = [
       { id: "leads", label: "Leads", icon: NAV_ICONS.people },
       { id: "communication", label: "Messages", icon: NAV_ICONS.communication },
       { id: "analytics", label: "Analytics", icon: NAV_ICONS.analytics },
+      ...(FEATURES.businessReport ? [{ id: "report", label: "Business report", icon: NAV_ICONS.analytics }] : []),
       ...(FEATURES.experimental ? [{ id: "ai", label: "AI Insights", icon: NAV_ICONS.trophy }] : []),
     ],
   },
@@ -215,6 +217,7 @@ const HIDDEN_TABS = new Set<string>([
   ...(FEATURES.events ? [] : ["events"]),
   ...(FEATURES.bookings ? [] : ["bookings"]),
   ...(FEATURES.opsCalendar ? [] : ["calendar"]),
+  ...(FEATURES.businessReport ? [] : ["report"]),
 ]);
 
 /** Demo-data loader is a development tool: Settings only, never in production. */
@@ -738,6 +741,14 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {/* TEAM: coaches, staff, roles, daily attendance */}
           {activeTab === "team" && <TeamPanel />}
           {activeTab === "payroll" && <PayrollPanel onOpenTeam={() => go("team")} />}
+
+          {/* BUSINESS REPORT (V1 Business, flag businessReport) */}
+          {activeTab === "report" && FEATURES.businessReport && (
+            <div className="space-y-6">
+              <SectionHeader title="Business report" description="Revenue, outstanding fees, attendance and utilisation from your real records" />
+              <BusinessReport currentMonth={currentMonth} />
+            </div>
+          )}
 
           {/* CALENDAR (V1 Business, flag opsCalendar) */}
           {activeTab === "calendar" && FEATURES.opsCalendar && (
