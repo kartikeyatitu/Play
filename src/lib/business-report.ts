@@ -47,6 +47,8 @@ export type BatchRow = {
   utilisation: number | null;
   sessions: number;
   cancelled: number;
+  present: number;
+  marked: number;
   attendanceRate: number | null;
   billed: number;
   collected: number;
@@ -120,6 +122,8 @@ export function computeBusinessReport(input: ReportInput): BusinessReport {
     const fees = input.fees.filter((f) => f.batchId === b.id);
     const bBilled = fees.reduce((s, f) => s + f.amount, 0);
     const bCollected = fees.filter((f) => f.status === "PAID").reduce((s, f) => s + f.amount, 0);
+    const bPresent = ls.reduce((n, s) => n + s.present, 0);
+    const bMarked = ls.reduce((n, s) => n + s.marked, 0);
     return {
       id: b.id,
       name: b.name,
@@ -128,7 +132,9 @@ export function computeBusinessReport(input: ReportInput): BusinessReport {
       utilisation: b.capacity ? ratio(b.enrolled, b.capacity) : null,
       sessions: ls.length,
       cancelled: ss.length - ls.length,
-      attendanceRate: ratio(ls.reduce((n, s) => n + s.present, 0), ls.reduce((n, s) => n + s.marked, 0)),
+      present: bPresent,
+      marked: bMarked,
+      attendanceRate: ratio(bPresent, bMarked),
       billed: money(bBilled),
       collected: money(bCollected),
       outstanding: money(bBilled - bCollected),

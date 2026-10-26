@@ -3,8 +3,12 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
+import { FEATURES } from "@/lib/features";
+import { GROWTH_TOOLS_DISABLED_ERROR } from "@/lib/referral-rules";
+import { createReferralRecord } from "@/lib/referral-server";
 
 export async function getReferrals() {
+  if (!FEATURES.growthTools) return [];
     const session = await requireAuth(['ADMIN', 'PARENT']);
   try {
     // Referral has no orgId column — scope via the referrer (parents only see their own)
@@ -31,28 +35,12 @@ export async function getReferrals() {
 }
 
 export async function createReferral(referrerId: string, refereePhone: string) {
-    const session = await requireAuth(['ADMIN', 'PARENT']);
+  if (!FEATURES.growthTools) return { success: false, error: GROWTH_TOOLS_DISABLED_ERROR };
+  const session = await requireAuth(['ADMIN', 'PARENT']);
   try {
-    // Never trust referrerId: parents refer as themselves; admins may record for a user in their academy
-    let id: string | null = null;
-    if (session.role === "PARENT") {
-      id = session.id;
-    } else if (referrerId) {
-      const user = await db.user.findFirst({ where: { id: referrerId, orgId: session.orgId || "__no_org__" }, select: { id: true } });
-      id = user?.id ?? null;
-    }
-    if (!id) return { success: false, error: "Referrer not found" };
-
-    const referral = await db.referral.create({
-      data: {
-        referrerId: id,
-        refereePhone,
-        status: "PENDING",
-        discount: 500,
-      }
-    });
-    revalidatePath("/org");
-    return { success: true, referral };
+    const res = await createReferralRecord(session, referrerId, refereePhone);
+    if (res.success) revalidatePath("/org");
+    return res;
   } catch (error) {
     console.error("Failed to create referral:", error);
     return { success: false, error: "Failed to create referral" };

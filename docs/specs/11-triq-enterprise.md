@@ -168,7 +168,7 @@ branches (V1), audit log, flags, `secret-box.ts` (integrations), V3 Play (cross-
 |---|---|---|
 | E1 Multi-branch admin | Partial (flag `branches`, SQL pending) | `src/app/actions/branches.ts`, `BranchesCard.tsx` |
 | E2 Org hierarchy | Partial — multi-org membership exists; group hierarchy designed only | `OrgMembership` (`prisma/schema.prisma`), `getMyAcademies`/`switchAcademy` (`team.ts`), `src/lib/org-hierarchy.ts` |
-| E3 Consolidated reporting | Built (flag `enterprise`) | `src/app/actions/enterprise.ts`, `src/components/org/EnterpriseReport.tsx` |
+| E3 Consolidated reporting | Built (flag `enterprise`); tests `src/lib/__tests__/org-hierarchy.test.ts` | `src/app/actions/enterprise.ts`, `src/components/org/EnterpriseReport.tsx` |
 | E4 Role/permission admin | Partial — per-org roles + overrides; no branch scope | `src/lib/team.ts`, `TeamPanel.tsx` |
 | E5 Federation workflows | Missing | — |
 | E6 Cross-org competitions | Missing (V3 owns competitions) | `TournamentBracket.tsx` is UI-only |

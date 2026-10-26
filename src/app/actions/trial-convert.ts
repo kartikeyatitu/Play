@@ -3,6 +3,8 @@
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { requirePermission } from "@/lib/membership";
+import { FEATURES } from "@/lib/features";
+import { convertReferralOnEnrolment } from "@/lib/referral-server";
 
 export async function convertTrialToStudent(trialId: string) {
   const { session } = await requirePermission("students.manage");
@@ -18,7 +20,7 @@ export async function convertTrialToStudent(trialId: string) {
 
   const orgId = trial.batch.orgId;
 
-  await db.$transaction(async (tx) => {
+  const studentId = await db.$transaction(async (tx) => {
     // Compare-and-swap lock: atomically flip SCHEDULED/ATTENDED → ENROLLED. If a
     // concurrent call already did this, our updateMany returns count:0 and we
     // bail before creating a duplicate student/parent/enrollment.
@@ -81,8 +83,11 @@ export async function convertTrialToStudent(trialId: string) {
     });
 
     // 4. Trial status already set to ENROLLED above by the lock step.
+    return student.id;
   });
 
+  // Growth tools: a family that was referred and now enrols converts that referral (never throws).
+  if (FEATURES.growthTools && orgId) await convertReferralOnEnrolment(orgId, trial.parentPhone, studentId, session.id);
   revalidatePath("/org");
 }
 

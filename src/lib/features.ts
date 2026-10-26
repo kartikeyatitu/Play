@@ -58,6 +58,9 @@ export const FEATURES = {
   businessReport: flag("BUSINESS_REPORT", false),
   /** V1/V11: audit-log viewer with filters and CSV export (owners only). No SQL. */
   auditLogViewer: flag("AUDIT_LOG_VIEWER", false),
+  /** V1 Business growth tools (ex-Rewards): parent referrals (convert on enrolment) and coupon admin. Coupons are
+   *  not redeemable yet, and no referral reward is promised. No SQL. */
+  growthTools: flag("GROWTH_TOOLS", false),
   /** V11 Enterprise: consolidated report across academies (and branches) the viewer may report on. No SQL. */
   enterprise: flag("ENTERPRISE", false),
   /** TRIQ Brand Studio (V9): sponsors, campaigns, proposals, deliverables. Needs 2026-10-26_brand_studio.sql. */

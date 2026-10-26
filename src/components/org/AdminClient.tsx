@@ -92,6 +92,7 @@ const BatchFeeEditor = dynamic(() => import("@/components/org/BatchFeeEditor").t
 const OpsCalendar = dynamic(() => import("@/components/org/OpsCalendar").then((m) => m.OpsCalendar), { loading: sectionLoading });
 const BusinessReport = dynamic(() => import("@/components/org/BusinessReport").then((m) => m.BusinessReport), { loading: sectionLoading });
 const AuditLogPanel = dynamic(() => import("@/components/org/AuditLogPanel").then((m) => m.AuditLogPanel), { loading: sectionLoading });
+const EnterpriseReport = dynamic(() => import("@/components/org/EnterpriseReport").then((m) => m.EnterpriseReport), { loading: sectionLoading });
 const FacilityAllocation = dynamic(() => import("@/components/org/FacilityAllocation").then((m) => m.FacilityAllocation), { loading: sectionLoading });
 const CollectFees = dynamic(() => import("@/components/org/CollectFees").then((m) => m.CollectFees), { loading: sectionLoading });
 
@@ -194,6 +195,7 @@ const moreGroups: NavGroup[] = [
       { id: "communication", label: "Messages", icon: NAV_ICONS.communication },
       { id: "analytics", label: "Analytics", icon: NAV_ICONS.analytics },
       ...(FEATURES.businessReport ? [{ id: "report", label: "Business report", icon: NAV_ICONS.analytics }] : []),
+      ...(FEATURES.enterprise ? [{ id: "enterprise", label: "Enterprise", icon: NAV_ICONS.building }] : []),
       ...(FEATURES.experimental ? [{ id: "ai", label: "AI Insights", icon: NAV_ICONS.trophy }] : []),
     ],
   },
@@ -229,6 +231,7 @@ const HIDDEN_TABS = new Set<string>([
   ...(FEATURES.businessReport ? [] : ["report"]),
   ...(FEATURES.marketplace ? [] : ["store"]),
   ...(FEATURES.sponsorship || FEATURES.inclusive ? [] : ["brand"]),
+  ...(FEATURES.enterprise ? [] : ["enterprise"]),
 ]);
 
 /** Demo-data loader is a development tool: Settings only, never in production. */
@@ -594,12 +597,15 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
                     {(d) => <PaymentPlans academyName={academyName} feePlans={d.feePlans} />}
                   </Deferred>
                 </div>
-                <div>
-                  <SectionHeader title="Coupons" />
-                  <Deferred promise={secondary}>
-                    {(d) => <CouponManager initialCoupons={d.coupons} />}
-                  </Deferred>
-                </div>
+                {/* Coupons are not redeemable yet: growth tools flag (default off) */}
+                {FEATURES.growthTools && (
+                  <div>
+                    <SectionHeader title="Coupons" />
+                    <Deferred promise={secondary}>
+                      {(d) => <CouponManager initialCoupons={d.coupons} />}
+                    </Deferred>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -782,6 +788,14 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
             <div className="space-y-6">
               <SectionHeader title="Business report" description="Revenue, outstanding fees, attendance and utilisation from your real records" />
               <BusinessReport currentMonth={currentMonth} />
+            </div>
+          )}
+
+          {/* ENTERPRISE (V11, flag enterprise) */}
+          {activeTab === "enterprise" && FEATURES.enterprise && (
+            <div className="space-y-6">
+              <SectionHeader title="Enterprise" description="Consolidated numbers across your academies and branches" />
+              <EnterpriseReport currentMonth={currentMonth} />
             </div>
           )}
 

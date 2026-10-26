@@ -390,7 +390,7 @@ export function ParentClient({
             <div className="space-y-6">
               <SectionHeader title="More Actions" />
               {FEATURES.opportunities && <OpportunitiesCard academyName={org?.name} />}
-              <ReferralWidget userId={parent.id} />
+              {FEATURES.growthTools && <ReferralWidget userId={parent.id} />}
               <FeedbackWidget parentId={parent.id} existingFeedback={existingFeedback} />
             </div>
           )}
