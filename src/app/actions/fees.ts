@@ -1,8 +1,6 @@
 "use server";
 import { concessionAdjustedFee } from "@/lib/concession-fees";
 import { db } from "@/lib/db";
-import { billedAmount, concessionsByStudent } from "@/lib/concessions";
-import { FEATURES } from "@/lib/features";
 import { revalidatePath } from "next/cache";
 import { checkPermission } from "@/lib/membership";
 import { resolveStudentFee, istToday } from "@/lib/fees";
@@ -275,36 +273,4 @@ export async function getFeeReceiptToken(feeRecordId: string): Promise<{ token: 
   return { token: r?.token ?? null };
 }
 
-// For the cron job: no session, no permission check. Server-only; callers in the API route verify
-// the CRON_SECRET bearer token before invoking this.
-export async function generateMonthlyFeesForOrg(orgId: string, month: string) {
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) return { feesCreated: 0 };
-  const org = await db.organization.findUnique({ where: { id: orgId }, select: { defaultMonthlyFee: true, isActive: true } });
-  if (!org || org.isActive === false) return { feesCreated: 0 };
-
-  const students = await db.student.findMany({
-    where: { orgId },
-    include: { enrollments: { include: { batch: true } } },
-  });
-  // V9 Brand Studio: scholarship / CSR concessions; a 100% waiver resolves to 0 and is skipped below.
-  const concessions = FEATURES.inclusive
-    ? concessionsByStudent(await db.feeConcession.findMany({ where: { orgId, revokedAt: null } }))
-    : null;
-  let feesCreated = 0;
-  for (const student of students) {
-    const base = resolveStudentFee(student, org.defaultMonthlyFee);
-    const amount = concessions ? billedAmount(base, concessions.get(student.id), month) : base;
-    if (amount <= 0) continue;
-    const existing = await db.feeRecord.findUnique({
-      where: { studentId_month: { studentId: student.id, month } },
-      select: { id: true },
-    });
-    if (existing) continue;
-    await db.feeRecord.create({
-      data: { orgId, studentId: student.id, month, amount, status: "PENDING" },
-    });
-    feesCreated++;
-  }
-  return { feesCreated };
-}
 

@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { generateMonthlyFeesForOrg } from "@/app/actions/fees";
+import { generateMonthlyFeesForOrg } from "@/lib/monthly-fees-server";
 import { istMonthString } from "@/lib/fees";
 
 export const runtime = "nodejs";
