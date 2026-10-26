@@ -42,8 +42,8 @@ type Status = "live" | "soon" | "partial";
 /** Status pill. Text is always shown, so status never depends on colour alone. */
 export function StatusPill({ status }: { status: Status }) {
   const map: Record<Status, { label: string; cls: string }> = {
-    live: { label: "Live", cls: "border-lime-400/40 bg-lime-400/10 text-lime-300" },
-    soon: { label: "Coming soon", cls: "border-zinc-700 bg-zinc-800/70 text-zinc-300" },
+    live: { label: "Live", cls: "border-volt/40 bg-volt/10 text-volt-ink" },
+    soon: { label: "Coming soon", cls: "border-line bg-surface-2/70 text-ink-muted" },
     partial: { label: "Partly live", cls: "border-amber-400/40 bg-amber-400/10 text-amber-200" },
   };
   const s = map[status];
@@ -72,15 +72,15 @@ function Card({
   className?: string;
 }) {
   return (
-    <div className={cn("mk-reveal flex min-w-0 flex-col rounded-3xl border border-zinc-800 bg-zinc-900/40 p-6", className)}>
+    <div className={cn("mk-reveal flex min-w-0 flex-col rounded-3xl border border-line bg-surface/40 p-6", className)}>
       <div className="mb-4 flex items-start justify-between gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-950 text-lime-400">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-line bg-canvas text-volt">
           <Icon className="h-4 w-4" aria-hidden />
         </span>
         <StatusPill status={status} />
       </div>
-      <h3 className="font-semibold text-zinc-50">{title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-zinc-400">{body}</p>
+      <h3 className="font-semibold text-ink">{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-ink-muted">{body}</p>
     </div>
   );
 }
@@ -108,7 +108,7 @@ export function Marquee({ items, label }: { items: string[]; label: string }) {
   const row = (dup: boolean) => (
     <ul className={cn("flex shrink-0 items-center gap-3 pr-3", dup && "mk-marquee-dup")} aria-hidden={dup || undefined}>
       {items.map((s) => (
-        <li key={s} className="whitespace-nowrap rounded-full border border-zinc-800 bg-zinc-900/60 px-4 py-2 text-sm text-zinc-300">
+        <li key={s} className="whitespace-nowrap rounded-full border border-line bg-surface/60 px-4 py-2 text-sm text-ink-muted">
           {s}
         </li>
       ))}
@@ -126,8 +126,8 @@ export function Marquee({ items, label }: { items: string[]; label: string }) {
 
 export function SportsStrip() {
   return (
-    <section className="border-y border-white/5 bg-zinc-950 py-8">
-      <p className="mb-5 px-4 text-center text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+    <section className="border-y border-white/5 bg-canvas py-8">
+      <p className="mb-5 px-4 text-center text-xs font-semibold uppercase tracking-[0.2em] text-ink-muted">
         For batch-based sports coaching
       </p>
       <Marquee items={SPORTS} label="Sports supported" />
@@ -149,11 +149,11 @@ const PAINS = [
 export function SoundFamiliar() {
   return (
     <section className="px-4 pt-20 sm:px-6 sm:pt-24">
-      <div className="mx-auto max-w-3xl rounded-3xl border border-zinc-800 bg-zinc-900/40 p-6 sm:p-8">
+      <div className="mx-auto max-w-3xl rounded-3xl border border-line bg-surface/40 p-6 sm:p-8">
         <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">Sound familiar?</p>
         <ul className="grid gap-3 sm:grid-cols-2">
           {PAINS.map((p) => (
-            <li key={p} className="flex items-start gap-3 text-sm text-zinc-300">
+            <li key={p} className="flex items-start gap-3 text-sm text-ink-muted">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" aria-hidden />
               {p}
             </li>
@@ -235,8 +235,8 @@ export function ParentsSection() {
             title="Every parent sees their child's page. No group chat needed."
             description="Each parent gets a link to their child's page, sent on WhatsApp. It opens in any phone browser, so there is nothing to install."
           />
-          <p className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-4 py-2 text-xs text-zinc-300">
-            <ShieldCheck className="h-3.5 w-3.5 text-lime-400" aria-hidden />
+          <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/60 px-4 py-2 text-xs text-ink-muted">
+            <ShieldCheck className="h-3.5 w-3.5 text-volt" aria-hidden />
             Login links are single use and expire after 7 days.
           </p>
         </div>
@@ -430,16 +430,16 @@ export function ComingBand() {
         />
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((it) => (
-            <li key={it.title} className="flex min-w-0 items-start gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 text-zinc-400">
+            <li key={it.title} className="flex min-w-0 items-start gap-4 rounded-2xl border border-line bg-surface/30 p-5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-line bg-canvas text-ink-muted">
                 <it.icon className="h-4 w-4" aria-hidden />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-semibold text-zinc-100">{it.title}</h3>
+                  <h3 className="font-semibold text-ink">{it.title}</h3>
                   <StatusPill status={it.status} />
                 </div>
-                <p className="mt-1 text-sm leading-relaxed text-zinc-400">{it.body}</p>
+                <p className="mt-1 text-sm leading-relaxed text-ink-muted">{it.body}</p>
               </div>
             </li>
           ))}
@@ -486,20 +486,20 @@ export function TrustSection() {
         />
         <ul className="grid gap-4 sm:grid-cols-2">
           {points.map((p) => (
-            <li key={p.title} className="flex min-w-0 gap-4 rounded-3xl border border-zinc-800 bg-zinc-900/40 p-6">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-lime-400/10 text-lime-400">
+            <li key={p.title} className="flex min-w-0 gap-4 rounded-3xl border border-line bg-surface/40 p-6">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-volt/10 text-volt">
                 <p.icon className="h-5 w-5" aria-hidden />
               </span>
               <div>
-                <h3 className="font-semibold text-zinc-50">{p.title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">{p.body}</p>
+                <h3 className="font-semibold text-ink">{p.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">{p.body}</p>
               </div>
             </li>
           ))}
         </ul>
-        <p className="mt-6 text-center text-xs text-zinc-400">
+        <p className="mt-6 text-center text-xs text-ink-muted">
           Read the full{" "}
-          <Link href="/privacy" className="underline underline-offset-4 hover:text-zinc-100">
+          <Link href="/privacy" className="underline underline-offset-4 hover:text-ink">
             privacy policy
           </Link>
           .
@@ -551,17 +551,17 @@ export function MigrationSteps() {
             Start my migration <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
         </div>
-        <ol className="relative space-y-6 border-l border-zinc-800 pl-6 sm:pl-8">
+        <ol className="relative space-y-6 border-l border-line pl-6 sm:pl-8">
           {STEPS.map((s, i) => (
-            <li key={s.title} className="mk-reveal relative min-w-0 rounded-3xl border border-zinc-800 bg-zinc-900/40 p-6">
-              <span className="absolute -left-[37px] top-7 flex h-6 w-6 items-center justify-center rounded-full border border-lime-400/40 bg-zinc-950 text-[11px] font-bold text-lime-400 sm:-left-[45px]">
+            <li key={s.title} className="mk-reveal relative min-w-0 rounded-3xl border border-line bg-surface/40 p-6">
+              <span className="absolute -left-[37px] top-7 flex h-6 w-6 items-center justify-center rounded-full border border-volt/40 bg-canvas text-[11px] font-bold text-volt sm:-left-[45px]">
                 {i + 1}
               </span>
               <div className="flex items-center gap-3">
-                <s.icon className="h-5 w-5 text-lime-400" aria-hidden />
-                <h3 className="font-semibold text-zinc-50">{s.title}</h3>
+                <s.icon className="h-5 w-5 text-volt" aria-hidden />
+                <h3 className="font-semibold text-ink">{s.title}</h3>
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{s.body}</p>
+              <p className="mt-2 text-sm leading-relaxed text-ink-muted">{s.body}</p>
             </li>
           ))}
         </ol>
@@ -583,15 +583,15 @@ export function FoundingAcademies() {
   ];
   return (
     <section className="px-4 py-20 sm:px-6">
-      <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-lime-400/20 bg-zinc-900/60 p-6 sm:p-12">
+      <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-volt/20 bg-surface/60 p-6 sm:p-12">
         <div className="mk-glow pointer-events-none absolute inset-0 opacity-70" aria-hidden />
         <div className="relative grid gap-10 lg:grid-cols-[1.3fr_1fr] lg:items-center">
           <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-lime-400">Founding academies</p>
-            <h2 className="text-balance text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-volt">Founding academies</p>
+            <h2 className="text-balance text-3xl font-bold tracking-tight text-ink sm:text-4xl">
               We&apos;re choosing our first {FOUNDING_OFFER.slots} founding academies. Apply now.
             </h2>
-            <p className="mt-4 max-w-xl text-zinc-400">
+            <p className="mt-4 max-w-xl text-ink-muted">
               No logo wall here yet. We&apos;d rather earn it. Founding academies get the best price we&apos;ll offer and help shape
               what Triq becomes.
             </p>
@@ -604,8 +604,8 @@ export function FoundingAcademies() {
           </div>
           <ul className="space-y-3">
             {perks.map((p) => (
-              <li key={p} className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-200">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-lime-400" aria-hidden /> {p}
+              <li key={p} className="flex items-center gap-3 rounded-2xl border border-line bg-canvas/70 px-4 py-3 text-sm text-ink">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-volt" aria-hidden /> {p}
               </li>
             ))}
           </ul>
@@ -661,12 +661,12 @@ export function Faq() {
         <SectionHeading eyebrow="FAQ" title="Questions coaches ask us" />
         <div className="space-y-3">
           {FAQS.map((f) => (
-            <details key={f.q} className="mk-faq group rounded-2xl border border-zinc-800 bg-zinc-900/40 open:bg-zinc-900/70">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left font-medium text-zinc-100">
+            <details key={f.q} className="mk-faq group rounded-2xl border border-line bg-surface/40 open:bg-surface/70">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left font-medium text-ink">
                 {f.q}
-                <Plus className="mk-chevron h-4 w-4 shrink-0 text-zinc-400 transition-transform" aria-hidden />
+                <Plus className="mk-chevron h-4 w-4 shrink-0 text-ink-muted transition-transform" aria-hidden />
               </summary>
-              <p className="px-5 pb-5 text-sm leading-relaxed text-zinc-400">{f.a}</p>
+              <p className="px-5 pb-5 text-sm leading-relaxed text-ink-muted">{f.a}</p>
             </details>
           ))}
         </div>
@@ -682,13 +682,13 @@ export function Faq() {
 export function FinalCta() {
   return (
     <section className="px-4 pb-24 pt-8 sm:px-6">
-      <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-zinc-800 bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-900 px-6 py-16 text-center sm:px-12">
+      <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-line bg-gradient-to-br from-surface via-canvas to-surface px-6 py-16 text-center sm:px-12">
         <div className="mk-glow pointer-events-none absolute inset-0" aria-hidden />
         <div className="relative">
-          <h2 className="mx-auto max-w-2xl text-balance text-3xl font-bold tracking-tight text-zinc-50 sm:text-5xl">
+          <h2 className="mx-auto max-w-2xl text-balance text-3xl font-bold tracking-tight text-ink sm:text-5xl">
             Your academy, running from your phone. Tonight.
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-zinc-400">
+          <p className="mx-auto mt-4 max-w-xl text-ink-muted">
             Free up to {FREE_PLAN.maxStudents} students. Set up in minutes, or let us do it for you.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

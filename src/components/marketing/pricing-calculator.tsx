@@ -13,21 +13,21 @@ export function PricingCalculator({ initial = 60 }: { initial?: number }) {
   const minApplies = !isFree && students * GROWTH_PLAN.perStudentMonthly < GROWTH_PLAN.minMonthly;
 
   return (
-    <div className="rounded-3xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-8">
+    <div className="rounded-3xl border border-line bg-surface/50 p-5 sm:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <label htmlFor={id} className="text-sm font-medium text-zinc-300">
+          <label htmlFor={id} className="text-sm font-medium text-ink-muted">
             Active students
           </label>
-          <p className="text-4xl font-bold tabular-nums text-zinc-50" aria-live="polite">
+          <p className="text-4xl font-bold tabular-nums text-ink" aria-live="polite">
             {students}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-zinc-400">You&apos;d pay</p>
-          <p className="text-4xl font-bold tabular-nums text-lime-400">
+          <p className="text-sm text-ink-muted">You&apos;d pay</p>
+          <p className="text-4xl font-bold tabular-nums text-volt">
             {isFree ? "Free" : formatINR(monthly)}
-            {!isFree && <span className="text-base font-medium text-zinc-400">/mo</span>}
+            {!isFree && <span className="text-base font-medium text-ink-muted">/mo</span>}
           </p>
         </div>
       </div>
@@ -39,13 +39,13 @@ export function PricingCalculator({ initial = 60 }: { initial?: number }) {
         step={5}
         value={students}
         onChange={(e) => setStudents(Number(e.target.value))}
-        className="mt-6 w-full accent-lime-400"
+        className="mt-6 w-full accent-volt"
       />
-      <div className="mt-1 flex justify-between text-xs text-zinc-400" aria-hidden>
+      <div className="mt-1 flex justify-between text-xs text-ink-muted" aria-hidden>
         <span>5</span>
         <span>400+</span>
       </div>
-      <p className="mt-5 text-sm text-zinc-400">
+      <p className="mt-5 text-sm text-ink-muted">
         {isFree
           ? `Up to ${FREE_PLAN.maxStudents} active students is free, forever.`
           : minApplies

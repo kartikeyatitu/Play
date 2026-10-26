@@ -55,7 +55,7 @@ export function HeroCopy({
 
   return (
     <div lang={lang === "hi" ? "hi" : "en"} className="flex flex-col items-center text-center lg:items-start lg:text-left">
-      <div role="group" aria-label="Language" className="mb-6 inline-flex rounded-full border border-zinc-800 bg-zinc-900/70 p-1 text-xs font-semibold">
+      <div role="group" aria-label="Language" className="mb-6 inline-flex rounded-full border border-line bg-surface/70 p-1 text-xs font-semibold">
         {(["en", "hi"] as const).map((l) => (
           <button
             key={l}
@@ -64,7 +64,7 @@ export function HeroCopy({
             onClick={() => choose(l)}
             className={
               "rounded-full px-3 py-1.5 transition-colors " +
-              (lang === l ? "bg-zinc-100 text-zinc-950" : "text-zinc-400 hover:text-zinc-100")
+              (lang === l ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")
             }
           >
             {l === "en" ? "English" : "हिंदी"}
@@ -74,22 +74,22 @@ export function HeroCopy({
 
       <Link
         href="/register"
-        className="mb-6 inline-flex max-w-full items-center gap-2 rounded-full border border-lime-400/30 bg-lime-400/10 px-3 py-1.5 text-xs font-medium text-lime-300 hover:bg-lime-400/15"
+        className="mb-6 inline-flex max-w-full items-center gap-2 rounded-full border border-volt/30 bg-volt/10 px-3 py-1.5 text-xs font-medium text-volt-ink hover:bg-volt/15"
       >
         <span className="relative flex h-2 w-2 shrink-0">
-          <span className="mk-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-lime-400" />
+          <span className="mk-ping absolute inline-flex h-full w-full rounded-full bg-volt opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-volt" />
         </span>
         <span className="truncate">{t.eyebrow}</span>
         <ArrowRight className="h-3 w-3 shrink-0" aria-hidden />
       </Link>
 
-      <h1 className="text-balance text-4xl font-extrabold leading-[1.05] tracking-tight text-zinc-50 sm:text-5xl lg:text-6xl">
+      <h1 className="text-balance text-4xl font-extrabold leading-[1.05] tracking-tight text-ink sm:text-5xl lg:text-6xl">
         {t.titleA}{" "}
-        <span className="bg-gradient-to-r from-lime-300 via-lime-400 to-emerald-400 bg-clip-text text-transparent">{t.titleB}</span>
+        <span className="bg-gradient-to-r from-volt-ink via-volt to-emerald-400 bg-clip-text text-transparent">{t.titleB}</span>
       </h1>
 
-      <p className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-zinc-400 sm:text-lg">{t.sub}</p>
+      <p className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-ink-muted sm:text-lg">{t.sub}</p>
 
       <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
         <Link href="/register" className={primaryClass}>
@@ -100,10 +100,10 @@ export function HeroCopy({
         </a>
       </div>
 
-      <ul className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-zinc-400 lg:justify-start">
+      <ul className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-ink-muted lg:justify-start">
         {t.micro.map((m) => (
           <li key={m} className="flex items-center gap-1.5">
-            <span className="h-1 w-1 rounded-full bg-lime-400" aria-hidden />
+            <span className="h-1 w-1 rounded-full bg-volt" aria-hidden />
             {m}
           </li>
         ))}

@@ -22,7 +22,7 @@ const SPORTS = [
 const initialState: DemoFormState = { status: "idle" };
 
 const inputClass =
-  "block w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-lime-400/60 focus:outline-none focus:ring-2 focus:ring-lime-400/20 aria-[invalid=true]:border-red-500/70";
+  "block w-full rounded-xl border border-line bg-canvas px-3.5 py-3 text-sm text-ink placeholder:text-ink-subtle focus:border-volt/60 focus:outline-none focus:ring-2 focus:ring-volt/20 aria-[invalid=true]:border-red-500/70";
 
 function Field({
   id,
@@ -39,8 +39,8 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-zinc-300">
-        {label} {optional && <span className="font-normal text-zinc-400">(optional)</span>}
+      <label htmlFor={id} className="block text-sm font-medium text-ink-muted">
+        {label} {optional && <span className="font-normal text-ink-muted">(optional)</span>}
       </label>
       {children}
       {error && (
@@ -71,10 +71,10 @@ export function DemoForm({
 
   if (state.status === "success") {
     return (
-      <div role="status" className="flex flex-col items-center rounded-2xl border border-lime-400/30 bg-lime-400/5 p-8 text-center">
-        <CheckCircle2 className="mb-3 h-10 w-10 text-lime-400" aria-hidden />
-        <p className="text-lg font-semibold text-zinc-50">Request received</p>
-        <p className="mt-2 max-w-sm text-sm text-zinc-400">{state.message}</p>
+      <div role="status" className="flex flex-col items-center rounded-2xl border border-volt/30 bg-volt/5 p-8 text-center">
+        <CheckCircle2 className="mb-3 h-10 w-10 text-volt" aria-hidden />
+        <p className="text-lg font-semibold text-ink">Request received</p>
+        <p className="mt-2 max-w-sm text-sm text-ink-muted">{state.message}</p>
         {whatsappHref && (
           <a
             href={whatsappHref}
@@ -114,7 +114,7 @@ export function DemoForm({
         </Field>
         <Field id="demo-phone" label="WhatsApp number" error={fe.phone}>
           <div className="flex">
-            <span className="inline-flex items-center rounded-l-xl border border-r-0 border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-400">
+            <span className="inline-flex items-center rounded-l-xl border border-r-0 border-line bg-surface px-3 text-sm text-ink-muted">
               +91
             </span>
             <input
@@ -193,12 +193,12 @@ export function DemoForm({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] px-6 text-sm font-semibold text-zinc-950 transition hover:brightness-110 disabled:opacity-60"
+        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] px-6 text-sm font-semibold text-volt-fg transition hover:brightness-110 disabled:opacity-60"
       >
         {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
         {pending ? "Sending…" : "Book my 15-min demo"}
       </button>
-      <p className="text-center text-xs text-zinc-400">
+      <p className="text-center text-xs text-ink-muted">
         We&apos;ll only use your number to schedule the demo. No spam, ever.
       </p>
     </form>

@@ -9,7 +9,7 @@ export function FoundingOfferBanner({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex flex-col items-start gap-4 rounded-3xl border border-amber-400/30 bg-gradient-to-br from-amber-400/10 via-zinc-900/40 to-lime-400/5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8",
+        "flex flex-col items-start gap-4 rounded-3xl border border-amber-400/30 bg-gradient-to-br from-amber-400/10 via-surface/40 to-volt/5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8",
         className,
       )}
     >
@@ -19,7 +19,7 @@ export function FoundingOfferBanner({ className }: { className?: string }) {
         </span>
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-amber-300">Founding offer</p>
-          <p className="mt-1 text-lg font-semibold text-zinc-50">
+          <p className="mt-1 text-lg font-semibold text-ink">
             First {FOUNDING_OFFER.slots} academies: {FOUNDING_OFFER.discountPercent}% off for {FOUNDING_OFFER.months} months + free
             migration in {FOUNDING_OFFER.migrationHours} hours.
           </p>
@@ -41,25 +41,25 @@ export function PlanCards() {
           className={cn(
             "relative flex flex-col rounded-3xl border p-6 sm:p-8",
             plan.highlighted
-              ? "border-lime-400/50 bg-zinc-900/80 shadow-[0_0_60px_-15px_rgba(163,230,53,0.35)]"
-              : "border-zinc-800 bg-zinc-900/40",
+              ? "border-volt/50 bg-surface/80 shadow-[0_0_60px_-15px_rgba(163,230,53,0.35)]"
+              : "border-line bg-surface/40",
           )}
         >
           {plan.highlighted && (
-            <span className="absolute -top-3 left-6 rounded-full bg-[var(--brand)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-zinc-950">
+            <span className="absolute -top-3 left-6 rounded-full bg-[var(--brand)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-volt-fg">
               Most academies
             </span>
           )}
-          <h3 className={cn("text-lg font-semibold", plan.highlighted ? "text-lime-400" : "text-zinc-100")}>{plan.name}</h3>
+          <h3 className={cn("text-lg font-semibold", plan.highlighted ? "text-volt" : "text-ink")}>{plan.name}</h3>
           <p className="mt-4 flex flex-wrap items-baseline gap-x-2">
-            <span className="text-4xl font-bold tracking-tight text-zinc-50">{plan.price}</span>
-            {plan.priceSuffix && <span className="text-sm text-zinc-400">{plan.priceSuffix}</span>}
+            <span className="text-4xl font-bold tracking-tight text-ink">{plan.price}</span>
+            {plan.priceSuffix && <span className="text-sm text-ink-muted">{plan.priceSuffix}</span>}
           </p>
-          <p className="mt-3 text-sm text-zinc-400">{plan.blurb}</p>
+          <p className="mt-3 text-sm text-ink-muted">{plan.blurb}</p>
           <ul className="mt-6 flex-1 space-y-3">
             {plan.features.map((f) => (
-              <li key={f} className="flex items-start gap-3 text-sm text-zinc-300">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-lime-400" aria-hidden />
+              <li key={f} className="flex items-start gap-3 text-sm text-ink-muted">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-volt" aria-hidden />
                 <span>{f}</span>
               </li>
             ))}
