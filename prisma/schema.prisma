@@ -1312,3 +1312,52 @@ model JobApplicationEvent {
   @@index([applicationId, createdAt])
   @@index([orgId])
 }
+
+// ---- V6 TRIQ Wellness (additive, 2026-10-26; prisma/sql/2026-10-26_wellness.sql) ---------------
+
+/// A wellness professional's service profile (user-owned). credentialStatus uses src/lib/credentials.ts.
+model WellnessProvider {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  displayName          String
+  category             String    // PHYSIOTHERAPY | NUTRITION | RECOVERY | PSYCHOLOGY
+  services             String?
+  bio                  String?
+  city                 String?
+  registrationBody     String?
+  registrationNumber   String?   // never shown on discovery pages
+  credentialStatus     String    @default("SUBMITTED")
+  credentialReviewedById String?
+  credentialReviewedAt DateTime?
+  credentialVerifiedById String?
+  credentialVerifiedAt DateTime?
+  credentialRejectReason String?
+  isListed             Boolean   @default(false)
+  acceptingRequests    Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  @@index([isListed, category])
+}
+
+/// status: REQUESTED | CONFIRMED | DECLINED | COMPLETED | CANCELLED (src/lib/wellness.ts).
+/// `note` is sensitive: visible only to the requester and the provider, never audited.
+model WellnessAppointment {
+  id             String    @id @default(cuid())
+  providerId     String
+  providerUserId String
+  requesterId    String
+  category       String
+  scheduledAt    DateTime
+  note           String?
+  status         String    @default("REQUESTED")
+  confirmedAt    DateTime?
+  declinedAt     DateTime?
+  completedAt    DateTime?
+  cancelledAt    DateTime?
+  cancelledById  String?
+  cancelReason   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  @@index([providerUserId, status, scheduledAt])
+  @@index([requesterId, createdAt])
+}

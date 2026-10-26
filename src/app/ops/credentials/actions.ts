@@ -54,3 +54,36 @@ export async function reviewProfessionalCredential(formData: FormData): Promise<
   revalidatePath(PATH);
   back();
 }
+
+/** Verifier moves a wellness provider's credential (Wellness). */
+export async function reviewProviderCredential(formData: FormData): Promise<void> {
+  const session = await requireAuth(["SUPER_ADMIN"]);
+  if (!FEATURES.wellness) back("Wellness is switched off");
+  const id = formData.get("id");
+  const to = String(formData.get("status") || "");
+  const reason = String(formData.get("reason") || "").trim().slice(0, 300) || null;
+  if (!validId(id) || !isCredentialStatus(to)) back("Invalid request");
+  const p = await db.wellnessProvider.findUnique({ where: { id }, select: { id: true, credentialStatus: true, userId: true } });
+  if (!p || !isCredentialStatus(p.credentialStatus)) back("Provider not found");
+  if (!canSetCredentialStatus(p.credentialStatus, to, "VERIFIER")) back("That status change is not allowed");
+  if (to === "REJECTED" && !reason) back("Give a reason when rejecting");
+  const s = stamp(to, session.id, reason) as Record<string, unknown>;
+  const data: Record<string, unknown> = { credentialStatus: to };
+  if ("reviewedById" in s) data.credentialReviewedById = s.reviewedById;
+  if ("reviewedAt" in s) data.credentialReviewedAt = s.reviewedAt;
+  if ("verifiedById" in s) data.credentialVerifiedById = s.verifiedById;
+  if ("verifiedAt" in s) data.credentialVerifiedAt = s.verifiedAt;
+  if ("rejectReason" in s) data.credentialRejectReason = s.rejectReason;
+  const { count } = await db.wellnessProvider.updateMany({ where: { id: p.id, credentialStatus: p.credentialStatus }, data });
+  if (!count) back("The provider changed meanwhile. Refresh and try again.");
+  await db.auditLog.create({
+    data: {
+      userId: session.id,
+      orgId: null,
+      action: credentialAuditAction(p.credentialStatus, to),
+      details: JSON.stringify({ credentialType: "WELLNESS_PROVIDER", providerId: p.id, subjectUserId: p.userId, from: p.credentialStatus, to }),
+    },
+  });
+  revalidatePath(PATH);
+  back();
+}

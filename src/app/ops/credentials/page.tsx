@@ -3,7 +3,8 @@ import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { FEATURES } from "@/lib/features";
 import { CREDENTIAL_STATUSES, canSetCredentialStatus, credentialLabel } from "@/lib/credentials";
-import { reviewProfessionalCredential } from "./actions";
+import { reviewProfessionalCredential, reviewProviderCredential } from "./actions";
+import { PROVIDER_CATEGORY_LABELS, isProviderCategory } from "@/lib/wellness";
 import { Card, Flash, Page, Pill, Section, buttonCls, inputCls, istDate } from "@/components/verticals/ui";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +46,14 @@ export default async function OpsCredentialsPage({ searchParams }: { searchParam
     ? await db.user.findMany({ where: { id: { in: professional.map((c) => c.userId) } }, select: { id: true, name: true } })
     : [];
   const nameById = new Map(users.map((u) => [u.id, u.name]));
+  const providers = FEATURES.wellness
+    ? await db.wellnessProvider.findMany({
+        where: { credentialStatus: { in: ["SUBMITTED", "REVIEWED", "VERIFIED"] } },
+        orderBy: { updatedAt: "asc" },
+        take: 100,
+        select: { id: true, displayName: true, category: true, registrationBody: true, registrationNumber: true, credentialStatus: true, updatedAt: true },
+      })
+    : [];
 
   return (
     <Page eyebrow="Triq ops" title="Credential verification">
@@ -78,6 +87,30 @@ export default async function OpsCredentialsPage({ searchParams }: { searchParam
                 <Pill tone={c.status === "VERIFIED" ? "emerald" : c.status === "REVIEWED" ? "sky" : "amber"}>{credentialLabel(c.status)}</Pill>
               </div>
               <MoveForm action={reviewProfessionalCredential} id={c.id} from={c.status} />
+            </Card>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Wellness providers">
+        {!FEATURES.wellness && <p className="text-sm text-zinc-500">Wellness is switched off.</p>}
+        {FEATURES.wellness && providers.length === 0 && <p className="text-sm text-zinc-400">Nothing waiting.</p>}
+        <div className="space-y-2">
+          {providers.map((p) => (
+            <Card key={p.id}>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="font-medium text-white">{p.displayName}</p>
+                  <p className="text-xs text-zinc-400">
+                    {isProviderCategory(p.category) ? PROVIDER_CATEGORY_LABELS[p.category] : p.category} · {p.registrationBody || "no body given"} ·{" "}
+                    {p.registrationNumber || "no number given"} · updated {istDate(p.updatedAt)}
+                  </p>
+                </div>
+                <Pill tone={p.credentialStatus === "VERIFIED" ? "emerald" : p.credentialStatus === "REVIEWED" ? "sky" : "amber"}>
+                  {credentialLabel(p.credentialStatus)}
+                </Pill>
+              </div>
+              <MoveForm action={reviewProviderCredential} id={p.id} from={p.credentialStatus} />
             </Card>
           ))}
         </div>

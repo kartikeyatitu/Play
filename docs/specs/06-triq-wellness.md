@@ -43,7 +43,7 @@ Users: parents/athletes/academy staff (requesters), wellness providers (any sign
 ## 5. Fields and validation (`src/lib/health.ts`, `src/lib/wellness.ts`)
 - Medical whitelist `MEDICAL_FIELDS`: allergies, medicalConditions, emergencyContactName, emergencyContactPhone, doctorName, doctorPhone, insurancePolicyNumber, consent, signature (strings ≤500, consent boolean). Unknown keys dropped when flag on.
 - Provider: displayName 2–80, category enum, services ≤500, bio ≤2000, city ≤80, registrationBody ≤120, registrationNumber ≤60.
-- Appointment: preferredAt future datetime within 180 days, note ≤500 (optional, visible to provider and requester only), cancelReason ≤300.
+- Appointment: scheduledAt future datetime within 180 days, note ≤500 (optional, visible to provider and requester only), cancelReason ≤300.
 
 ## 6. Journeys
 1. Provider opens `/wellness/provider`, saves profile (credential SUBMITTED), ticks "listed".
@@ -58,7 +58,7 @@ Users: parents/athletes/academy staff (requesters), wellness providers (any sign
 | REQUESTED | CONFIRM | provider | CONFIRMED |
 | REQUESTED | DECLINE | provider | DECLINED |
 | REQUESTED, CONFIRMED | CANCEL | provider or requester | CANCELLED |
-| CONFIRMED | COMPLETE | provider, only at/after `preferredAt` | COMPLETED |
+| CONFIRMED | COMPLETE | provider, only at/after `scheduledAt` | COMPLETED |
 DECLINED, CANCELLED, COMPLETED are terminal. A provider cannot request with themselves. A provider with `acceptingRequests=false` or not listed cannot receive new requests.
 
 ## 8. Database (additive, `prisma/sql/2026-10-26_wellness.sql`)
@@ -68,7 +68,7 @@ DECLINED, CANCELLED, COMPLETED are terminal. A provider cannot request with them
 `saveProviderProfile`, `requestAppointment`, `actOnAppointment(formData: id, action, reason?)` — all re-check `FEATURES.wellness`. `updateMedicalInfo(studentId, data)` unchanged signature; adds permission check and whitelist when flag on, audit always. Ops: `reviewProviderCredential` in `src/app/ops/credentials/actions.ts`.
 
 ## 10. Errors and edge cases
-Invalid transition → error, no write. Concurrent transitions: update uses `where: {id, status: from}` (compare-and-set) so a second writer gets "Appointment changed, refresh". Past preferredAt rejected on request. Flag off → pages 404, actions no-op.
+Invalid transition → error, no write. Concurrent transitions: update uses `where: {id, status: from}` (compare-and-set) so a second writer gets "Appointment changed, refresh". Past scheduledAt rejected on request. Flag off → pages 404, actions no-op.
 
 ## 11. Security and privacy
 - Audit `MEDICAL_INFO_UPDATED` stores `{studentId, fields: [names]}` — never values (`medicalAuditDetails`, unit-tested).
