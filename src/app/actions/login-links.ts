@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { setSessionCookie, homePathForRole } from "@/lib/auth";
 import { checkPermission, hasPermission } from "@/lib/membership";
 import { getAppUrl } from "@/lib/app-url";
+import { belongsToOtherAcademy } from "@/lib/team";
 
 const LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -33,6 +34,8 @@ async function appOrigin() {
  * in the admin's own academy. Only the sha256 hash of the token is stored.
  * Parents need students.manage, coaches team.manage; links for admin accounts are owner-only
  * (a link signs in AS that person, so a manager must not be able to mint one for the owner).
+ * Never for someone who also belongs to (or is invited to) another academy: the link would let this
+ * academy's owner act as them in the other academy too.
  */
 export async function createLoginLink(userId: string) {
   const auth = await checkPermission(null);
@@ -41,9 +44,15 @@ export async function createLoginLink(userId: string) {
 
   const user = await db.user.findFirst({
     where: { id: userId, orgId: session.orgId },
-    select: { id: true, name: true, phone: true, role: true },
+    select: { id: true, name: true, phone: true, role: true, orgId: true, memberships: { select: { orgId: true, status: true } } },
   });
   if (!user) return { success: false as const, error: "User not found in your academy." };
+  if (belongsToOtherAcademy(user, session.orgId, { countInvites: true })) {
+    return {
+      success: false as const,
+      error: "This person also works at another academy, so you can't create a login link for them. They can sign in with their phone number.",
+    };
+  }
   if (!["COACH", "PARENT", "ADMIN"].includes(user.role)) {
     return { success: false as const, error: "Login links are only available for coaches, parents and admins." };
   }

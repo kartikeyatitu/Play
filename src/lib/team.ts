@@ -120,6 +120,23 @@ export function canMarkBatchAttendance(
   return true;
 }
 
+/**
+ * True when a user already belongs to an academy other than `orgId`: an ACTIVE membership there, or
+ * (legacy rows from before memberships) User.orgId pointing at it. With `countInvites`, a pending
+ * invite to another academy counts too. Used to require consent before someone joins a second
+ * academy, and to stop one academy's owner signing in as a person who also works elsewhere.
+ */
+export function belongsToOtherAcademy(
+  user: { orgId?: string | null; memberships: { orgId: string; status: string }[] },
+  orgId: string,
+  { countInvites = false }: { countInvites?: boolean } = {},
+): boolean {
+  if (user.orgId && user.orgId !== orgId) return true;
+  return user.memberships.some(
+    (m) => m.orgId !== orgId && (m.status === "ACTIVE" || (countInvites && m.status === "INVITED")),
+  );
+}
+
 export function parsePermissionOverrides(json?: string | null): Record<string, boolean> {
   if (!json) return {};
   try {

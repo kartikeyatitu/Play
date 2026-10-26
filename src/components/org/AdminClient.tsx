@@ -1,4 +1,5 @@
 "use client";
+import { AcademySwitcher } from "@/components/team/AcademySwitcher";
 import { ThemePicker } from "@/components/ui/theme-picker";
 import React from "react";
 import { DashboardShell, SectionHeader, NAV_ICONS, type NavGroup, type NavItem } from "@/components/ui/dashboard-shell";
@@ -766,7 +767,12 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           )}
 
           {/* TEAM: coaches, staff, roles, daily attendance */}
-          {activeTab === "team" && <TeamPanel />}
+          {activeTab === "team" && (
+            <>
+              <AcademySwitcher className="mb-4 w-full" />
+              <TeamPanel />
+            </>
+          )}
           {activeTab === "payroll" && <PayrollPanel onOpenTeam={() => go("team")} />}
 
           {activeTab === "institution" && FEATURES.education && (
