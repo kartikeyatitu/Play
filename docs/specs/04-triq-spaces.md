@@ -138,7 +138,7 @@ Unit: `src/lib/__tests__/venue-policy.test.ts`, `venue-utilisation.test.ts`, `tu
 Integration (DB, not in CI): concurrent `reserveSlot`, `moveSlot` conflict. E2E: payment smoke test
 (`docs/sprints/task-7-payment-smoke-test.md` pattern) for a turf booking.
 
-## 15. Implementation status (verified on `main` 5ab2358)
+## 15. Implementation status (verified on `main` 5ab2358, updated for branch `build/v-play-spaces`; nothing run against a database)
 
 | Feature group | Status | Evidence |
 |---|---|---|
@@ -148,12 +148,12 @@ Integration (DB, not in CI): concurrent `reserveSlot`, `moveSlot` conflict. E2E:
 | Double-booking protection | Complete in code; constraint not in repo SQL | `reserveSlot` advisory lock + overlap check, `isOverlapViolation` in `src/lib/turf-engine.ts`; `scripts/apply-turf-constraint.ts` absent; assignment states constraint exists in prod |
 | Online advance (Razorpay) | Complete (code) | `startOnlineBooking`, `confirmTurfCheckout` (`src/app/book/actions.ts`), `confirmPaidBooking`, webhook `[orgId]/route.ts` |
 | UPI direct | Complete, overloads `providerPaymentId` with `UPI_REPORTED` marker | `startUpiBooking`, `reportUpiPaid`, `confirmUpiBooking` |
-| Booking lifecycle actions + audit | Partial — actions audited, **creation not audited**, public paths not audited | `updateBooking` writes `TURF_BOOKING_<ACTION>`; `createCounterBooking` no audit |
-| Cancellation / refund policy | Missing | no policy code; cancel just sets CANCELLED |
-| Rescheduling | Missing | — |
-| Maintenance / blocked slots | Missing | — |
-| Utilisation report | Missing | no turf query in `src/app/actions/reports.ts` |
-| Public discovery listing | Missing (directory is academies only: `src/app/academies`) | — |
+| Booking lifecycle actions + audit | Complete in code (this branch) — staff create/cancel/series/reschedule/block → `AuditLog`; all actors → `TurfBookingEvent` (flag `spacesOps`, SQL not applied); webhook-path confirmations not evented (webhook untouched) | `src/app/actions/turf-bookings.ts`, `src/app/book/actions.ts`, `src/lib/turf-audit.ts` |
+| Cancellation / refund policy | Complete (quote only; refunds stay manual) behind `spacesOps` | `src/lib/venue-policy.ts` + tests; quote in cancel confirm and audit details |
+| Rescheduling | Complete in code behind `spacesOps` (staff only) | `moveSlot` in `src/lib/turf-engine.ts`, `rescheduleBooking`, `RescheduleForm` in `TurfBoard.tsx` |
+| Maintenance / blocked slots | Complete in code behind `spacesOps` (no schema change) | `blockSlots`, `BlockDialog`/`BlockedSlotDialog` in `TurfBoard.tsx` |
+| Utilisation report | Complete behind `spacesOps` | `src/lib/venue-utilisation.ts` + tests, `getVenueUtilisation`, `src/components/org/VenueUtilisation.tsx` |
+| Public discovery listing | Complete behind `spacesDiscovery` (noindex) | `src/app/venues/page.tsx`, `src/lib/venue-discovery.ts` + tests |
 | Public booking page gated by flag | Partial | `/book/*` does not read `FEATURES` |
 | Academy batch ↔ court | Broken/dead | `Booking` + `bookFacility` (`src/app/actions/facilities.ts`) — no UI caller, not checked by engine |
 | Reviews, amenities, peak pricing, per-facility permissions, branch link | Missing | — |

@@ -6,6 +6,7 @@ import { rateLimitDb } from "@/lib/rate-limit";
 import { cleanPhone } from "@/lib/import-utils";
 import { reserveSlot, confirmPaidBooking, UPI_REPORTED } from "@/lib/turf-engine";
 import { getOrgRazorpay } from "@/lib/razorpay-org";
+import { recordBookingEvents } from "@/lib/turf-audit";
 import { createRazorpayOrder, verifyRazorpayCheckoutSignature } from "@/lib/gateways/razorpay";
 import { buildUpiLink, isValidUpiId } from "@/lib/fees";
 import {
@@ -204,6 +205,7 @@ export async function startOnlineBooking(input: {
         notes: { kind: "turf", bookingId: hold.id, orgId: org.id },
       });
       await db.turfBooking.update({ where: { id: hold.id }, data: { providerOrderId: order.id } });
+      await recordBookingEvents(org.id, [hold.id], "CREATED", { type: "CUSTOMER" }, { channel: "RAZORPAY", amount, onlineDue, status: "HOLD" });
       return {
         success: true,
         bookingId: hold.id,
@@ -217,6 +219,7 @@ export async function startOnlineBooking(input: {
       };
     } catch (e) {
       await db.turfBooking.updateMany({ where: { id: hold.id, status: "HOLD" }, data: { status: "EXPIRED" } }).catch(() => {});
+      await recordBookingEvents(org.id, [hold.id], "RELEASED", { type: "SYSTEM" }, { reason: "payment order failed" });
       console.error("startOnlineBooking order failed:", e instanceof Error ? e.message : e);
       return { success: false, error: "Couldn't start the payment. Please try again." };
     }
@@ -230,7 +233,11 @@ export async function startOnlineBooking(input: {
 export async function releaseHold(bookingId: string): Promise<void> {
   try {
     if (!bookingId) return;
-    await db.turfBooking.updateMany({ where: { id: String(bookingId), status: "HOLD", source: "ONLINE", advancePaid: 0, providerPaymentId: null }, data: { status: "EXPIRED" } });
+    const res = await db.turfBooking.updateMany({ where: { id: String(bookingId), status: "HOLD", source: "ONLINE", advancePaid: 0, providerPaymentId: null }, data: { status: "EXPIRED" } });
+    if (res.count > 0) {
+      const b = await db.turfBooking.findUnique({ where: { id: String(bookingId) }, select: { orgId: true } });
+      if (b) await recordBookingEvents(b.orgId, [String(bookingId)], "RELEASED", { type: "CUSTOMER" }, { reason: "payment window closed" });
+    }
   } catch {
     /* best effort: the hold expires on its own */
   }
@@ -256,6 +263,7 @@ export async function confirmTurfCheckout(a: { orderId: string; paymentId: strin
     if (!res.ok) {
       return { success: false, error: "Your payment was received but the slot is no longer available. The venue will contact you to refund or reschedule." };
     }
+    await recordBookingEvents(booking.orgId, [booking.id], "CONFIRMED_ONLINE", { type: "GATEWAY" }, { via: "checkout signature", paid: booking.onlineDue });
     const org = await db.organization.findUnique({ where: { id: booking.orgId }, select: { name: true, phone: true } });
     const startIst = new Date(booking.startTime.getTime() + 5.5 * 3600_000);
     return {
@@ -360,6 +368,7 @@ export async function startUpiBooking(input: {
         error: hold.reason === "CONFLICT" ? "Sorry, that slot was just taken. Please pick another time." : "Couldn't hold the slot. Please try again.",
       };
     }
+    await recordBookingEvents(org.id, [hold.id], "CREATED", { type: "CUSTOMER" }, { channel: "UPI", amount, onlineDue, status: "HOLD" });
     const note = `${facility.name} ${date} ${formatRange(startHour, hours)}`.slice(0, 60);
     return {
       success: true,
@@ -402,6 +411,7 @@ export async function reportUpiPaid(input: { bookingId: string; phone: string; u
         where: { id: b.id },
         data: { providerPaymentId: marker, holdExpiresAt: new Date(Date.now() + UPI_VERIFY_HOURS * 3600_000) },
       });
+      await recordBookingEvents(b.orgId, [b.id], "UPI_REPORTED", { type: "CUSTOMER" }, { late: false, ref: utr || null });
       return { success: true, late: false };
     }
     if (b.status === "EXPIRED") {
@@ -414,6 +424,7 @@ export async function reportUpiPaid(input: { bookingId: string; phone: string; u
           notes: `Customer says they paid ₹${b.onlineDue} by UPI after the hold expired${utr ? ` (ref ${utr})` : ""}. Check your UPI app, then confirm or refund.`.slice(0, 300),
         },
       });
+      await recordBookingEvents(b.orgId, [b.id], "UPI_REPORTED", { type: "CUSTOMER" }, { late: true, ref: utr || null });
       return { success: true, late: true };
     }
     return { success: false, error: "This booking can no longer be updated." };

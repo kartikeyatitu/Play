@@ -22,7 +22,7 @@ export type ReserveInput = {
   advancePaid: number;
   onlineDue?: number;
   status: "CONFIRMED" | "HOLD";
-  source: "COUNTER" | "ONLINE" | "LEASE";
+  source: "COUNTER" | "ONLINE" | "LEASE" | "BLOCK";
   holdExpiresAt?: Date | null;
   notes?: string | null;
   leaseGroupId?: string | null;
@@ -88,6 +88,48 @@ export async function reserveSlot(input: ReserveInput): Promise<ReserveResult> {
   } catch (e) {
     if (isOverlapViolation(e)) return { ok: false, reason: "CONFLICT" };
     console.error("reserveSlot failed:", e instanceof Error ? e.message : e);
+    return { ok: false, reason: "ERROR" };
+  }
+}
+
+export type MoveResult = { ok: true; fromFacilityId: string; fromStart: Date } | { ok: false; reason: "CONFLICT" | "NOT_FOUND" | "BAD_STATUS" | "ERROR" };
+
+/**
+ * Moves a CONFIRMED booking to another time and/or court in one transaction. Both courts are locked
+ * (in id order, so two opposite moves can't deadlock) and the target is overlap-checked excluding the
+ * booking itself; the exclusion constraint still backs this up. On conflict nothing changes.
+ */
+export async function moveSlot(a: { id: string; orgId: string; facilityId: string; start: Date; end: Date }): Promise<MoveResult> {
+  try {
+    const existing = await db.turfBooking.findFirst({ where: { id: a.id, orgId: a.orgId }, select: { facilityId: true } });
+    if (!existing) return { ok: false, reason: "NOT_FOUND" };
+    return await db.$transaction(
+      async (tx) => {
+        for (const fid of [...new Set([existing.facilityId, a.facilityId])].sort()) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${fid}))`;
+        }
+        const b = await tx.turfBooking.findFirst({ where: { id: a.id, orgId: a.orgId } });
+        if (!b) return { ok: false, reason: "NOT_FOUND" } as MoveResult;
+        if (b.status !== "CONFIRMED") return { ok: false, reason: "BAD_STATUS" } as MoveResult;
+
+        await tx.turfBooking.updateMany({
+          where: { facilityId: a.facilityId, status: "HOLD", holdExpiresAt: { lt: new Date() } },
+          data: { status: "EXPIRED" },
+        });
+        const clash = await tx.turfBooking.findFirst({
+          where: { facilityId: a.facilityId, id: { not: b.id }, status: { in: ACTIVE }, startTime: { lt: a.end }, endTime: { gt: a.start } },
+          select: { id: true },
+        });
+        if (clash) return { ok: false, reason: "CONFLICT" } as MoveResult;
+
+        await tx.turfBooking.update({ where: { id: b.id }, data: { facilityId: a.facilityId, startTime: a.start, endTime: a.end } });
+        return { ok: true, fromFacilityId: b.facilityId, fromStart: b.startTime } as MoveResult;
+      },
+      { maxWait: 10_000, timeout: 15_000 }
+    );
+  } catch (e) {
+    if (isOverlapViolation(e)) return { ok: false, reason: "CONFLICT" };
+    console.error("moveSlot failed:", e instanceof Error ? e.message : e);
     return { ok: false, reason: "ERROR" };
   }
 }

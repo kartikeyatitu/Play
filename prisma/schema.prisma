@@ -70,6 +70,7 @@ model Organization {
   expenses        Expense[]
   branches    Branch[]
   competitions    Competition[]
+  turfBookingEvents TurfBookingEvent[]
 }
 
 // ==========================================
@@ -750,6 +751,7 @@ model TurfBooking {
 
   @@index([facilityId, startTime])
   @@index([orgId, startTime])
+  events   TurfBookingEvent[]
 }
 
 model Booking {
@@ -1914,4 +1916,24 @@ model ContentReport {
   createdAt    DateTime  @default(now())
   @@unique([targetType, targetId, reporterId])
   @@index([status, createdAt])
+}
+
+// TRIQ Spaces (additive, prisma/sql/2026-10-26_turf_booking_events.sql): per-booking history for every
+// create/cancel/status change, including public customers and the gateway, who have no User row for
+// AuditLog. Written best-effort and only when FEATURES.spacesOps is on.
+model TurfBookingEvent {
+  id          String   @id @default(cuid())
+  orgId       String
+  bookingId   String
+  action      String   // CREATED | CANCEL | CANCEL_SERIES | REJECT_UPI | RELEASED | UPI_REPORTED | CONFIRMED_ONLINE | RESCHEDULED | COMPLETE | NO_SHOW | ...
+  actorType   String   // STAFF | CUSTOMER | GATEWAY | SYSTEM
+  actorUserId String?
+  details     String?  // JSON
+  createdAt   DateTime @default(now())
+
+  org     Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  booking TurfBooking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, createdAt])
+  @@index([orgId, createdAt])
 }
