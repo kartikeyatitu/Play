@@ -88,6 +88,7 @@ const PendingPayments = dynamic(() => import("@/components/org/PendingPayments")
 const BatchFeeEditor = dynamic(() => import("@/components/org/BatchFeeEditor").then((m) => m.BatchFeeEditor), { loading: inlineLoading });
 const OpsCalendar = dynamic(() => import("@/components/org/OpsCalendar").then((m) => m.OpsCalendar), { loading: sectionLoading });
 const BusinessReport = dynamic(() => import("@/components/org/BusinessReport").then((m) => m.BusinessReport), { loading: sectionLoading });
+const AuditLogPanel = dynamic(() => import("@/components/org/AuditLogPanel").then((m) => m.AuditLogPanel), { loading: sectionLoading });
 const FacilityAllocation = dynamic(() => import("@/components/org/FacilityAllocation").then((m) => m.FacilityAllocation), { loading: sectionLoading });
 const CollectFees = dynamic(() => import("@/components/org/CollectFees").then((m) => m.CollectFees), { loading: sectionLoading });
 
@@ -783,6 +784,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
               <SectionHeader title="Academy Settings" description="Manage your academy profile" />
               {org && <AcademySettings org={org} />}
               <ThemePicker />
+              {FEATURES.auditLogViewer && <AuditLogPanel />}
               <div>
                 <SectionHeader title="Import Data" description="Import students from WhatsApp, Excel or CSV" />
                 <div className="mb-4">
