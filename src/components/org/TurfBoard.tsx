@@ -2,11 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CalendarClock, ChevronLeft, ChevronRight, Copy, Loader2, Plus, Settings2, Share2, AlertTriangle, MessageCircle } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight, Copy, Loader2, Plus, Settings2, Share2, AlertTriangle, MessageCircle, Ban } from "lucide-react";
+import { FEATURES } from "@/lib/features";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SectionHeader } from "@/components/shell/SectionHeader";
 import { EmptyState, shellButton } from "@/components/shell/EmptyState";
 import {
+  blockSlots,
+  getCancellationQuote,
+  rescheduleBooking,
   archiveFacility,
   createCounterBooking,
   getTurfBoard,
@@ -24,6 +28,7 @@ const field = "w-full min-h-[44px] rounded-xl bg-zinc-950 border border-zinc-800
 const label = "block text-xs text-zinc-400 mb-1";
 
 function statusStyle(b: TurfBookingRow): { box: string; tag: string } {
+  if (b.source === "BLOCK") return { box: "bg-zinc-800/80 border-zinc-600 text-zinc-300 [background-image:repeating-linear-gradient(45deg,transparent,transparent_6px,rgba(255,255,255,0.04)_6px,rgba(255,255,255,0.04)_12px)]", tag: "Blocked" };
   if (b.status === "PAID_CONFLICT") return { box: "bg-red-500/15 border-red-500/50 text-red-200", tag: "Needs attention" };
   if (b.status === "HOLD") return { box: "bg-sky-500/15 border-sky-500/40 text-sky-200", tag: "Awaiting payment" };
   if (b.status === "NO_SHOW") return { box: "bg-zinc-800/60 border-zinc-700 text-zinc-400", tag: "No-show" };
@@ -48,6 +53,7 @@ export function TurfBoard() {
   const [editFacility, setEditFacility] = useState<TurfFacility | "new" | null>(null);
   const [copied, setCopied] = useState(false);
   const [activeCourt, setActiveCourt] = useState<string | null>(null);
+  const [blockFor, setBlockFor] = useState<{ facilityId?: string; startHour?: number } | null>(null);
 
   const load = useCallback(async (d: string | null) => {
     setLoading(true);
@@ -77,7 +83,7 @@ export function TurfBoard() {
   }, [data?.slug]);
 
   const summary = useMemo(() => {
-    const live = (data?.bookings ?? []).filter((b) => ["CONFIRMED", "COMPLETED", "HOLD"].includes(b.status));
+    const live = (data?.bookings ?? []).filter((b) => b.source !== "BLOCK" && ["CONFIRMED", "COMPLETED", "HOLD"].includes(b.status));
     return {
       count: live.length,
       hours: live.reduce((s, b) => s + b.hours, 0),
@@ -105,6 +111,11 @@ export function TurfBoard() {
           <button type="button" className={shellButton.quiet} onClick={() => setEditFacility("new")}>
             <Settings2 className="w-4 h-4" /> Courts
           </button>
+          {FEATURES.spacesOps && facilities.length > 0 && (
+            <button type="button" className={shellButton.quiet} onClick={() => setBlockFor({})}>
+              <Ban className="w-4 h-4" /> Block time
+            </button>
+          )}
           {facilities.length > 0 && (
             <button type="button" className={shellButton.primary} onClick={() => setNewFor({})}>
               <Plus className="w-4 h-4" /> New booking
@@ -357,6 +368,7 @@ export function TurfBoard() {
                           {formatRange(b.startHour, b.hours)} · {st.tag}
                         </p>
                         {b.source === "LEASE" && <p className="text-[10px] opacity-70">Weekly lease</p>}
+                        {b.source === "BLOCK" && <p className="text-[10px] opacity-70">Unavailable</p>}
                       </button>
                     );
                   })}
@@ -380,10 +392,36 @@ export function TurfBoard() {
           }}
         />
       )}
-      {selected && (
+      {blockFor && (
+        <BlockDialog
+          facilities={facilities}
+          date={date}
+          today={data.today}
+          initial={blockFor}
+          onClose={() => setBlockFor(null)}
+          onSaved={() => {
+            setBlockFor(null);
+            refresh();
+          }}
+        />
+      )}
+      {selected && selected.source === "BLOCK" && (
+        <BlockedSlotDialog
+          booking={selected}
+          facility={facilities.find((f) => f.id === selected.facilityId)}
+          onClose={() => setSelected(null)}
+          onChanged={() => {
+            setSelected(null);
+            refresh();
+          }}
+        />
+      )}
+      {selected && selected.source !== "BLOCK" && (
         <BookingDialog
           booking={selected}
           facility={facilities.find((f) => f.id === selected.facilityId)}
+          facilities={facilities}
+          today={data.today}
           orgName={data.orgName}
           onClose={() => setSelected(null)}
           onChanged={() => {
@@ -549,17 +587,34 @@ function NewBookingDialog({
 function BookingDialog({
   booking: b,
   facility,
+  facilities,
+  today,
   orgName,
   onClose,
   onChanged,
 }: {
   booking: TurfBookingRow;
   facility?: TurfFacility;
+  facilities: TurfFacility[];
+  today: string;
   orgName: string;
   onClose: () => void;
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState<BookingAction | null>(null);
+  const [quote, setQuote] = useState<string | null>(null);
+  const [moving, setMoving] = useState(false);
+
+  useEffect(() => {
+    if (!FEATURES.spacesOps || !["CONFIRMED", "HOLD", "PAID_CONFLICT"].includes(b.status)) return;
+    let alive = true;
+    getCancellationQuote(b.id).then((r) => {
+      if (alive && r.success) setQuote(`${r.quote.message}${r.quote.refundDue > 0 ? ` Refund due: ${rupees(r.quote.refundDue)} (process it in Razorpay/UPI/cash — TRIQ doesn't send refunds).` : ""}`);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [b.id, b.status]);
   const balance = Math.max(0, b.amount - b.advancePaid);
   const st = statusStyle(b);
 
@@ -624,11 +679,27 @@ function BookingDialog({
               <button
                 className={`${btn} col-span-2 border-rose-500/40 text-rose-300`}
                 disabled={!!busy}
-                onClick={() => run("CANCEL", b.advancePaid > 0 ? `Cancel this booking? ${rupees(b.advancePaid)} was received. Refund it from your Razorpay dashboard or in cash.` : "Cancel this booking?")}
+                onClick={() =>
+                  run(
+                    "CANCEL",
+                    quote
+                      ? `Cancel this booking? ${quote}`
+                      : b.advancePaid > 0
+                        ? `Cancel this booking? ${rupees(b.advancePaid)} was received. Refund it from your Razorpay dashboard or in cash.`
+                        : "Cancel this booking?"
+                  )
+                }
               >
                 {busy === "CANCEL" ? "Cancelling…" : "Cancel booking"}
               </button>
             )}
+            {FEATURES.spacesOps && quote && <p className="col-span-2 text-[11px] text-zinc-400">Policy: {quote}</p>}
+            {FEATURES.spacesOps && live && (
+              <button className={`${btn} col-span-2 border-zinc-700 text-zinc-200`} disabled={!!busy} onClick={() => setMoving((v) => !v)}>
+                Reschedule
+              </button>
+            )}
+            {moving && <RescheduleForm booking={b} facilities={facilities} today={today} onDone={onChanged} />}
             {live && b.source === "LEASE" && (
               <button className={`${btn} col-span-2 border-rose-500/30 text-rose-300/90`} disabled={!!busy} onClick={() => run("CANCEL_SERIES", "Cancel this and all later weeks of this lease?")}>
                 Cancel this + all later weeks
@@ -728,6 +799,182 @@ function FacilityDialog({ facility, onClose, onSaved }: { facility: TurfFacility
             </button>
           )}
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ───────────────────────── TRIQ Spaces: blocks & reschedule (flag spacesOps) ───────────────────────── */
+
+function RescheduleForm({ booking: b, facilities, today, onDone }: { booking: TurfBookingRow; facilities: TurfFacility[]; today: string; onDone: () => void }) {
+  const [facilityId, setFacilityId] = useState(b.facilityId);
+  const [date, setDate] = useState(b.date);
+  const [startHour, setStartHour] = useState(b.startHour);
+  const [busy, setBusy] = useState(false);
+  const f = facilities.find((x) => x.id === facilityId) ?? facilities[0];
+  const starts = Array.from({ length: Math.max(0, f.closeHour - f.openHour - b.hours + 1) }, (_, i) => f.openHour + i);
+
+  return (
+    <div className="col-span-2 space-y-2 rounded-xl border border-zinc-800 p-2">
+      <select className={field} value={facilityId} onChange={(e) => setFacilityId(e.target.value)} aria-label="Court">
+        {facilities.map((x) => (
+          <option key={x.id} value={x.id}>
+            {x.name}
+          </option>
+        ))}
+      </select>
+      <div className="grid grid-cols-2 gap-2">
+        <input className={field} type="date" min={today} value={date} onChange={(e) => setDate(e.target.value)} aria-label="New date" />
+        <select className={field} value={startHour} onChange={(e) => setStartHour(Number(e.target.value))} aria-label="New start">
+          {starts.map((h) => (
+            <option key={h} value={h}>
+              {formatRange(h, b.hours)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <button
+        type="button"
+        className={`${shellButton.primary} w-full`}
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          const r = await rescheduleBooking(b.id, { date, startHour, facilityId });
+          setBusy(false);
+          if (!r.success) return void toast.error(r.error);
+          toast.success("Booking moved");
+          onDone();
+        }}
+      >
+        {busy ? "Moving…" : "Move booking"}
+      </button>
+      <p className="text-[11px] text-zinc-500">Same length and price. Allowed up to 4 hours before the original start.</p>
+    </div>
+  );
+}
+
+function BlockDialog({
+  facilities,
+  date: initialDate,
+  today,
+  initial,
+  onClose,
+  onSaved,
+}: {
+  facilities: TurfFacility[];
+  date: string;
+  today: string;
+  initial: { facilityId?: string; startHour?: number };
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const first = facilities.find((f) => f.id === initial.facilityId) ?? facilities[0];
+  const [facilityId, setFacilityId] = useState(first.id);
+  const [date, setDate] = useState(initialDate < today ? today : initialDate);
+  const f = facilities.find((x) => x.id === facilityId) ?? first;
+  const [startHour, setStartHour] = useState(initial.startHour ?? f.openHour);
+  const [hours, setHours] = useState(f.closeHour - (initial.startHour ?? f.openHour));
+  const [days, setDays] = useState(1);
+  const [reason, setReason] = useState("Maintenance");
+  const [busy, setBusy] = useState(false);
+  const maxHours = Math.max(1, f.closeHour - startHour);
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Block time</DialogTitle>
+        </DialogHeader>
+        <form
+          className="space-y-3"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            const r = await blockSlots({ facilityId, date, startHour, hours: Math.min(hours, maxHours), days, reason });
+            setBusy(false);
+            if (!r.success) return void toast.error(r.error);
+            toast.success(r.conflicts.length ? `Blocked ${r.created} day(s). Skipped ${r.conflicts.join(", ")} — already booked.` : `Blocked ${r.created} day(s)`);
+            onSaved();
+          }}
+        >
+          <div>
+            <label className={label}>Court</label>
+            <select className={field} value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
+              {facilities.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className={label}>From date</label>
+              <input className={field} type="date" min={today} value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div>
+              <label className={label}>Days</label>
+              <input className={field} type="number" min={1} max={31} value={days} onChange={(e) => setDays(Number(e.target.value) || 1)} />
+            </div>
+            <div>
+              <label className={label}>Start</label>
+              <select className={field} value={startHour} onChange={(e) => setStartHour(Number(e.target.value))}>
+                {Array.from({ length: f.closeHour - f.openHour }, (_, i) => f.openHour + i).map((h) => (
+                  <option key={h} value={h}>
+                    {formatHour(h)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={label}>Hours</label>
+              <input className={field} type="number" min={1} max={maxHours} value={Math.min(hours, maxHours)} onChange={(e) => setHours(Number(e.target.value) || 1)} />
+            </div>
+          </div>
+          <div>
+            <label className={label}>Reason (only you see this)</label>
+            <input className={field} value={reason} onChange={(e) => setReason(e.target.value)} minLength={2} maxLength={80} required />
+          </div>
+          <p className="text-[11px] text-zinc-500">Customers will see these hours as taken. Hours that are already booked are skipped, never overwritten.</p>
+          <button className={`${shellButton.primary} w-full`} disabled={busy}>
+            {busy ? "Blocking…" : "Block"}
+          </button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function BlockedSlotDialog({ booking: b, facility, onClose, onChanged }: { booking: TurfBookingRow; facility?: TurfFacility; onClose: () => void; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const run = async (action: BookingAction) => {
+    setBusy(true);
+    const r = await updateBooking(b.id, action);
+    setBusy(false);
+    if (!r.success) return void toast.error(r.error || "Couldn't update");
+    toast.success("Slot freed");
+    onChanged();
+  };
+  const btn = "min-h-[44px] px-3 rounded-xl border text-sm font-medium disabled:opacity-50 w-full";
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Blocked: {b.customerName}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-zinc-300">
+          {facility?.name ?? "Court"} · {formatDateLabel(b.date)} · {formatRange(b.startHour, b.hours)}
+        </p>
+        <div className="space-y-2">
+          <button className={`${btn} border-zinc-700 text-zinc-200`} disabled={busy || b.status !== "CONFIRMED"} onClick={() => run("CANCEL")}>
+            Remove block
+          </button>
+          {b.inSeries && (
+            <button className={`${btn} border-zinc-700 text-zinc-300`} disabled={busy || b.status !== "CONFIRMED"} onClick={() => run("CANCEL_SERIES")}>
+              Remove this and the following days
+            </button>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
