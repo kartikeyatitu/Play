@@ -112,6 +112,10 @@ export async function deleteAllData() {
       : []),
     ["product",         () => db.product.deleteMany({ where: { orgId: oId } })],
     ["announcement",    () => db.announcement.deleteMany({ where: { orgId: oId } })],
+    // TRIQ Spaces history table exists only once prisma/sql/2026-10-26_turf_booking_events.sql is applied (flag `spacesOps`).
+    ...(FEATURES.spacesOps
+      ? ([["turfBookingEvent", () => db.turfBookingEvent.deleteMany({ where: { orgId: oId } })]] as Array<[string, () => Promise<{ count: number }>]>)
+      : []),
     ["facility",        () => db.facility.deleteMany({ where: { orgId: oId } })],
     ["equipment",       () => db.equipment.deleteMany({ where: { orgId: oId } })],
     ["coupon",          () => db.coupon.deleteMany({ where: { orgId: oId } })],

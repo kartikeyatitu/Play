@@ -70,6 +70,7 @@ model Organization {
   expenses        Expense[]
   branches    Branch[]
   competitions    Competition[]
+  turfBookingEvents TurfBookingEvent[]
 }
 
 // ==========================================
@@ -737,7 +738,7 @@ model TurfBooking {
   advancePaid       Int       @default(0) // rupees received so far
   onlineDue         Int       @default(0) // rupees the customer must pay online to confirm (ONLINE source)
   status            String    @default("CONFIRMED") // HOLD | CONFIRMED | CANCELLED | EXPIRED | COMPLETED | NO_SHOW | PAID_CONFLICT
-  source            String    @default("COUNTER") // COUNTER | ONLINE | LEASE
+  source            String    @default("COUNTER") // COUNTER | ONLINE | LEASE | BLOCK (maintenance/unavailable, amount 0)
   holdExpiresAt     DateTime?
   providerOrderId   String?   @unique // Razorpay order id for the online advance
   providerPaymentId String?
@@ -747,6 +748,7 @@ model TurfBooking {
   updatedAt         DateTime  @updatedAt
 
   facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  events   TurfBookingEvent[]
 
   @@index([facilityId, startTime])
   @@index([orgId, startTime])
@@ -1851,4 +1853,23 @@ model FeeConcession {
   updatedAt    DateTime  @updatedAt
   program      ScholarshipProgram? @relation(fields: [programId], references: [id], onDelete: SetNull)
   @@index([orgId, studentId])
+}
+// TRIQ Spaces (additive, prisma/sql/2026-10-26_turf_booking_events.sql): per-booking history for every
+// create/cancel/status change, including public customers and the gateway, who have no User row for
+// AuditLog. Written best-effort and only when FEATURES.spacesOps is on.
+model TurfBookingEvent {
+  id          String   @id @default(cuid())
+  orgId       String
+  bookingId   String
+  action      String   // CREATED | CANCEL | CANCEL_SERIES | REJECT_UPI | RELEASED | UPI_REPORTED | CONFIRMED_ONLINE | RESCHEDULED | COMPLETE | NO_SHOW | ...
+  actorType   String   // STAFF | CUSTOMER | GATEWAY | SYSTEM
+  actorUserId String?
+  details     String?  // JSON
+  createdAt   DateTime @default(now())
+
+  org     Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  booking TurfBooking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, createdAt])
+  @@index([orgId, createdAt])
 }
