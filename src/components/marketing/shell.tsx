@@ -129,7 +129,7 @@ function SiteFooter() {
       </div>
       <div className="border-t border-white/5">
         <p className="mx-auto max-w-6xl px-4 py-6 text-xs text-zinc-400 sm:px-6">
-          © {new Date().getFullYear()} Triq. Hudle and Playo are trademarks of their respective owners; Triq is not affiliated with them.
+          © {new Date().getFullYear()} Triq.
         </p>
       </div>
     </footer>

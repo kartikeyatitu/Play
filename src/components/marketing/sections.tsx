@@ -25,6 +25,7 @@ import {
   LineChart,
   Wallet,
   MapPin,
+  Video,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -379,26 +380,32 @@ export function ComingBand() {
     {
       icon: Briefcase,
       title: "Careers",
-      body: "Professional profiles, sports-industry jobs and applications.",
-      status: "soon",
+      body: "Coach profiles with verified certifications, sports jobs and applications.",
+      status: flagStatus(FEATURES.careers),
     },
     {
       icon: HeartPulse,
       title: "Wellness",
-      body: "Health and wellbeing services for athletes and professionals.",
-      status: "soon",
+      body: "Physio, nutrition and recovery providers, appointments and protected health records.",
+      status: flagStatus(FEATURES.wellness),
+    },
+    {
+      icon: Video,
+      title: "Creators",
+      body: "Creator profiles and portfolios for athletes and coaches, with real (never inflated) stats.",
+      status: flagStatus(FEATURES.creators),
     },
     {
       icon: ShoppingBag,
       title: "Commerce",
-      body: "The kit store for academies is live. A wider marketplace is not.",
-      status: "partial",
+      body: "Academy kit store with stock control and a clear order lifecycle.",
+      status: flagStatus(FEATURES.marketplace),
     },
     {
       icon: Megaphone,
       title: "Brand Studio",
-      body: "Social posts and marketing tools for academies.",
-      status: flagStatus(FEATURES.experimental),
+      body: "Sponsors, campaigns, proposals, scholarships and fee waivers.",
+      status: flagStatus(FEATURES.sponsorship),
     },
     {
       icon: GraduationCap,
@@ -409,8 +416,8 @@ export function ComingBand() {
     {
       icon: Building2,
       title: "Enterprise",
-      body: "Corporate sports programmes for employers.",
-      status: flagStatus(FEATURES.corporate),
+      body: "Multi-branch academies, consolidated reports and a full audit trail.",
+      status: flagStatus(FEATURES.enterprise),
     },
   ];
   return (
