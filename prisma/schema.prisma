@@ -670,6 +670,45 @@ model Order {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   orgId       String?
+  detail      StoreOrderDetail? // V8 Commerce: price snapshot + payment (null on legacy orders)
+}
+
+/// V8 TRIQ Commerce (additive, 2026-10-26_store_orders.sql): price snapshot, quantity and
+/// pay-at-academy payment state for a Kit Store order. Order.status holds the lifecycle
+/// (PLACED/CONFIRMED/FULFILLED/CANCELLED/REFUND_REQUESTED/REFUNDED, see src/lib/store.ts).
+/// Read only when FEATURES.marketplace is on.
+model StoreOrderDetail {
+  id               String    @id @default(cuid())
+  orgId            String
+  orderId          String    @unique
+  quantity         Int
+  unitPricePaise   Int
+  amountPaise      Int
+  currency         String    @default("INR")
+  paymentMode      String    @default("PAY_AT_ACADEMY")
+  paymentStatus    String    @default("UNPAID") // UNPAID | PAID_AT_ACADEMY | REFUNDED
+  paidAt           DateTime?
+  paidRecordedById String?
+  placedById       String
+  note             String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  order            Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  @@index([orgId, createdAt])
+}
+
+/// V8 TRIQ Commerce: status history of a Kit Store order (one row per accepted transition).
+model StoreOrderEvent {
+  id         String   @id @default(cuid())
+  orgId      String
+  orderId    String
+  fromStatus String?
+  toStatus   String
+  actorId    String
+  note       String?
+  createdAt  DateTime @default(now())
+  @@index([orderId, createdAt])
+  @@index([orgId, createdAt])
 }
 
 model Message {

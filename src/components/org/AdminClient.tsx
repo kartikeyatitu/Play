@@ -193,7 +193,7 @@ const moreGroups: NavGroup[] = [
     items: [
       ...(FEATURES.experimental ? [{ id: "marketing", label: "Marketing", icon: NAV_ICONS.send }] : []),
       { id: "gallery", label: "Gallery", icon: NAV_ICONS.heart },
-      { id: "store", label: "Kit Store", icon: NAV_ICONS.shop },
+      ...(FEATURES.marketplace ? [{ id: "store", label: "Kit Store", icon: NAV_ICONS.shop }] : []),
       ...(FEATURES.events ? [{ id: "events", label: "Events", icon: NAV_ICONS.ticket }] : []),
     ],
   },
@@ -211,6 +211,7 @@ const HIDDEN_TABS = new Set<string>([
   ...(FEATURES.experimental ? [] : ["ai", "marketing"]),
   ...(FEATURES.events ? [] : ["events"]),
   ...(FEATURES.bookings ? [] : ["bookings"]),
+  ...(FEATURES.marketplace ? [] : ["store"]),
 ]);
 
 /** Demo-data loader is a development tool: Settings only, never in production. */
@@ -693,7 +694,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           )}
 
           {/* STORE */}
-          {activeTab === "store" && (
+          {activeTab === "store" && FEATURES.marketplace && (
             <div>
               <SectionHeader title="Kit Store" description="Manage products and orders" />
               <Deferred promise={secondary}>

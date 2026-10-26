@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { isOrgOwner } from "@/lib/membership";
+import { FEATURES } from "@/lib/features";
 
 /**
  * Nuclear "delete everything in my academy" — reserved for owners who want to
@@ -41,6 +42,13 @@ export async function deleteAllData() {
     ["session",         () => db.session.deleteMany({ where: { orgId: oId } })],
     ["skillReport",     () => db.skillReport.deleteMany({ where: { orgId: oId } })],
     ["feeRecord",       () => db.feeRecord.deleteMany({ where: { orgId: oId } })],
+    // V8 Commerce tables exist only once 2026-10-26_store_orders.sql is applied (flag on).
+    ...(FEATURES.marketplace
+      ? ([
+          ["storeOrderEvent",  () => db.storeOrderEvent.deleteMany({ where: { orgId: oId } })],
+          ["storeOrderDetail", () => db.storeOrderDetail.deleteMany({ where: { orgId: oId } })],
+        ] as Array<[string, () => Promise<{ count: number }>]>)
+      : []),
     ["order",           () => db.order.deleteMany({ where: { orgId: oId } })],
     ["message",         () => db.message.deleteMany({ where: { orgId: oId } })],
     ["media",           () => db.media.deleteMany({ where: { orgId: oId } })],
