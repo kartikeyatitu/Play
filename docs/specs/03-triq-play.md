@@ -65,7 +65,8 @@ Every query filters by `orgId` from the session; ids from the client are re-fetc
 **Competition**: `name` 3–80 chars; `sport` ≤40; `format` LEAGUE|KNOCKOUT; `entryType` TEAM|INDIVIDUAL;
 `legs` 1|2 (LEAGUE only); `startDate`/`endDate` optional ISO dates, end ≥ start; `venue` ≤120;
 `maxEntries` 2–128 (KNOCKOUT ≤64); `minAge`/`maxAge` 3–80, min ≤ max; `ageCutoffDate` required if an
-age rule is set (defaults to `startDate`); `eligibleBatchId` must belong to org; `pointsWin` 0–10,
+age rule is set (defaults to `startDate`); `eligibleBatchId` must belong to org; age/batch rules are
+accepted for INDIVIDUAL entries only (TEAM rosters don't exist yet, so the rule would be unenforceable); `pointsWin` 0–10,
 `pointsDraw` 0–10, `pointsLoss` 0–10 with win ≥ draw ≥ loss; `allowDraws` (LEAGUE only; KNOCKOUT never).
 **Entry**: `name` 2–60, unique per competition (case-insensitive); INDIVIDUAL requires `studentId` of
 org, unique per competition; TEAM may carry `batchId`; `seed` 1–128 optional, unique per competition.
@@ -171,12 +172,12 @@ later): create → register → generate → record → standings.
 | Feature group | Status | Evidence |
 |---|---|---|
 | Match events + RSVP (batch-bound) | Complete (ungated, separate from competitions) | `Event`/`RSVP` in `prisma/schema.prisma`; `src/app/actions/events.ts`; `src/components/coach/MatchManager.tsx` used by `src/app/coach/page.tsx` |
-| Tournament bracket (main) | Mocked | `src/components/org/TournamentBracket.tsx`: `useState` only, `Math.random()` shuffle, round 1 only, odd team dropped, scores lost on reload |
+| Tournament bracket (main) | Mocked on main; removed on this branch | `src/components/org/TournamentBracket.tsx`: `useState` only, `Math.random()` shuffle, round 1 only, odd team dropped, scores lost on reload |
 | Certificates | Mocked (print template) | `src/components/org/CertificateGenerator.tsx` |
-| Competition engine | Missing on main (building) | `src/lib/competition.ts`, `src/lib/__tests__/competition.test.ts` |
-| Persisted competitions/entries/fixtures | Missing on main (building) | `prisma/schema.prisma`, `prisma/sql/2026-10-26_competitions.sql`, `src/app/actions/competitions.ts` |
-| Organizer UI (create/register/generate/results/standings) | Missing on main (building) | `src/components/org/CompetitionManager.tsx` mounted in `AdminClient.tsx` |
-| Officials recording results | Missing on main (building) | `recordFixtureResult` |
+| Competition engine | Complete (unit-tested) | `src/lib/competition.ts`, `src/lib/__tests__/competition.test.ts` |
+| Persisted competitions/entries/fixtures | Complete in code; SQL NOT applied; not run against a DB | `prisma/schema.prisma`, `prisma/sql/2026-10-26_competitions.sql`, `src/app/actions/competitions.ts` |
+| Organizer UI (create/register/generate/results/standings) | Complete behind `events` (not browser-tested: no DB in sandbox) | `src/components/org/CompetitionManager.tsx` mounted in `AdminClient.tsx` |
+| Officials recording results | Partial — action accepts the assigned official; no coach-app screen yet | `recordFixtureResult` |
 | Discovery, fees, notifications, public page, parent view, analytics | Missing | — |
 
 ## 16. Release dependencies and open decisions
