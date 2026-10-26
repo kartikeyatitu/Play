@@ -4,13 +4,17 @@ import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { cleanIndianPhone, parseDob } from "@/lib/import-utils";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
+import { buildJoinLead, isOpenLeadStatus, JOIN_LIMITS } from "@/lib/join-request";
 
 export type RegisterParentState = { error?: string };
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
 
-/** Public parent self-registration. Returns {error} on failure; redirects to /join/success on success. */
+/**
+ * Public parent self-registration. Records a pending enquiry (Lead, status NEW) that the academy
+ * approves by converting it to a student. Returns {error} on failure; redirects to /join/success.
+ */
 export async function registerParent(
   _prevState: RegisterParentState,
   formData: FormData
@@ -34,7 +38,7 @@ export async function registerParent(
     if (!dob) return { error: "Please enter a valid date of birth (age should be between 2 and 70 years)." };
   }
 
-  // --- Rate limit (per phone and per IP-ish key) ---
+  // --- Rate limit (per phone, per IP and per academy; DB-backed so it holds on serverless) ---
   let ip = "unknown";
   try {
     const h = await headers();
@@ -43,80 +47,41 @@ export async function registerParent(
     // headers() unavailable: fall back to "unknown" bucket
   }
   const HOUR = 60 * 60_000;
-  if (!rateLimit(`join:phone:${phone}`, 5, HOUR).allowed || !rateLimit(`join:ip:${ip}`, 20, HOUR).allowed) {
+  if (
+    !(await rateLimitDb(`join:phone:${phone}`, JOIN_LIMITS.perPhonePerHour, HOUR)).allowed ||
+    !(await rateLimitDb(`join:ip:${ip}`, JOIN_LIMITS.perIpPerHour, HOUR)).allowed
+  ) {
     return { error: "Too many attempts. Please try again later." };
   }
 
   // NOTE: redirect() throws, so it must stay outside this try/catch.
   try {
-    const org = await db.organization.findUnique({ where: { slug } });
+    const org = await db.organization.findUnique({ where: { slug }, select: { id: true, isActive: true } });
     if (!org || !org.isActive) return { error: "Academy not found." };
+    if (!(await rateLimitDb(`join:org:${org.id}`, JOIN_LIMITS.perAcademyPerDay, 24 * HOUR)).allowed) {
+      return { error: "This academy is receiving a lot of registrations right now. Please try again later." };
+    }
 
-    // Batch must belong to THIS academy (cross-tenant guard)
-    let batch: { id: string; name: string; capacity: number | null } | null = null;
+    // Batch must belong to THIS academy (cross-tenant guard). It is only a preference: the academy
+    // decides the batch when it approves the registration.
+    let batch: { name: string; sport: string } | null = null;
     if (batchId) {
-      batch = await db.batch.findFirst({
-        where: { id: batchId, orgId: org.id },
-        select: { id: true, name: true, capacity: true },
-      });
+      batch = await db.batch.findFirst({ where: { id: batchId, orgId: org.id }, select: { name: true, sport: true } });
       if (!batch) return { error: "The selected batch is not available. Please choose another batch." };
-
-      if (batch.capacity) {
-        const enrolled = await db.batchEnrollment.count({ where: { batchId: batch.id } });
-        if (enrolled >= batch.capacity) {
-          return {
-            error: `${batch.name} is currently full. Please choose another batch, or ask the academy to add you to the waitlist.`,
-          };
-        }
-      }
     }
 
-    // Phone may be stored with or without country code
-    // Phone may be stored with or without country code — try common variants
-    const phoneVariants = [phone, `+${phone}`, phone.replace(/^\+/, "")];
-    if (phone.length === 10) phoneVariants.push(`91${phone}`, `+91${phone}`);
-    const existingUser = await db.user.findFirst({ where: { phone: { in: phoneVariants } } });
-    if (existingUser) {
-      if (existingUser.orgId !== org.id) {
-        return {
-          error:
-            "This phone number is already registered with a different academy. Please use another number or contact your academy.",
-        };
-      }
-      if (existingUser.role !== "PARENT") {
-        return { error: "This phone number belongs to a staff account. Please use a parent's phone number." };
-      }
-      // Duplicate child under same parent (case-insensitive)
-      const dup = await db.student.findFirst({
-        where: {
-          parentId: existingUser.id,
-          orgId: org.id,
-          name: { equals: childName, mode: "insensitive" },
-        },
-        select: { id: true },
-      });
-      if (dup) return { error: `${childName} is already registered with this phone number.` };
-    }
-
-    await db.$transaction(async (tx) => {
-      const parent =
-        existingUser ??
-        (await tx.user.create({
-          data: { name: parentName, phone, role: "PARENT", orgId: org.id },
-        }));
-
-      const student = await tx.student.create({
-        data: { name: childName, parentId: parent.id, dob, orgId: org.id },
-      });
-
-      if (batch) {
-        await tx.batchEnrollment.create({ data: { studentId: student.id, batchId: batch.id } });
-      }
+    // A public join only records an enquiry for the academy to review. It never creates accounts,
+    // students or enrolments, and never says whether the phone number is already registered.
+    const lead = buildJoinLead({ orgId: org.id, parentName, parentPhone: phone, childName, dob, batch, now: new Date() });
+    const open = await db.lead.findMany({
+      where: { orgId: org.id, parentPhone: phone, childName: { equals: lead.childName, mode: "insensitive" } },
+      select: { status: true },
+      take: 20,
     });
-  } catch (err: any) {
-    if (err?.code === "P2002") {
-      return { error: "This phone number is already registered. Please contact your academy." };
+    if (!open.some((l) => isOpenLeadStatus(l.status))) {
+      await db.lead.create({ data: lead });
     }
+  } catch (err: any) {
     console.error("registerParent failed:", err);
     return { error: GENERIC_ERROR };
   }

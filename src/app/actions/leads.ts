@@ -158,6 +158,7 @@ export async function getLeadStats(_orgId?: string) {
 }
 
 import { cleanIndianPhone } from "@/lib/import-utils";
+import { dobFromJoinNotes } from "@/lib/join-request";
 
 export async function convertLeadToStudent(leadId: string, batchId: string) {
   const auth = await checkPermission("leads.manage");
@@ -213,7 +214,7 @@ export async function convertLeadToStudent(leadId: string, batchId: string) {
         data: {
           parentId: user.id,
           name: lead.childName,
-          dob: new Date(approxYear, 0, 1),
+          dob: dobFromJoinNotes(lead.notes) ?? new Date(approxYear, 0, 1),
           orgId,
         },
       });

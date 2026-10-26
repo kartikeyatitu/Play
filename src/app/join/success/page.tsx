@@ -23,7 +23,7 @@ export default async function JoinSuccessPage({
           {org && <CardDescription>{org.name}</CardDescription>}
         </CardHeader>
         <CardContent className="text-center text-sm text-zinc-300">
-          Registration received. Your academy will send you a one-tap login link on WhatsApp.
+          Your academy will review your registration and confirm the batch. Once they approve it, they'll send you a one-tap login link on WhatsApp.
         </CardContent>
       </Card>
     </div>
