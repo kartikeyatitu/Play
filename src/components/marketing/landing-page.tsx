@@ -1,6 +1,6 @@
 import { FOUNDING_OFFER, FREE_PLAN } from "@/lib/pricing";
 import { HeroCopy, type HeroCopyStrings, type HeroLang } from "./hero-copy";
-import { ProductMock } from "./product-mock";
+import { HeroVideo } from "./hero-video";
 import { MarketingShell, primaryCta, secondaryCta } from "./shell";
 import {
   AcademyOperations,
@@ -60,7 +60,7 @@ export function LandingPage({ searchParams, page = "/" }: { searchParams?: Marke
         <div className="mk-grid pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]" aria-hidden />
         <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.05fr_1fr]">
           <HeroCopy copy={HERO_COPY} primaryClass={primaryCta} secondaryClass={secondaryCta} />
-          <ProductMock />
+          <HeroVideo />
         </div>
       </section>
 
