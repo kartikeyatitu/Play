@@ -18,6 +18,7 @@ import {
   VenuesSection,
 } from "./sections";
 import { PricingSection } from "./pricing-section";
+import { PhotoStrip } from "./photo-strip";
 import { DemoSection, buildUtm, type MarketingSearchParams } from "./demo-section";
 
 const HERO_COPY: Record<HeroLang, HeroCopyStrings> = {
@@ -69,6 +70,7 @@ export function LandingPage({ searchParams, page = "/" }: { searchParams?: Marke
       <AcademyOperations />
       <ParentsSection />
       <AthletesSection />
+      <PhotoStrip />
       <VenuesSection />
       <ComingBand />
       <TrustSection />
