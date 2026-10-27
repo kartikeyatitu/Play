@@ -22,6 +22,8 @@ export async function callClaude(opts: {
   feature: string;
   system: string;
   prompt: string;
+  /** Optional image (base64, no data: prefix) sent before the prompt text. */
+  image?: { mediaType: "image/jpeg" | "image/png" | "image/webp"; base64: string };
   maxTokens: number;
   orgId: string | null;
   userId: string;
@@ -34,7 +36,9 @@ export async function callClaude(opts: {
     where: { action: AI_USAGE_ACTION, createdAt: { gte: monthStartUtc(new Date()) } },
     select: { details: true },
   });
-  const estimate = costUsd(model, Math.ceil((opts.system.length + opts.prompt.length) / 3), opts.maxTokens);
+  // Images cost roughly width×height/750 tokens; a 1600px photo is under ~3,500.
+  const imageTokens = opts.image ? 3500 : 0;
+  const estimate = costUsd(model, Math.ceil((opts.system.length + opts.prompt.length) / 3) + imageTokens, opts.maxTokens);
   if (!withinBudget(sumLoggedCost(rows), monthlyBudgetUsd(process.env), estimate)) {
     return { ok: false, error: "This month's AI budget has been used up. It resets on the 1st." };
   }
@@ -52,7 +56,17 @@ export async function callClaude(opts: {
         model,
         max_tokens: opts.maxTokens,
         system: opts.system,
-        messages: [{ role: "user", content: opts.prompt }],
+        messages: [
+          {
+            role: "user",
+            content: opts.image
+              ? [
+                  { type: "image", source: { type: "base64", media_type: opts.image.mediaType, data: opts.image.base64 } },
+                  { type: "text", text: opts.prompt },
+                ]
+              : opts.prompt,
+          },
+        ],
       }),
       signal: AbortSignal.timeout(30_000),
       cache: "no-store",

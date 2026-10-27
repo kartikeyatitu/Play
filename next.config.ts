@@ -36,6 +36,8 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ["lucide-react", "date-fns"],
+    // Register photos are resized in the browser to ~1600px JPEG (well under 1 MB); 3 MB leaves headroom.
+    serverActions: { bodySizeLimit: "3mb" },
   },
   async headers() {
     const csp = [

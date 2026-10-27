@@ -9,6 +9,7 @@ import { istMonthString } from "@/lib/fees";
 import { getSportConfig } from "@/lib/sport-metrics";
 import { aiConfigured, callClaude } from "@/lib/ai/client";
 import { REPORT_SYSTEM, SKILL_NOTE_SYSTEM, buildReportPrompt, buildSkillNotePrompt, clampScore } from "@/lib/ai/prompts";
+import { REGISTER_PROMPT, REGISTER_SYSTEM, parseRegisterReply, type RegisterRow } from "@/lib/ai/register";
 import { loadBusinessReportInput } from "@/lib/business-report-data";
 import { computeBusinessReport, isReportMonth } from "@/lib/business-report";
 
@@ -93,4 +94,46 @@ export async function explainBusinessReport(month: string): Promise<Result> {
   });
   if (!res.ok) return { success: false, error: res.error };
   return { success: true, text: res.text.slice(0, 2500) };
+}
+
+const REGISTER_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const REGISTER_MAX_BYTES = 3 * 1024 * 1024;
+
+/**
+ * Read a photo of a paper register into rows for the admin to review. Nothing is imported here and
+ * the photo is not stored — the admin checks every row, then imports through importStudents.
+ */
+export async function readRegisterPhoto(
+  formData: FormData,
+): Promise<{ success: true; rows: RegisterRow[]; truncated: boolean } | { success: false; error: string }> {
+  const auth = await checkPermission("students.manage");
+  if (!auth.ok) return { success: false, error: auth.error };
+  if (!aiConfigured()) return { success: false, error: "AI is not switched on for this academy yet." };
+
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) return { success: false, error: "Choose a photo of the register first." };
+  if (!REGISTER_TYPES.has(file.type)) return { success: false, error: "Please use a JPG, PNG or WebP photo." };
+  if (file.size > REGISTER_MAX_BYTES) return { success: false, error: "That photo is too large. Please try a smaller one." };
+
+  const orgId = auth.session.orgId;
+  const rl = await rateLimitDb(`ai:register:${orgId}`, 20, 60 * 60 * 1000);
+  if (!rl.allowed) return { success: false, error: "Too many photos this hour. Please try again later." };
+
+  const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+  const res = await callClaude({
+    feature: "register_import",
+    system: REGISTER_SYSTEM,
+    prompt: REGISTER_PROMPT,
+    image: { mediaType: file.type as "image/jpeg" | "image/png" | "image/webp", base64 },
+    maxTokens: 8000,
+    orgId,
+    userId: auth.session.id as string,
+  });
+  if (!res.ok) return { success: false, error: res.error };
+
+  const parsed = parseRegisterReply(res.text);
+  if (parsed.rows.length === 0) {
+    return { success: false, error: "No student rows could be read. Try a sharper, well-lit photo of one page." };
+  }
+  return { success: true, rows: parsed.rows, truncated: parsed.truncated };
 }

@@ -77,6 +77,7 @@ const CalendarExport = dynamic(() => import("@/components/org/CalendarExport").t
 const ImportExcelButton = dynamic(() => import("@/components/org/ImportExcelButton").then((m) => m.ImportExcelButton), { loading: inlineLoading });
 const ExcelImport = dynamic(() => import("@/components/org/ExcelImport").then((m) => m.ExcelImport), { loading: sectionLoading });
 const WhatsAppRosterImport = dynamic(() => import("@/components/org/WhatsAppRosterImport").then((m) => m.WhatsAppRosterImport), { loading: inlineLoading });
+const RegisterPhotoImport = dynamic(() => import("@/components/org/RegisterPhotoImport").then((m) => m.RegisterPhotoImport), { loading: inlineLoading });
 const PaymentPlans = dynamic(() => import("@/components/org/PaymentPlans").then((m) => m.PaymentPlans), { loading: sectionLoading });
 const ReferralProgram = dynamic(() => import("@/components/org/ReferralProgram").then((m) => m.ReferralProgram), { loading: sectionLoading });
 const TestimonialCollector = dynamic(() => import("@/components/org/TestimonialCollector").then((m) => m.TestimonialCollector), { loading: sectionLoading });
@@ -342,6 +343,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
                     <div className="flex items-center gap-2 flex-wrap">
                       <ImportExcelButton />
                       <WhatsAppRosterImport existingBatches={batches} />
+                      <RegisterPhotoImport batches={batches.map((b: any) => ({ id: b.id, name: b.name }))} />
                       <CreateStudentDialog batches={batches.map((b: any) => ({ id: b.id, name: b.name, sport: b.sport }))} orgId={session.orgId} />
                     </div>
                   }
@@ -850,9 +852,10 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
               <ThemePicker />
               {FEATURES.auditLogViewer && <AuditLogPanel />}
               <div>
-                <SectionHeader title="Import Data" description="Import students from WhatsApp, Excel or CSV" />
-                <div className="mb-4">
+                <SectionHeader title="Import Data" description="Import students from WhatsApp, a register photo, Excel or CSV" />
+                <div className="mb-4 flex flex-wrap items-center gap-2">
                   <WhatsAppRosterImport existingBatches={batches} />
+                  <RegisterPhotoImport batches={batches.map((b: any) => ({ id: b.id, name: b.name }))} />
                 </div>
                 <ExcelImport />
               </div>
