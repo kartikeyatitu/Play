@@ -34,7 +34,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FEATURES } from "@/lib/features";
-import { FOUNDING_OFFER, FREE_PLAN, GROWTH_PLAN, formatINR } from "@/lib/pricing";
+import { AI_MONTHLY_ACTIONS, ANNUAL_FREE_MONTHS, FOUNDING_OFFER, FREE_PLAN, GROWTH_PLAN, INTERNATIONAL_GROWTH, VENUE_COMMISSION_PERCENT, formatINR } from "@/lib/pricing";
 import { SectionHeading, WhatsAppButton, primaryCta, secondaryCta } from "./shell";
 
 /* ------------------------------------------------------------------ */
@@ -669,7 +669,19 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How does Growth pricing work?",
-    a: `${formatINR(GROWTH_PLAN.perStudentMonthly)} per active student per month, with a minimum of ${formatINR(GROWTH_PLAN.minMonthly)}/month. An active student is one enrolled in at least one batch that month. Students who have left or paused aren't billed.`,
+    a: `${formatINR(15)} per active student per month for the first 100 students, ${formatINR(10)} for students 101 to 500, and ${formatINR(7)} after that, with a minimum of ${formatINR(GROWTH_PLAN.minMonthly)}/month. Prices are before 18% GST. Pay yearly and get ${ANNUAL_FREE_MONTHS} months free. An active student is one enrolled in at least one batch that month. Students who have left or paused aren't billed.`,
+  },
+  {
+    q: "Do you take a cut of fees or court bookings?",
+    a: `No. Fees and bookings are paid into your own Razorpay or UPI account. Triq takes ${VENUE_COMMISSION_PERCENT}% commission and adds no markup; you only pay your payment gateway's own charges.`,
+  },
+  {
+    q: "What does the AI assistant cost?",
+    a: `It's included. Free academies get ${AI_MONTHLY_ACTIONS.free} AI actions a month (drafting a note, explaining a report, scanning a register page); Growth and Academy get ${AI_MONTHLY_ACTIONS.growth.toLocaleString("en-IN")}.`,
+  },
+  {
+    q: "Is Triq available outside India?",
+    a: `Yes. Outside India, Growth is US$${INTERNATIONAL_GROWTH.perStudentMonthly} per active student per month (minimum US$${INTERNATIONAL_GROWTH.minMonthly}), with the same free tier up to ${FREE_PLAN.maxStudents} students. Local taxes may apply.`,
   },
   {
     q: "What is the founding offer?",

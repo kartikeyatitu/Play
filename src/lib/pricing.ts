@@ -55,13 +55,47 @@ export const FREE_PLAN = {
   maxStudents: 30,
 } as const;
 
+/**
+ * Growth: graduated per-student pricing (INR, per active student per month, before 18% GST).
+ * Finalised 2026-10-27 — research and rationale in docs/business/TRIQ_PRICING.md.
+ * Each band is charged at its own rate (like income-tax slabs), so adding a student never lowers the bill.
+ */
 export const GROWTH_PLAN = {
   id: "growth",
   name: "Growth",
-  /** Price per active student per month (INR). */
-  perStudentMonthly: 25,
+  tiers: [
+    { upTo: 100, perStudent: 15 },
+    { upTo: 500, perStudent: 10 },
+    { upTo: null, perStudent: 7 },
+  ] as ReadonlyArray<{ upTo: number | null; perStudent: number }>,
+  /** Headline rate (first band). */
+  perStudentMonthly: 15,
   /** Minimum monthly bill (INR). */
-  minMonthly: 749,
+  minMonthly: 499,
+} as const;
+
+/** GST on TRIQ's own subscription (SaaS, SAC 9983). Prices on the site are shown before GST. */
+export const GST_RATE = 0.18;
+
+/** Annual billing: pay for 10 months, get 12. */
+export const ANNUAL_FREE_MONTHS = 2;
+
+/** AI actions (drafts, explanations, register scans) included per academy per calendar month. */
+export const AI_MONTHLY_ACTIONS: Record<PlanId, number> = {
+  free: 50,
+  growth: 1000,
+  academy: 1000,
+};
+
+/** Venues: TRIQ takes no commission on court bookings, and adds no markup on payments (gateway fees are the academy's own). */
+export const VENUE_COMMISSION_PERCENT = 0;
+export const PAYMENT_MARKUP_PERCENT = 0;
+
+/** Outside India (billed in USD): same Free tier, flat per-student rate with a minimum. */
+export const INTERNATIONAL_GROWTH = {
+  currency: "USD",
+  perStudentMonthly: 1,
+  minMonthly: 49,
 } as const;
 
 export const ACADEMY_PLAN = {
@@ -92,8 +126,41 @@ export function formatINR(amount: number): string {
 
 /** Monthly Growth bill for a given number of active students (before any founding discount). */
 export function growthMonthlyPrice(activeStudents: number): number {
-  if (activeStudents <= FREE_PLAN.maxStudents) return 0;
-  return Math.max(GROWTH_PLAN.minMonthly, activeStudents * GROWTH_PLAN.perStudentMonthly);
+  const n = Math.max(0, Math.floor(activeStudents || 0));
+  if (n <= FREE_PLAN.maxStudents) return 0;
+  return Math.max(GROWTH_PLAN.minMonthly, graduatedStudentCharge(n));
+}
+
+/** Sum of each band's students × that band's rate (no minimum applied). */
+export function graduatedStudentCharge(activeStudents: number): number {
+  let remaining = Math.max(0, Math.floor(activeStudents || 0));
+  let previousCap = 0;
+  let total = 0;
+  for (const tier of GROWTH_PLAN.tiers) {
+    if (remaining <= 0) break;
+    const bandSize = tier.upTo == null ? remaining : Math.min(remaining, tier.upTo - previousCap);
+    total += bandSize * tier.perStudent;
+    remaining -= bandSize;
+    if (tier.upTo != null) previousCap = tier.upTo;
+  }
+  return total;
+}
+
+/** Price including GST, rounded to the rupee. */
+export function withGst(amount: number): number {
+  return Math.round(amount * (1 + GST_RATE));
+}
+
+/** Annual price for the Growth plan (pay for 12 − ANNUAL_FREE_MONTHS months). */
+export function growthAnnualPrice(activeStudents: number): number {
+  return growthMonthlyPrice(activeStudents) * (12 - ANNUAL_FREE_MONTHS);
+}
+
+/** USD monthly price for academies billed outside India. */
+export function internationalMonthlyPrice(activeStudents: number): number {
+  const n = Math.max(0, Math.floor(activeStudents || 0));
+  if (n <= FREE_PLAN.maxStudents) return 0;
+  return Math.max(INTERNATIONAL_GROWTH.minMonthly, n * INTERNATIONAL_GROWTH.perStudentMonthly);
 }
 
 /** Monthly Growth bill with the founding-academy discount applied. */
@@ -121,6 +188,7 @@ export const PLANS: PlanCard[] = [
     blurb: `For independent coaches — up to ${FREE_PLAN.maxStudents} active students.`,
     features: [
       `Up to ${FREE_PLAN.maxStudents} active students`,
+      `AI assistant: ${AI_MONTHLY_ACTIONS.free} actions a month`,
       "Coach app & parent app",
       "Attendance in a few taps",
       "Fee tracking with UPI details",
@@ -133,9 +201,11 @@ export const PLANS: PlanCard[] = [
     name: GROWTH_PLAN.name,
     price: formatINR(GROWTH_PLAN.perStudentMonthly),
     priceSuffix: "per active student / month",
-    blurb: `For growing academies. Minimum ${formatINR(GROWTH_PLAN.minMonthly)}/month.`,
+    blurb: `For growing academies. ${formatINR(10)} per student from the 101st, ${formatINR(7)} from the 501st. Minimum ${formatINR(GROWTH_PLAN.minMonthly)}/month, plus GST.`,
     features: [
       "Everything in Free, plus:",
+      `AI assistant: ${AI_MONTHLY_ACTIONS.growth.toLocaleString("en-IN")} actions a month`,
+      "GST tax invoices, calendar & business report",
       "Unlimited coaches & batches",
       "Online payments & one-tap WhatsApp fee reminders",
       "Evaluations & progress reports",
@@ -154,7 +224,7 @@ export const PLANS: PlanCard[] = [
     blurb: "For multi-centre academies, schools and federations.",
     features: [
       "Everything in Growth, plus:",
-      "Multiple centres & branches",
+      "Multiple centres & branches with consolidated reports",
       "Your brand colours",
       "Assisted data migration & coach training",
       "Annual invoicing",

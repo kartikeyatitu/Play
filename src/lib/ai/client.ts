@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { FEATURES } from "@/lib/features";
-import { DEFAULT_AI_MODEL, costUsd, monthStartUtc, monthlyBudgetUsd, sumLoggedCost, withinBudget } from "./usage";
+import { AI_MONTHLY_ACTIONS, canonicalPlan } from "@/lib/pricing";
+import { DEFAULT_AI_MODEL, aiActionsRemaining, costUsd, monthStartUtc, monthlyBudgetUsd, sumLoggedCost, withinBudget } from "./usage";
 
 /**
  * Server-only Claude API client. Every call:
@@ -30,6 +31,25 @@ export async function callClaude(opts: {
 }): Promise<AiResult> {
   if (!aiConfigured()) return { ok: false, error: "AI is not switched on for this academy yet." };
   const model = process.env.AI_MODEL || DEFAULT_AI_MODEL;
+
+  // Per-academy monthly allowance by plan (Free 50, paid plans 1,000) — see AI_MONTHLY_ACTIONS.
+  if (opts.orgId) {
+    const [sub, org, used] = await Promise.all([
+      db.subscription.findUnique({ where: { orgId: opts.orgId }, select: { plan: true } }),
+      db.organization.findUnique({ where: { id: opts.orgId }, select: { plan: true } }),
+      db.auditLog.count({ where: { orgId: opts.orgId, action: AI_USAGE_ACTION, createdAt: { gte: monthStartUtc(new Date()) } } }),
+    ]);
+    const plan = canonicalPlan(sub?.plan ?? org?.plan ?? "free");
+    if (aiActionsRemaining(AI_MONTHLY_ACTIONS[plan], used) === 0) {
+      return {
+        ok: false,
+        error:
+          plan === "free"
+            ? `Your academy has used its ${AI_MONTHLY_ACTIONS.free} free AI actions this month. Growth includes ${AI_MONTHLY_ACTIONS.growth.toLocaleString("en-IN")} a month.`
+            : "Your academy has used this month's AI actions. They reset on the 1st.",
+      };
+    }
+  }
 
   // Budget: spent so far this month + worst case for this call (prompt estimate at ~4 chars/token, full output).
   const rows = await db.auditLog.findMany({

@@ -69,3 +69,8 @@ export function sumLoggedCost(rows: ReadonlyArray<{ details: string | null }>): 
 export function withinBudget(spentUsd: number, budgetUsd: number, estimateUsd: number): boolean {
   return budgetUsd > 0 && spentUsd + estimateUsd <= budgetUsd;
 }
+
+/** AI actions left this month for an academy (never negative). */
+export function aiActionsRemaining(allowance: number, usedThisMonth: number): number {
+  return Math.max(0, Math.floor(allowance) - Math.max(0, Math.floor(usedThisMonth)));
+}

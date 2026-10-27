@@ -64,3 +64,68 @@ describe("PLAN_IDS / PLAN_LIMITS", () => {
     }
   });
 });
+
+import {
+  AI_MONTHLY_ACTIONS,
+  foundingMonthlyPrice,
+  graduatedStudentCharge,
+  growthAnnualPrice,
+  growthMonthlyPrice,
+  internationalMonthlyPrice,
+  withGst,
+} from "@/lib/pricing";
+import { aiActionsRemaining } from "@/lib/ai/usage";
+
+describe("Growth pricing (graduated)", () => {
+  it("is free up to 30 students", () => {
+    expect(growthMonthlyPrice(0)).toBe(0);
+    expect(growthMonthlyPrice(30)).toBe(0);
+  });
+  it("applies the ₹499 minimum just above the free tier", () => {
+    expect(growthMonthlyPrice(31)).toBe(499); // 31 × 15 = 465 < 499
+    expect(growthMonthlyPrice(34)).toBe(510);
+  });
+  it("charges each band at its own rate", () => {
+    expect(growthMonthlyPrice(100)).toBe(1500);
+    expect(growthMonthlyPrice(150)).toBe(1500 + 50 * 10);
+    expect(growthMonthlyPrice(500)).toBe(1500 + 400 * 10);
+    expect(growthMonthlyPrice(1000)).toBe(5500 + 500 * 7);
+  });
+  it("never goes down when a student is added", () => {
+    let prev = 0;
+    for (let n = 0; n <= 1200; n++) {
+      const p = growthMonthlyPrice(n);
+      if (n > 30) expect(p).toBeGreaterThanOrEqual(prev);
+      prev = p;
+    }
+  });
+  it("ignores bad input", () => {
+    expect(graduatedStudentCharge(-5)).toBe(0);
+    expect(growthMonthlyPrice(Number.NaN)).toBe(0);
+  });
+  it("founding offer halves the bill", () => {
+    expect(foundingMonthlyPrice(100)).toBe(750);
+  });
+  it("adds 18% GST and gives 2 months free on annual", () => {
+    expect(withGst(1500)).toBe(1770);
+    expect(growthAnnualPrice(100)).toBe(15000);
+  });
+  it("prices outside India at US$1 per student, minimum US$49", () => {
+    expect(internationalMonthlyPrice(30)).toBe(0);
+    expect(internationalMonthlyPrice(31)).toBe(49);
+    expect(internationalMonthlyPrice(49)).toBe(49);
+    expect(internationalMonthlyPrice(100)).toBe(100);
+  });
+});
+
+describe("AI allowance", () => {
+  it("gives Free 50 and paid plans 1,000 actions a month", () => {
+    expect(AI_MONTHLY_ACTIONS.free).toBe(50);
+    expect(AI_MONTHLY_ACTIONS.growth).toBe(1000);
+  });
+  it("counts down and stops at zero", () => {
+    expect(aiActionsRemaining(50, 0)).toBe(50);
+    expect(aiActionsRemaining(50, 49)).toBe(1);
+    expect(aiActionsRemaining(50, 60)).toBe(0);
+  });
+});
