@@ -15,10 +15,10 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
   const venue = await getPublicVenue(slug);
   if (!venue) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-8 text-center">
+      <div className="min-h-screen bg-canvas text-ink flex items-center justify-center p-8 text-center">
         <div>
           <p className="text-lg font-semibold">This booking page isn&apos;t available.</p>
-          <p className="text-sm text-zinc-400 mt-1">Please check the link with the venue.</p>
+          <p className="text-sm text-ink-muted mt-1">Please check the link with the venue.</p>
         </div>
       </div>
     );

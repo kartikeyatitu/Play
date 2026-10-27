@@ -233,18 +233,18 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
         <div className="rounded-2xl border border-amber-400/30 bg-amber-400/5 p-6 text-center">
           <Clock className="w-12 h-12 text-amber-300 mx-auto" />
           <h2 className="text-xl font-bold mt-3">{reported.late ? "Payment noted" : "Waiting for the venue to confirm"}</h2>
-          <p className="text-zinc-400 text-sm mt-1">
+          <p className="text-ink-muted text-sm mt-1">
             {reported.late
               ? "Your hold had expired, so the venue will check the slot and contact you."
               : `Your slot is reserved. ${venue.name} will confirm once they see your ${rupees(upi.amount)} UPI payment.`}
           </p>
-          <div className="mt-5 rounded-xl bg-zinc-900 p-4 text-left space-y-2 text-sm">
+          <div className="mt-5 rounded-xl bg-surface p-4 text-left space-y-2 text-sm">
             <Row k="Booking" v={upi.description} />
             <Row k="Date" v={formatDateLabel(date)} />
             <Row k="You paid" v={rupees(upi.amount)} />
           </div>
           {waPhone && (
-            <a href={waLink(msg)} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center justify-center gap-2 w-full h-12 rounded-xl bg-emerald-500 text-zinc-950 font-bold">
+            <a href={waLink(msg)} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center justify-center gap-2 w-full h-12 rounded-xl bg-emerald-500 text-volt-fg font-bold">
               <MessageCircle className="w-4 h-4" /> Message the venue
             </a>
           )}
@@ -256,14 +256,14 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
   if (upi) {
     return (
       <Shell venue={venue}>
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-4">
+        <div className="rounded-2xl border border-line bg-surface/60 p-5 space-y-4">
           <div className="text-center">
-            <p className="text-xs text-zinc-400">Pay {venue.name} by UPI</p>
+            <p className="text-xs text-ink-muted">Pay {venue.name} by UPI</p>
             <p className="text-3xl font-bold mt-1">{rupees(upi.amount)}</p>
-            <p className="text-xs text-zinc-500 mt-1">{upi.description} · {formatDateLabel(date)}</p>
+            <p className="text-xs text-ink-subtle mt-1">{upi.description} · {formatDateLabel(date)}</p>
           </div>
           {qr && <img src={qr} alt="UPI QR code" className="mx-auto rounded-lg bg-[#fff] p-2 w-48 h-48" />}
-          <a href={upi.upiLink} className="flex items-center justify-center w-full h-12 rounded-xl bg-lime-400 text-zinc-950 font-bold">
+          <a href={upi.upiLink} className="flex items-center justify-center w-full h-12 rounded-xl bg-volt text-volt-fg font-bold">
             Open UPI app to pay
           </a>
           <button
@@ -273,17 +273,17 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }}
-            className="w-full text-center text-sm text-zinc-300"
+            className="w-full text-center text-sm text-ink-muted"
           >
-            Or pay to <span className="font-mono text-emerald-400">{upi.upiId}</span> {copied && <span className="text-xs text-zinc-500">copied</span>}
+            Or pay to <span className="font-mono text-emerald-400">{upi.upiId}</span> {copied && <span className="text-xs text-ink-subtle">copied</span>}
           </button>
-          <p className="text-[11px] text-zinc-500 text-center">Your slot is held for {upi.holdMinutes} minutes. After paying, tap the button below.</p>
-          <input value={utr} onChange={(e) => setUtr(e.target.value)} placeholder="UPI reference no. (optional)" className="w-full h-11 rounded-xl bg-zinc-950 border border-zinc-700 px-4 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-lime-400" />
+          <p className="text-[11px] text-ink-subtle text-center">Your slot is held for {upi.holdMinutes} minutes. After paying, tap the button below.</p>
+          <input value={utr} onChange={(e) => setUtr(e.target.value)} placeholder="UPI reference no. (optional)" className="w-full h-11 rounded-xl bg-canvas border border-line px-4 text-sm text-ink placeholder:text-zinc-600 outline-none focus:border-volt" />
           {error && <p className="text-sm text-red-400">{error}</p>}
-          <button onClick={iHavePaid} disabled={submitting} className="w-full h-12 rounded-xl border border-lime-400 text-lime-300 font-bold disabled:opacity-60 flex items-center justify-center gap-2">
+          <button onClick={iHavePaid} disabled={submitting} className="w-full h-12 rounded-xl border border-volt text-volt-ink font-bold disabled:opacity-60 flex items-center justify-center gap-2">
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null} I&apos;ve paid
           </button>
-          <button onClick={cancelUpi} className="w-full text-xs text-zinc-500 underline">Cancel and release the slot</button>
+          <button onClick={cancelUpi} className="w-full text-xs text-ink-subtle underline">Cancel and release the slot</button>
         </div>
       </Shell>
     );
@@ -293,11 +293,11 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
     const msg = `Hi, I booked ${done.court} on ${formatDateLabel(done.date)}, ${formatRange(done.startHour, done.hours)} at ${done.venue}. Name: ${name}.`;
     return (
       <Shell venue={venue}>
-        <div className="rounded-2xl border border-lime-400/30 bg-lime-400/5 p-6 text-center">
-          <CheckCircle2 className="w-12 h-12 text-lime-400 mx-auto" />
+        <div className="rounded-2xl border border-volt/30 bg-volt/5 p-6 text-center">
+          <CheckCircle2 className="w-12 h-12 text-volt mx-auto" />
           <h2 className="text-xl font-bold mt-3">You&apos;re booked!</h2>
-          <p className="text-zinc-400 text-sm mt-1">{done.venue}</p>
-          <div className="mt-5 rounded-xl bg-zinc-900 p-4 text-left space-y-2 text-sm">
+          <p className="text-ink-muted text-sm mt-1">{done.venue}</p>
+          <div className="mt-5 rounded-xl bg-surface p-4 text-left space-y-2 text-sm">
             <Row k="Court" v={done.court} />
             <Row k="Date" v={formatDateLabel(done.date)} />
             <Row k="Time" v={formatRange(done.startHour, done.hours)} />
@@ -305,11 +305,11 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
             {done.balance > 0 && <Row k="Pay at venue" v={rupees(done.balance)} />}
           </div>
           {waPhone && (
-            <a href={waLink(msg)} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center justify-center gap-2 w-full h-12 rounded-xl bg-emerald-500 text-zinc-950 font-bold">
+            <a href={waLink(msg)} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center justify-center gap-2 w-full h-12 rounded-xl bg-emerald-500 text-volt-fg font-bold">
               <MessageCircle className="w-4 h-4" /> Message the venue
             </a>
           )}
-          <button onClick={() => { setDone(null); setStartHour(null); setName(""); setPhone(""); }} className="mt-3 text-sm text-zinc-400 underline">
+          <button onClick={() => { setDone(null); setStartHour(null); setName(""); setPhone(""); }} className="mt-3 text-sm text-ink-muted underline">
             Book another slot
           </button>
         </div>
@@ -330,7 +330,7 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
             <button
               key={d}
               onClick={() => setDate(d)}
-              className={`snap-start shrink-0 w-16 rounded-xl py-2 text-center border transition ${active ? "bg-lime-400 text-zinc-950 border-lime-400" : "bg-zinc-900 border-zinc-800 text-zinc-300"}`}
+              className={`snap-start shrink-0 w-16 rounded-xl py-2 text-center border transition ${active ? "bg-volt text-volt-fg border-volt" : "bg-surface border-line text-ink-muted"}`}
             >
               <div className="text-[11px] uppercase opacity-70">{d === venue.today ? "Today" : wd}</div>
               <div className="text-sm font-bold">{(rest ?? "").replace(/ /, "\u00a0")}</div>
@@ -343,7 +343,7 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
       {venue.facilities.length > 1 && (
         <div className="flex gap-2 mt-3 overflow-x-auto -mx-4 px-4">
           {venue.facilities.map((f) => (
-            <button key={f.id} onClick={() => setCourtId(f.id)} className={`shrink-0 px-4 h-10 rounded-full text-sm font-medium border ${f.id === court.id ? "bg-white text-zinc-950 border-white" : "bg-zinc-900 border-zinc-800 text-zinc-300"}`}>
+            <button key={f.id} onClick={() => setCourtId(f.id)} className={`shrink-0 px-4 h-10 rounded-full text-sm font-medium border ${f.id === court.id ? "bg-white text-volt-fg border-white" : "bg-surface border-line text-ink-muted"}`}>
               {f.name}
             </button>
           ))}
@@ -351,16 +351,16 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
       )}
 
       <div className="mt-4 flex items-center justify-between text-sm">
-        <div className="text-zinc-300">
-          <span className="font-semibold text-white">{court.name}</span> · {court.type}
+        <div className="text-ink-muted">
+          <span className="font-semibold text-ink">{court.name}</span> · {court.type}
         </div>
-        <div className="text-lime-400 font-semibold">{court.hourlyRate > 0 ? `${rupees(court.hourlyRate)}/hr` : "Price on request"}</div>
+        <div className="text-volt font-semibold">{court.hourlyRate > 0 ? `${rupees(court.hourlyRate)}/hr` : "Price on request"}</div>
       </div>
 
       {/* hour grid */}
       <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2 min-h-24">
         {loadingAvail ? (
-          <div className="col-span-full flex justify-center py-6 text-zinc-500"><Loader2 className="w-5 h-5 animate-spin" /></div>
+          <div className="col-span-full flex justify-center py-6 text-ink-subtle"><Loader2 className="w-5 h-5 animate-spin" /></div>
         ) : (
           hoursList.map((h) => {
             const free = isFree(h);
@@ -371,7 +371,7 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
                 disabled={!free}
                 onClick={() => pickHour(h)}
                 className={`h-12 rounded-xl text-sm font-medium border transition ${
-                  inSel ? "bg-lime-400 text-zinc-950 border-lime-400" : free ? "bg-zinc-900 border-zinc-700 text-white hover:border-lime-400/60" : "bg-zinc-950 border-zinc-900 text-zinc-700 line-through"
+                  inSel ? "bg-volt text-volt-fg border-volt" : free ? "bg-surface border-line text-ink hover:border-volt/60" : "bg-canvas border-zinc-900 text-zinc-700 line-through"
                 }`}
               >
                 {formatHour(h)}
@@ -380,16 +380,16 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
           })
         )}
       </div>
-      <p className="text-xs text-zinc-500 mt-2 flex items-center gap-1"><Clock className="w-3 h-3" /> Crossed-out slots are taken or already started.</p>
+      <p className="text-xs text-ink-subtle mt-2 flex items-center gap-1"><Clock className="w-3 h-3" /> Crossed-out slots are taken or already started.</p>
 
       {/* selection */}
       {startHour !== null && (
-        <div className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-4">
+        <div className="mt-5 rounded-2xl border border-line bg-surface/60 p-4 space-y-4">
           <div>
-            <div className="text-xs text-zinc-400 mb-2">How long?</div>
+            <div className="text-xs text-ink-muted mb-2">How long?</div>
             <div className="flex gap-2">
               {Array.from({ length: Math.max(maxHours, 1) }, (_, i) => i + 1).map((n) => (
-                <button key={n} onClick={() => setHours(n)} className={`flex-1 h-10 rounded-lg text-sm font-semibold border ${hours === n ? "bg-lime-400 text-zinc-950 border-lime-400" : "bg-zinc-950 border-zinc-700"}`}>
+                <button key={n} onClick={() => setHours(n)} className={`flex-1 h-10 rounded-lg text-sm font-semibold border ${hours === n ? "bg-volt text-volt-fg border-volt" : "bg-canvas border-line"}`}>
                   {n}h
                 </button>
               ))}
@@ -398,33 +398,33 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
 
           <div className="flex items-end justify-between">
             <div>
-              <div className="text-sm text-white font-semibold">{formatRange(startHour, hours)}</div>
-              <div className="text-xs text-zinc-400">{formatDateLabel(date)}</div>
+              <div className="text-sm text-ink font-semibold">{formatRange(startHour, hours)}</div>
+              <div className="text-xs text-ink-muted">{formatDateLabel(date)}</div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold text-white">{rupees(total)}</div>
-              {(venue.onlinePayments || venue.upi) && balance > 0 && <div className="text-xs text-zinc-400">Pay {rupees(onlineDue)} now · {rupees(balance)} at venue</div>}
+              <div className="text-2xl font-bold text-ink">{rupees(total)}</div>
+              {(venue.onlinePayments || venue.upi) && balance > 0 && <div className="text-xs text-ink-muted">Pay {rupees(onlineDue)} now · {rupees(balance)} at venue</div>}
             </div>
           </div>
 
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" className="w-full h-12 rounded-xl bg-zinc-950 border border-zinc-700 px-4 text-white placeholder:text-zinc-600 outline-none focus:border-lime-400" />
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Mobile number" inputMode="tel" autoComplete="tel" className="w-full h-12 rounded-xl bg-zinc-950 border border-zinc-700 px-4 text-white placeholder:text-zinc-600 outline-none focus:border-lime-400" />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" className="w-full h-12 rounded-xl bg-canvas border border-line px-4 text-ink placeholder:text-zinc-600 outline-none focus:border-volt" />
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Mobile number" inputMode="tel" autoComplete="tel" className="w-full h-12 rounded-xl bg-canvas border border-line px-4 text-ink placeholder:text-zinc-600 outline-none focus:border-volt" />
 
           {error && <p className="text-sm text-red-400">{error}</p>}
 
           {(venue.onlinePayments || venue.upi) && court.hourlyRate > 0 ? (
-            <button onClick={venue.onlinePayments ? pay : payUpi} disabled={submitting} className="w-full h-12 rounded-xl bg-lime-400 text-zinc-950 font-bold text-base disabled:opacity-60 flex items-center justify-center gap-2">
+            <button onClick={venue.onlinePayments ? pay : payUpi} disabled={submitting} className="w-full h-12 rounded-xl bg-volt text-volt-fg font-bold text-base disabled:opacity-60 flex items-center justify-center gap-2">
               {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> {venue.onlinePayments ? "Opening secure payment…" : "Holding your slot…"}</> : <>{venue.onlinePayments ? `Pay ${rupees(onlineDue)} & confirm` : `Pay ${rupees(onlineDue)} by UPI`}</>}
             </button>
           ) : waPhone ? (
-            <a href={waLink(waMsg)} target="_blank" rel="noreferrer" className="w-full h-12 rounded-xl bg-emerald-500 text-zinc-950 font-bold flex items-center justify-center gap-2">
+            <a href={waLink(waMsg)} target="_blank" rel="noreferrer" className="w-full h-12 rounded-xl bg-emerald-500 text-volt-fg font-bold flex items-center justify-center gap-2">
               <MessageCircle className="w-4 h-4" /> Request this slot on WhatsApp
             </a>
           ) : (
-            <p className="text-sm text-zinc-400">Online booking isn&apos;t set up yet. Please contact the venue.</p>
+            <p className="text-sm text-ink-muted">Online booking isn&apos;t set up yet. Please contact the venue.</p>
           )}
-          {venue.onlinePayments && <p className="text-[11px] text-zinc-500 text-center">Your slot is held for 10 minutes while you pay. Secured by Razorpay.</p>}
-          {!venue.onlinePayments && venue.upi && <p className="text-[11px] text-zinc-500 text-center">Pay by any UPI app. The venue confirms your booking after checking the payment.</p>}
+          {venue.onlinePayments && <p className="text-[11px] text-ink-subtle text-center">Your slot is held for 10 minutes while you pay. Secured by Razorpay.</p>}
+          {!venue.onlinePayments && venue.upi && <p className="text-[11px] text-ink-subtle text-center">Pay by any UPI app. The venue confirms your booking after checking the payment.</p>}
         </div>
       )}
       {startHour === null && error && <p className="text-sm text-red-400 mt-3">{error}</p>}
@@ -435,19 +435,19 @@ export function BookClient({ venue }: { venue: PublicVenue }) {
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between">
-      <span className="text-zinc-400">{k}</span>
-      <span className="text-white font-medium">{v}</span>
+      <span className="text-ink-muted">{k}</span>
+      <span className="text-ink font-medium">{v}</span>
     </div>
   );
 }
 
 function Shell({ venue, children }: { venue: PublicVenue; children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
+    <div className="min-h-screen bg-canvas text-ink">
       <div className="max-w-lg mx-auto px-4 py-6">
         <header className="mb-5">
           <h1 className="text-2xl font-bold">{venue.name}</h1>
-          {venue.city && <p className="text-sm text-zinc-400 flex items-center gap-1 mt-0.5"><MapPin className="w-3.5 h-3.5" />{venue.city}</p>}
+          {venue.city && <p className="text-sm text-ink-muted flex items-center gap-1 mt-0.5"><MapPin className="w-3.5 h-3.5" />{venue.city}</p>}
         </header>
         {children}
         <p className="text-center text-[11px] text-zinc-600 mt-10">Powered by Triq</p>
