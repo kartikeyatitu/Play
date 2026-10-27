@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { getBusinessReport } from "@/app/actions/business-report";
+import { explainBusinessReport, getAiStatus } from "@/app/actions/ai";
 import { pct, type BusinessReport as Report } from "@/lib/business-report";
 import { formatCurrency } from "@/lib/currency";
 
@@ -23,6 +24,36 @@ export function BusinessReport({ currentMonth }: { currentMonth: string }) {
   const [currency, setCurrency] = useState("INR");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [aiAvailable, setAiAvailable] = useState(false);
+  const [explaining, setExplaining] = useState(false);
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [explainError, setExplainError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAiStatus()
+      .then((r) => setAiAvailable(r.available))
+      .catch(() => setAiAvailable(false));
+  }, []);
+
+  useEffect(() => {
+    setExplanation(null);
+    setExplainError(null);
+  }, [month]);
+
+  async function explain() {
+    if (explaining) return;
+    setExplaining(true);
+    setExplainError(null);
+    try {
+      const res = await explainBusinessReport(month);
+      if (res.success) setExplanation(res.text);
+      else setExplainError(res.error);
+    } catch {
+      setExplainError("Couldn't get an explanation. Please try again.");
+    } finally {
+      setExplaining(false);
+    }
+  }
 
   useEffect(() => {
     let alive = true;
@@ -62,6 +93,33 @@ export function BusinessReport({ currentMonth }: { currentMonth: string }) {
       </label>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
+      {aiAvailable && report && !loading && (
+        <div className="rounded-xl border border-line bg-surface shadow-hairline p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-ink">What does this month mean?</p>
+            <button
+              type="button"
+              onClick={explain}
+              disabled={explaining}
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-volt text-volt-fg text-sm font-semibold hover:bg-volt/90 disabled:opacity-60"
+            >
+              {explaining ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {explaining ? "Reading the numbers…" : explanation ? "Explain again" : "Explain with AI"}
+            </button>
+          </div>
+          {explainError && <p className="text-sm text-red-500">{explainError}</p>}
+          {explanation && (
+            <>
+              <div className="space-y-1.5 text-sm text-ink">
+                {explanation.split("\n").filter((l) => l.trim()).map((line, i) => (
+                  <p key={i}>{line.replace(/^\s*[-•*]\s*/, "• ")}</p>
+                ))}
+              </div>
+              <p className="text-xs text-ink-subtle">AI summary based only on the numbers on this page. Check them before acting.</p>
+            </>
+          )}
+        </div>
+      )}
       {loading ? (
         <p className="flex items-center gap-2 text-sm text-ink-subtle"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</p>
       ) : report ? (

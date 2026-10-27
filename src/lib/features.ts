@@ -86,6 +86,11 @@ export const FEATURES = {
   wellness: flag("WELLNESS", true),
   /** V7 TRIQ Creators: creator profiles, portfolio links, discovery, reporting. */
   creators: flag("CREATORS", true),
+  /**
+   * AI drafts and summaries (Claude API): coach note drafts, business report explanations.
+   * Also needs ANTHROPIC_API_KEY; without it no AI button is shown. Spend capped by AI_MONTHLY_BUDGET_INR.
+   */
+  aiAssist: flag("AI_ASSIST", true),
 } as const;
 
 export type FeatureName = keyof typeof FEATURES;

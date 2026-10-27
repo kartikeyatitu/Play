@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { submitSkillReport } from "@/app/actions/reports";
-import { Loader2, Star, Award } from "lucide-react";
+import { draftSkillNote, getAiStatus } from "@/app/actions/ai";
+import { Loader2, Star, Award, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { getSportConfig, type SkillDimension } from "@/lib/sport-metrics";
 
@@ -37,6 +38,9 @@ export function EvaluateModal({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState(existing?.notes ?? "");
+  const [aiAvailable, setAiAvailable] = useState(false);
+  const [drafting, setDrafting] = useState(false);
+  const [drafted, setDrafted] = useState(false);
 
   const config = getSportConfig(sport);
   const dimensions = config.dimensions;
@@ -66,7 +70,29 @@ export function EvaluateModal({
   function openModal() {
     setScores(buildInitialScores());
     setNotes(existing?.notes ?? "");
+    setDrafted(false);
     setOpen(true);
+    getAiStatus()
+      .then((r) => setAiAvailable(r.available))
+      .catch(() => setAiAvailable(false));
+  }
+
+  async function handleDraft() {
+    if (drafting) return;
+    setDrafting(true);
+    try {
+      const res = await draftSkillNote({ studentId: student.id, sport, month: currentMonth, scores, points: notes });
+      if (res.success) {
+        setNotes(res.text);
+        setDrafted(true);
+      } else {
+        toast.error(res.error);
+      }
+    } catch {
+      toast.error("Couldn't draft the note. Please try again.");
+    } finally {
+      setDrafting(false);
+    }
   }
 
   function setScore(key: string, value: number) {
@@ -164,18 +190,39 @@ export function EvaluateModal({
             ))}
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-300">
-                Coach notes (visible to parents)
-              </label>
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="coach-notes" className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                  Coach notes (visible to parents)
+                </label>
+                {aiAvailable && (
+                  <button
+                    type="button"
+                    onClick={handleDraft}
+                    disabled={drafting}
+                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-line text-xs font-semibold text-ink hover:bg-surface-2 disabled:opacity-60"
+                  >
+                    {drafting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-volt" />}
+                    {drafting ? "Drafting…" : "Draft with AI"}
+                  </button>
+                )}
+              </div>
+              {aiAvailable && !drafted && (
+                <p className="text-[11px] text-zinc-500">Set the scores and jot a few points, then draft. You can edit before saving.</p>
+              )}
               <textarea
+                id="coach-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                rows={3}
+                rows={drafted ? 5 : 3}
                 maxLength={1000}
                 placeholder="e.g. Great improvement in footwork. Work on weak-foot passing."
                 className="w-full rounded-xl bg-zinc-900 border border-zinc-800 p-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600"
               />
             </div>
+
+            {drafted && (
+              <p className="text-[11px] text-amber-400 -mt-3">AI draft. Read it and edit anything that isn&apos;t right before saving. Parents will see it.</p>
+            )}
 
             <Button
               onClick={handleSubmit}
