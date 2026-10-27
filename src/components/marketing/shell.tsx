@@ -124,6 +124,7 @@ function SiteFooter() {
             <li><Link href="/privacy" className="hover:text-ink">Privacy</Link></li>
             <li><Link href="/terms" className="hover:text-ink">Terms</Link></li>
             <li><Link href="/login" className="hover:text-ink">Log in</Link></li>
+            <li><a href="https://www.instagram.com/kartikeya_yadav29/" target="_blank" rel="noopener noreferrer" className="hover:text-ink">Instagram</a></li>
           </ul>
         </div>
       </div>
