@@ -26,6 +26,10 @@ import {
   Wallet,
   MapPin,
   Video,
+  Receipt,
+  Repeat,
+  Sparkles,
+  HandHeart,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -57,6 +61,9 @@ export function StatusPill({ status }: { status: Status }) {
 function flagStatus(on: boolean): Status {
   return on ? "live" : "soon";
 }
+
+/** AI features only count as live once the provider key is configured for this deployment. */
+const AI_LIVE = FEATURES.aiAssist && !!process.env.ANTHROPIC_API_KEY;
 
 function Card({
   icon: Icon,
@@ -213,6 +220,42 @@ export function AcademyOperations() {
             title="Safety & medical records"
             body="Medical details and emergency contacts for each student, an incident log, and an SOS flow coaches can use during a session."
             status="live"
+          />
+          <Card
+            icon={CalendarCheck}
+            title="Calendar & court allocation"
+            body="One calendar for batches, bookings and blocked slots, with a day view. Clashes between coaches or courts are highlighted."
+            status={flagStatus(FEATURES.opsCalendar)}
+          />
+          <Card
+            icon={Receipt}
+            title="GST tax invoices"
+            body="Numbered tax invoices and credit notes for fees, with CGST/SGST or IGST worked out from your GSTIN and the place of supply."
+            status={flagStatus(FEATURES.gstInvoices)}
+          />
+          <Card
+            icon={LineChart}
+            title="Business report"
+            body="One month on one page: billed, collected and outstanding fees, attendance, trial conversion, batch fill and court use, by batch and by court."
+            status={flagStatus(FEATURES.businessReport)}
+          />
+          <Card
+            icon={HandHeart}
+            title="Scholarships & fee waivers"
+            body="Run scholarship programmes and give concessions to individual students. Monthly fees apply them automatically, with every change recorded."
+            status={flagStatus(FEATURES.inclusive)}
+          />
+          <Card
+            icon={Repeat}
+            title="UPI AutoPay"
+            body="Parents approve a UPI mandate once and monthly fees are collected automatically on your own Razorpay account. Every charge is logged."
+            status="soon"
+          />
+          <Card
+            icon={Sparkles}
+            title="AI assistant"
+            body="Draft parent notes from a coach's scores, get a plain-English explanation of your monthly report, and turn a photo of a paper register into students. You review everything before it is saved or sent."
+            status={AI_LIVE ? "live" : "soon"}
           />
         </div>
       </div>
