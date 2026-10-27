@@ -669,7 +669,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How does Growth pricing work?",
-    a: `${formatINR(15)} per active student per month for the first 100 students, ${formatINR(10)} for students 101 to 500, and ${formatINR(7)} after that, with a minimum of ${formatINR(GROWTH_PLAN.minMonthly)}/month. Prices are before 18% GST. Pay yearly and get ${ANNUAL_FREE_MONTHS} months free. An active student is one enrolled in at least one batch that month. Students who have left or paused aren't billed.`,
+    a: `${formatINR(GROWTH_PLAN.tiers[0].perStudent)} per active student per month for the first 100 students, ${formatINR(GROWTH_PLAN.tiers[1].perStudent)} for students 101 to 500, and ${formatINR(GROWTH_PLAN.tiers[2].perStudent)} after that, with a minimum of ${formatINR(GROWTH_PLAN.minMonthly)}/month. Prices are before 18% GST. Pay yearly and get ${ANNUAL_FREE_MONTHS} months free. An active student is one enrolled in at least one batch that month. Students who have left or paused aren't billed.`,
   },
   {
     q: "Do you take a cut of fees or court bookings?",

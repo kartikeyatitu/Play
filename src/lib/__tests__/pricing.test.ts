@@ -81,15 +81,15 @@ describe("Growth pricing (graduated)", () => {
     expect(growthMonthlyPrice(0)).toBe(0);
     expect(growthMonthlyPrice(30)).toBe(0);
   });
-  it("applies the ₹499 minimum just above the free tier", () => {
-    expect(growthMonthlyPrice(31)).toBe(499); // 31 × 15 = 465 < 499
-    expect(growthMonthlyPrice(34)).toBe(510);
+  it("applies the ₹699 minimum just above the free tier", () => {
+    expect(growthMonthlyPrice(31)).toBe(699); // 31 × 20 = 620 < 699
+    expect(growthMonthlyPrice(35)).toBe(700);
   });
   it("charges each band at its own rate", () => {
-    expect(growthMonthlyPrice(100)).toBe(1500);
-    expect(growthMonthlyPrice(150)).toBe(1500 + 50 * 10);
-    expect(growthMonthlyPrice(500)).toBe(1500 + 400 * 10);
-    expect(growthMonthlyPrice(1000)).toBe(5500 + 500 * 7);
+    expect(growthMonthlyPrice(100)).toBe(2000);
+    expect(growthMonthlyPrice(150)).toBe(2000 + 50 * 12);
+    expect(growthMonthlyPrice(500)).toBe(2000 + 400 * 12);
+    expect(growthMonthlyPrice(1000)).toBe(6800 + 500 * 8);
   });
   it("never goes down when a student is added", () => {
     let prev = 0;
@@ -104,11 +104,11 @@ describe("Growth pricing (graduated)", () => {
     expect(growthMonthlyPrice(Number.NaN)).toBe(0);
   });
   it("founding offer halves the bill", () => {
-    expect(foundingMonthlyPrice(100)).toBe(750);
+    expect(foundingMonthlyPrice(100)).toBe(1000);
   });
   it("adds 18% GST and gives 2 months free on annual", () => {
-    expect(withGst(1500)).toBe(1770);
-    expect(growthAnnualPrice(100)).toBe(15000);
+    expect(withGst(2000)).toBe(2360);
+    expect(growthAnnualPrice(100)).toBe(20000);
   });
   it("prices outside India at US$1 per student, minimum US$49", () => {
     expect(internationalMonthlyPrice(30)).toBe(0);

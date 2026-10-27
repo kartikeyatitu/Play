@@ -57,21 +57,21 @@ export const FREE_PLAN = {
 
 /**
  * Growth: graduated per-student pricing (INR, per active student per month, before 18% GST).
- * Finalised 2026-10-27 — research and rationale in docs/business/TRIQ_PRICING.md.
+ * Finalised 2026-10-27, raised the same day (₹15/10/7, min ₹499 → ₹20/12/8, min ₹699). See docs/business/TRIQ_PRICING.md.
  * Each band is charged at its own rate (like income-tax slabs), so adding a student never lowers the bill.
  */
 export const GROWTH_PLAN = {
   id: "growth",
   name: "Growth",
   tiers: [
-    { upTo: 100, perStudent: 15 },
-    { upTo: 500, perStudent: 10 },
-    { upTo: null, perStudent: 7 },
+    { upTo: 100, perStudent: 20 },
+    { upTo: 500, perStudent: 12 },
+    { upTo: null, perStudent: 8 },
   ] as ReadonlyArray<{ upTo: number | null; perStudent: number }>,
   /** Headline rate (first band). */
-  perStudentMonthly: 15,
+  perStudentMonthly: 20,
   /** Minimum monthly bill (INR). */
-  minMonthly: 499,
+  minMonthly: 699,
 } as const;
 
 /** GST on TRIQ's own subscription (SaaS, SAC 9983). Prices on the site are shown before GST. */
@@ -201,7 +201,7 @@ export const PLANS: PlanCard[] = [
     name: GROWTH_PLAN.name,
     price: formatINR(GROWTH_PLAN.perStudentMonthly),
     priceSuffix: "per active student / month",
-    blurb: `For growing academies. ${formatINR(10)} per student from the 101st, ${formatINR(7)} from the 501st. Minimum ${formatINR(GROWTH_PLAN.minMonthly)}/month, plus GST.`,
+    blurb: `For growing academies. ${formatINR(GROWTH_PLAN.tiers[1].perStudent)} per student from the 101st, ${formatINR(GROWTH_PLAN.tiers[2].perStudent)} from the 501st. Minimum ${formatINR(GROWTH_PLAN.minMonthly)}/month, plus GST.`,
     features: [
       "Everything in Free, plus:",
       `AI assistant: ${AI_MONTHLY_ACTIONS.growth.toLocaleString("en-IN")} actions a month`,

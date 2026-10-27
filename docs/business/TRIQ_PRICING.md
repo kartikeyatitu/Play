@@ -1,4 +1,4 @@
-# TRIQ pricing (final, 2026-10-27)
+# TRIQ pricing (final, 2026-10-27, raised same day)
 
 Source of truth for numbers: `src/lib/pricing.ts`. Site copy (`/`, `/pricing`, FAQ, calculator) reads from it.
 Prices below are **before 18% GST**.
@@ -10,21 +10,23 @@ Prices below are **before 18% GST**.
 | Plan | Price | Notes |
 |---|---|---|
 | **Free** | ₹0, forever | Up to 30 active students. AI assistant: 50 actions/month. |
-| **Growth** | ₹15 per active student for students 1–100, ₹10 for 101–500, ₹7 above 500 | Minimum ₹499/month. Each band is charged at its own rate, so the bill never drops when a student is added. AI: 1,000 actions/month. |
+| **Growth** | ₹20 per active student for students 1–100, ₹12 for 101–500, ₹8 above 500 | Minimum ₹699/month. Each band is charged at its own rate, so the bill never drops when a student is added. AI: 1,000 actions/month. |
 | **Academy** | Custom | Multi-centre, schools, federations; consolidated reports, branding, account manager. |
 
 - **Annual:** pay 10 months, get 12.
 - **Founding offer (unchanged):** first 50 academies, 50% off for 12 months, free migration within 24 hours.
 - **Active student** = enrolled in at least one batch that month.
 
-| Active students | Growth / month | With founding offer | Old price (₹25, min ₹749) |
-|---|---|---|---|
-| 31 | ₹499 | ₹250 | ₹775 |
-| 50 | ₹750 | ₹375 | ₹1,250 |
-| 100 | ₹1,500 | ₹750 | ₹2,500 |
-| 200 | ₹2,500 | ₹1,250 | ₹5,000 |
-| 500 | ₹5,500 | ₹2,750 | ₹12,500 |
-| 1,000 | ₹9,000 | ₹4,500 | ₹25,000 |
+| Active students | Growth / month | With founding offer | First proposal (₹15/10/7, min ₹499) | Original (₹25, min ₹749) |
+|---|---|---|---|---|
+| 31 | ₹699 | ₹350 | ₹499 | ₹775 |
+| 50 | ₹1,000 | ₹500 | ₹750 | ₹1,250 |
+| 100 | ₹2,000 | ₹1,000 | ₹1,500 | ₹2,500 |
+| 200 | ₹3,200 | ₹1,600 | ₹2,500 | ₹5,000 |
+| 500 | ₹6,800 | ₹3,400 | ₹5,500 | ₹12,500 |
+| 1,000 | ₹10,800 | ₹5,400 | ₹9,000 | ₹25,000 |
+
+**Founder decision (2026-10-27):** rates raised from the first proposal to ₹20/₹12/₹8 with a ₹699 minimum. This puts Growth at about 1.7× ArenaFlow and 2.9× ScoreUp at 100 students; the founding offer brings early academies to roughly ArenaFlow's level. The price has to be carried by features competitors lack (parent and coach apps, GST invoices, calendar, business report, AI).
 
 ### Outside India (USD per month)
 Same Free tier (30 students). Growth **US$1 per active student, minimum US$49**. Local taxes may apply.
@@ -51,7 +53,7 @@ Same Free tier (30 students). Growth **US$1 per active student, minimum US$49**.
 | Playo (venues) | India | ~2% convenience fee to players (per a third-party analysis) | — | — |
 | Razorpay | India | 2% + 18% GST per transaction (UPI, cards, netbanking); UPI AutoPay +0.99% | — | — |
 
-**Reading:** India is priced at ₹5–12 per student per month for operations software. TRIQ's old ₹25 was 2–5× the market. TRIQ does more (parent app, coach app, GST invoices, calendar, business report, AI, venues), so Growth sits slightly above ArenaFlow and above ScoreUp, and the founding offer brings early academies to ScoreUp's level. The free tier (30 students) is TRIQ's wedge: none of the Indian products above has a permanent free plan of that size.
+**Reading:** India is priced at ₹5–12 per student per month for operations software. TRIQ's original ₹25 was 2–5× the market. TRIQ does more (parent app, coach app, GST invoices, calendar, business report, AI, venues), so Growth is priced at a premium (₹20 for the first 100 students), and the founding offer halves it for early academies. The free tier (30 students) is TRIQ's wedge: none of the Indian products above has a permanent free plan of that size.
 
 ## 3. Not built yet (must be done before charging)
 1. **Subscription billing is not automated.** No code charges academies. Until it exists, invoice manually.
