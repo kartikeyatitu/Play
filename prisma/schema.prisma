@@ -2079,3 +2079,113 @@ model FeeMandateCharge {
   @@unique([mandateId, feeRecordId])
   @@index([orgId, month])
 }
+
+// ─── TRIQ Play · live scoring (prisma/sql/2026-10-28_live_scoring.sql, applied 2026-10-28) ───
+// orgId / studentId / fixtureId / eventId are foreign keys in the database; they are kept as plain fields here so
+// existing models don't need back-relations.
+model LiveMatch {
+  id           String    @id @default(cuid())
+  orgId        String
+  sport        String
+  family       String    // cricket | goals | rally | tennis | performance | bout | chess
+  config       Json      @default("{}")
+  title        String
+  fixtureId    String?
+  eventId      String?
+  homeName     String
+  awayName     String?
+  venue        String?
+  scheduledAt  DateTime?
+  status       String    @default("SCHEDULED") // SCHEDULED | LIVE | COMPLETED | ABANDONED
+  visibility   String    @default("ACADEMY")   // PRIVATE | ACADEMY | LINK
+  shareToken   String?   @unique
+  scorerUserId String?
+  state        Json?
+  version      Int       @default(0)
+  startedAt    DateTime?
+  endedAt      DateTime?
+  createdById  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
+
+  players LiveMatchPlayer[]
+  events  LiveMatchEvent[]
+  stats   AthleteMatchStat[]
+  results PerformanceResult[]
+
+  @@index([orgId, status])
+  @@index([orgId, scheduledAt])
+}
+
+model LiveMatchPlayer {
+  id          String   @id @default(cuid())
+  orgId       String
+  matchId     String
+  side        String   // home | away | field
+  studentId   String?
+  displayName String
+  shirt       String?
+  role        String?
+  createdAt   DateTime @default(now())
+
+  match LiveMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, studentId])
+  @@index([studentId])
+}
+
+model LiveMatchEvent {
+  id          String    @id @default(cuid())
+  orgId       String
+  matchId     String
+  seq         Int
+  type        String
+  payload     Json
+  clientId    String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  voidedAt    DateTime?
+  voidedById  String?
+
+  match LiveMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, seq])
+  @@unique([matchId, clientId])
+}
+
+model AthleteMatchStat {
+  id        String   @id @default(cuid())
+  orgId     String
+  matchId   String
+  studentId String
+  sport     String
+  stats     Json
+  playedAt  DateTime
+  createdAt DateTime @default(now())
+
+  match LiveMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, studentId])
+  @@index([studentId, sport, playedAt])
+}
+
+model PerformanceResult {
+  id             String   @id @default(cuid())
+  orgId          String
+  matchId        String?
+  studentId      String
+  sport          String
+  eventName      String
+  measure        String   // time | distance | height | points
+  value          Int?
+  status         String   @default("OK") // OK | DNS | DNF | DQ
+  attempt        Int?
+  isPersonalBest Boolean  @default(false)
+  recordedById   String
+  recordedAt     DateTime @default(now())
+
+  match LiveMatch? @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  @@index([studentId, sport, eventName, recordedAt])
+  @@index([orgId])
+}

@@ -100,6 +100,9 @@ export async function deleteAllData() {
     ["feedback",        () => db.feedback.deleteMany({ where: { orgId: oId } })],
     ["referral",        () => db.referral.deleteMany({ where: { referrer: { orgId: oId } } })],
     ["batchEnrollment", () => db.batchEnrollment.deleteMany({ where: { batch: { orgId: oId } } })],
+    // Live scoring (prisma/sql/2026-10-28_live_scoring.sql): match deletes cascade to players, events and stats.
+    ["performanceResult", () => ifTableExists(() => db.performanceResult.deleteMany({ where: { orgId: oId } }))],
+    ["liveMatch",         () => ifTableExists(() => db.liveMatch.deleteMany({ where: { orgId: oId } }))],
     ["event",           () => db.event.deleteMany({ where: { orgId: oId } })],
     // TRIQ Play tables exist only once prisma/sql/2026-10-26_competitions.sql is applied (flag `events`).
     ...(FEATURES.events

@@ -1,4 +1,4 @@
--- TRIQ Play · multi-sport live scoring (docs/specs/live-scoring.md). Additive only. NOT APPLIED.
+-- TRIQ Play · multi-sport live scoring (docs/specs/live-scoring.md). Additive only. APPLIED to production 2026-10-28 with founder approval.
 -- One shared match + append-only event log for every sport family; sport rules live in src/lib/scoring/*.
 -- Apply in Supabase only after founder approval, then add the Prisma models and turn on NEXT_PUBLIC_FEATURE_LIVE_SCORING.
 
