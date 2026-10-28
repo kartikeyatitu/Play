@@ -77,6 +77,7 @@ const CalendarExport = dynamic(() => import("@/components/org/CalendarExport").t
 const ImportExcelButton = dynamic(() => import("@/components/org/ImportExcelButton").then((m) => m.ImportExcelButton), { loading: inlineLoading });
 const ExcelImport = dynamic(() => import("@/components/org/ExcelImport").then((m) => m.ExcelImport), { loading: sectionLoading });
 const WhatsAppRosterImport = dynamic(() => import("@/components/org/WhatsAppRosterImport").then((m) => m.WhatsAppRosterImport), { loading: inlineLoading });
+const AskTriq = dynamic(() => import("@/components/org/AskTriq").then((m) => m.AskTriq), { loading: inlineLoading });
 const FunnelAndRetention = dynamic(() => import("@/components/org/FunnelAndRetention").then((m) => m.FunnelAndRetention), { loading: sectionLoading });
 const AtRiskStudents = dynamic(() => import("@/components/org/AtRiskStudents").then((m) => m.AtRiskStudents), { loading: sectionLoading });
 const OwnerInsights = dynamic(() => import("@/components/org/OwnerInsights").then((m) => m.OwnerInsights), { loading: sectionLoading });
@@ -662,6 +663,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {/* ANALYTICS */}
           {activeTab === "analytics" && (
             <div className="space-y-6">
+              {FEATURES.askTriq && <AskTriq />}
               {FEATURES.ownerInsights && <OwnerInsights />}
               {FEATURES.atRiskStudents && <AtRiskStudents />}
               {FEATURES.funnelCohorts && <FunnelAndRetention />}

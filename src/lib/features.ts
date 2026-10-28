@@ -97,6 +97,8 @@ export const FEATURES = {
   atRiskStudents: flag("AT_RISK_STUDENTS", true),
   /** Enquiry funnel by source and new-student retention cohorts on the Analytics tab. Read-only, no schema. */
   funnelCohorts: flag("FUNNEL_COHORTS", true),
+  /** Ask TRIQ: plain-language questions routed by AI to approved reports (needs ANTHROPIC_API_KEY). */
+  askTriq: flag("ASK_TRIQ", true),
 } as const;
 
 export type FeatureName = keyof typeof FEATURES;
