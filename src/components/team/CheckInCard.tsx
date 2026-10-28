@@ -15,7 +15,7 @@ const time = (iso: string | null | undefined) =>
   iso ? new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date(iso)) : "";
 
 /** Compact daily check-in for coaches (the staff app has a full-screen version). */
-export function CheckInCard({ initial }: { initial: Today }) {
+export function CheckInCard({ initial, subtle = false }: { initial: Today; /** Outlined button, so it doesn't compete with the session's main action. */ subtle?: boolean }) {
   const [today, setToday] = React.useState<Today>(initial);
   const [busy, setBusy] = React.useState(false);
   const [justCheckedIn, setJustCheckedIn] = React.useState(false);
@@ -40,7 +40,11 @@ export function CheckInCard({ initial }: { initial: Today }) {
             setBusy(false);
           }
         }}
-        className="press w-full h-12 rounded-xl bg-volt text-volt-fg font-medium inline-flex items-center justify-center gap-2 hover:bg-lime-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-volt/25 disabled:opacity-60"
+        className={
+          subtle
+            ? "press w-full h-11 rounded-xl border border-line bg-surface text-ink font-medium inline-flex items-center justify-center gap-2 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-volt/25 disabled:opacity-60"
+            : "press w-full h-12 rounded-xl bg-volt text-volt-fg font-medium inline-flex items-center justify-center gap-2 hover:bg-lime-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-volt/25 disabled:opacity-60"
+        }
       >
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />} Check in for today
       </button>

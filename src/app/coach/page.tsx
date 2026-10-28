@@ -7,7 +7,6 @@ import { EmergencySOS, type SOSStudent } from "@/components/coach/EmergencySOS";
 import { RSVPBadge, CreateMatchModal } from "@/components/coach/MatchManager";
 import { CoachTabs, type CoachTab } from "@/components/coach/CoachTabs";
 import { BatchBroadcast } from "@/components/coach/BatchBroadcast";
-import { TodayStatPills } from "@/components/coach/TodayStatPills";
 import { AcademySwitcher } from "@/components/team/AcademySwitcher";
 import { CheckInCard } from "@/components/team/CheckInCard";
 import { getMyAttendance } from "@/app/actions/team";
@@ -17,6 +16,11 @@ import { requireAuth } from "@/lib/auth";
 import { istToday, istMonthString, istWeekday, scheduleRunsOn } from "@/lib/fees";
 import { attendanceStatusOf, parseMedicalInfo, cleanPhone, scheduleTime, scheduleStartMinutes, firstName } from "@/lib/coach";
 import { Calendar, Trophy, MapPin } from "lucide-react";
+import { NeedsYou } from "@/components/coach/NeedsYou";
+import { CoachAtRisk } from "@/components/coach/CoachAtRisk";
+import { AttendanceSync } from "@/components/coach/AttendanceSync";
+import { needsYou, planToday, scheduleRange, sessionPhase } from "@/lib/coach-today";
+import { loadAtRiskStudents } from "@/lib/risk-data";
 
 const TAB_IDS: CoachTab[] = ["today", "squad", "plan", "inbox", "me"];
 
@@ -49,7 +53,12 @@ export default async function CoachDashboard({
   const todayStart = istToday();
   const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
   const weekday = istWeekday();
-  const batchWhere = isAdmin ? { orgId } : { coachId: session.id, orgId };
+  // Owners/managers may open the coach view. Default to the batches they coach themselves ("mine");
+  // "all" shows every batch in the academy. Coaches always see only their own batches.
+  const scopeParam = typeof sp.scope === "string" ? sp.scope : "";
+  const ownBatchCount = isAdmin ? await db.batch.count({ where: { orgId, coachId: session.id } }) : 0;
+  const scope: "mine" | "all" = !isAdmin ? "mine" : scopeParam === "all" ? "all" : scopeParam === "mine" ? "mine" : ownBatchCount > 0 ? "mine" : "all";
+  const batchWhere = isAdmin && scope === "all" ? { orgId } : { coachId: session.id, orgId };
   const injuryWindow = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000);
 
   const [coach, batches, existingTodaySessions, events, org, currentMonthFeeRecords, trialsToday, recentInjuries] =
@@ -162,6 +171,8 @@ export default async function CoachDashboard({
             medicalNote: med.severity === "info" ? med.summary : null,
             injury: injuryByStudent.get(e.student.id) || null,
             feeDue: feeByStudent.get(e.student.id)?.status === "PENDING",
+            parentName: e.student.parent?.name ?? null,
+            parentPhone: e.student.parent?.phone ?? null,
           };
         }),
         trials: trialsToday
@@ -236,13 +247,42 @@ export default async function CoachDashboard({
   });
 
   // ---------- Panels ----------
-  const toWatchToday = new Set(
-    activeToday.flatMap((s) => s.students.filter((x) => x.medical || x.injury).map((x) => x.id))
-  ).size;
-  const heroIndex = (() => {
-    const open = todaySessions.findIndex((x) => x.status !== "CANCELLED" && x.status !== "COMPLETED");
-    return open !== -1 ? open : todaySessions.findIndex((x) => x.status !== "CANCELLED");
-  })();
+  // ---------- Today: order by the clock, not by "first unfinished" ----------
+  const istNow = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", day: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
+  const part = (t: string) => Number(istNow.find((p) => p.type === t)?.value ?? 0);
+  const nowMinutes = part("hour") * 60 + part("minute");
+  const dayOfMonth = part("day");
+  const scheduleByBatch = new Map(batches.map((b) => [b.id, b.schedule]));
+  const phased = todaySessions.map((s) => {
+    const range = scheduleRange(scheduleByBatch.get(s.batchId));
+    const marked = s.students.filter((x) => x.status !== null).length;
+    return { item: s, range, phase: sessionPhase({ cancelled: s.status === "CANCELLED", marked, total: s.students.length, range, nowMinutes }) };
+  });
+  const plan = planToday(phased);
+  const heroLabel = plan.hero
+    ? plan.hero.phase === "now"
+      ? "Now"
+      : plan.hero.phase === "in_progress"
+        ? "In progress"
+        : plan.hero.phase === "unmarked"
+          ? "Not marked yet"
+          : "Up next"
+    : "Up next";
+  const unmarkedCount = phased.filter((p) => p.phase === "unmarked").length;
+
+  const atRisk = await loadAtRiskStudents(orgId, { canContact: true, batchIds }).catch(() => null);
+  const scopeQuery = isAdmin ? `&scope=${scope}` : "";
+  const needs = needsYou({
+    unmarkedToday: unmarkedCount,
+    evaluationsDue: Math.max(0, totalStudents - totalEvaluated),
+    evaluationsTotal: totalStudents,
+    dayOfMonth,
+    atRiskHigh: atRisk?.high ?? 0,
+    atRiskMedium: atRisk?.medium ?? 0,
+    parentsNotOnApp: pendingParents.length,
+    scopeQuery,
+  });
+
   const shareContext = {
     coachName: coach.name,
     academyName: org?.name || "Academy",
@@ -250,37 +290,93 @@ export default async function CoachDashboard({
     dateLabel: todayLabel,
   };
 
+  const sessionGroup = (id: string, title: string, items: typeof phased, missed = false) =>
+    items.length > 0 ? (
+      <section id={id} aria-labelledby={`${id}-title`} className="space-y-3 scroll-mt-20">
+        <h3 id={`${id}-title`} className="text-xs font-semibold uppercase tracking-wide text-ink-subtle">
+          {title} · {items.length}
+        </h3>
+        {items.map((p) => (
+          <SessionAttendanceCard key={p.item.key} session={p.item} missed={missed} shareContext={shareContext} />
+        ))}
+      </section>
+    ) : null;
+
+  const scopeToggle = isAdmin ? (
+    <nav aria-label="Which batches" className="inline-flex rounded-lg border border-line p-0.5 text-xs font-semibold">
+      <a href={`/coach?tab=today&scope=mine`} aria-current={scope === "mine" ? "page" : undefined} className={`px-3 h-9 inline-flex items-center rounded-md ${scope === "mine" ? "bg-surface-2 text-ink" : "text-ink-muted"}`}>
+        My batches{ownBatchCount === 0 ? " (0)" : ""}
+      </a>
+      <a href={`/coach?tab=today&scope=all`} aria-current={scope === "all" ? "page" : undefined} className={`px-3 h-9 inline-flex items-center rounded-md ${scope === "all" ? "bg-surface-2 text-ink" : "text-ink-muted"}`}>
+        All batches
+      </a>
+    </nav>
+  ) : null;
+
   const todayPanel = (
-    <div className="space-y-5">
-      <div>
-        <p className="text-xs text-zinc-500 font-medium">{todayLabel}</p>
-        <h2 className="text-3xl font-black tracking-tight text-white leading-tight">
-          {greeting()}, <span style={{ color: "var(--brand)" }}>{firstName(coach.name)}</span>
-        </h2>
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:items-start space-y-5 lg:space-y-0">
+      <div className="space-y-5 min-w-0">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs text-ink-subtle font-medium">{todayLabel}</p>
+            <h2 className="text-2xl font-bold tracking-tight text-ink leading-tight">
+              {greeting()}, <span style={{ color: "var(--brand)" }}>{firstName(coach.name)}</span>
+            </h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              {activeToday.length === 0
+                ? "No sessions today."
+                : `${activeToday.length} session${activeToday.length === 1 ? "" : "s"} today · ${todayIn} of ${todayTotal} marked in`}
+            </p>
+          </div>
+          {scopeToggle && <div className="sm:hidden">{scopeToggle}</div>}
+        </div>
+
+        <AttendanceSync />
+        <AcademySwitcher className="w-full" />
+        {myAttendance && (
+          <div className="lg:hidden">
+            <CheckInCard initial={myAttendance.today} subtle />
+          </div>
+        )}
+
+        {todaySessions.length > 0 ? (
+          <>
+            {plan.hero && <SessionAttendanceCard key={plan.hero.item.key} session={plan.hero.item} isNextUp heroLabel={heroLabel} shareContext={shareContext} />}
+            <div className="lg:hidden">
+              <NeedsYou items={needs} />
+            </div>
+            {sessionGroup("not-marked", "Not marked yet", plan.unmarked, true)}
+            {sessionGroup("later", "Later today", plan.upcoming)}
+            {sessionGroup("done", "Done", plan.done)}
+            {sessionGroup("cancelled", "Cancelled", plan.cancelled)}
+          </>
+        ) : (
+          <>
+            <div className="text-center py-12 bg-surface border border-line rounded-2xl p-6 space-y-2">
+              <Calendar className="w-8 h-8 text-ink-subtle mx-auto" />
+              <h3 className="text-base font-semibold text-ink">No sessions today ({weekday})</h3>
+              <p className="text-ink-muted text-sm max-w-sm mx-auto">
+                Rest day. Use Squad to finish this month&apos;s evaluations, or message a batch from Inbox.
+              </p>
+            </div>
+            <div className="lg:hidden">
+              <NeedsYou items={needs} />
+            </div>
+          </>
+        )}
+
+        <div id="invite-parents" className="scroll-mt-20 lg:hidden">
+          <InviteParentsCard pending={pendingParents} academyName={org?.name || "our academy"} coachName={coach.name} />
+        </div>
       </div>
 
-      <AcademySwitcher className="w-full" />
-      {myAttendance && <CheckInCard initial={myAttendance.today} />}
-
-      <TodayStatPills sessions={activeToday.length} inToday={todayIn} total={todayTotal} toWatch={toWatchToday} />
-
-      {todaySessions.length > 0 ? (
-        <div className="space-y-3">
-          {todaySessions.map((s, i) => (
-            <SessionAttendanceCard key={s.key} session={s} isNextUp={i === heroIndex} shareContext={shareContext} />
-          ))}
+      <aside className="hidden lg:block space-y-4 lg:sticky lg:top-20">
+        <NeedsYou items={needs} />
+        {myAttendance && <CheckInCard initial={myAttendance.today} subtle />}
+        <div id="invite-parents-desktop">
+          <InviteParentsCard pending={pendingParents} academyName={org?.name || "our academy"} coachName={coach.name} />
         </div>
-      ) : (
-        <div className="text-center py-12 bg-zinc-900/40 border border-zinc-800/80 rounded-3xl p-6 space-y-2">
-          <Calendar className="w-8 h-8 text-zinc-600 mx-auto" />
-          <h3 className="text-base font-bold text-zinc-200">No sessions today ({weekday})</h3>
-          <p className="text-zinc-500 text-xs max-w-sm mx-auto">
-            Rest day. Use the Squad tab to finish this month&apos;s evaluations, or message a batch from Inbox.
-          </p>
-        </div>
-      )}
-
-      <InviteParentsCard pending={pendingParents} academyName={org?.name || "our academy"} coachName={coach.name} />
+      </aside>
     </div>
   );
 
@@ -293,7 +389,16 @@ export default async function CoachDashboard({
     })),
   }));
   // Cast: DB rows carry extra Prisma fields beyond BatchRecord's shape.
-  const squadPanel = <CoachBatchRoster batches={squadBatches as unknown as import("@/components/coach/CoachBatchRoster").BatchRecord[]} coachId={coach.id} currentMonth={currentMonth} />;
+  const squadPanel = (
+    <div className="space-y-6">
+      {atRisk && atRisk.high + atRisk.medium + atRisk.low > 0 && (
+        <div id="at-risk" className="scroll-mt-20">
+          <CoachAtRisk data={atRisk} />
+        </div>
+      )}
+      <CoachBatchRoster batches={squadBatches as unknown as import("@/components/coach/CoachBatchRoster").BatchRecord[]} coachId={coach.id} currentMonth={currentMonth} />
+    </div>
+  );
 
   const planPanel = (
     <div className="space-y-4">
@@ -381,7 +486,7 @@ export default async function CoachDashboard({
     >
       {/* Sticky header with always-on SOS */}
       <header className="sticky top-0 z-30 bg-canvas/85 backdrop-blur-md border-b border-line">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+        <div className="max-w-4xl lg:max-w-none mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-lg brand-bg flex items-center justify-center text-[15px] font-semibold shrink-0" aria-hidden>
               {(org?.name || "Triq").trim().charAt(0).toUpperCase()}
@@ -391,17 +496,44 @@ export default async function CoachDashboard({
               <div className="text-[12px] text-ink-subtle leading-tight mt-0.5">Coach view</div>
             </div>
           </div>
-          <EmergencySOS students={sosStudents} coachId={coach.id} />
+          <div className="flex items-center gap-2 shrink-0">
+            {isAdmin && (
+              <>
+                <nav aria-label="Which batches" className="hidden sm:inline-flex rounded-lg border border-line p-0.5 text-xs font-semibold">
+                  <a
+                    href={`/coach?tab=${initialTab}&scope=mine`}
+                    aria-current={scope === "mine" ? "page" : undefined}
+                    className={`px-2.5 h-8 inline-flex items-center rounded-md ${scope === "mine" ? "bg-surface-2 text-ink" : "text-ink-muted hover:text-ink"}`}
+                  >
+                    My batches{ownBatchCount === 0 ? " (0)" : ""}
+                  </a>
+                  <a
+                    href={`/coach?tab=${initialTab}&scope=all`}
+                    aria-current={scope === "all" ? "page" : undefined}
+                    className={`px-2.5 h-8 inline-flex items-center rounded-md ${scope === "all" ? "bg-surface-2 text-ink" : "text-ink-muted hover:text-ink"}`}
+                  >
+                    All batches
+                  </a>
+                </nav>
+                <a href="/org" className="h-9 px-3 inline-flex items-center rounded-lg border border-line text-xs font-semibold text-ink-muted hover:text-ink">
+                  Admin
+                </a>
+              </>
+            )}
+            <EmergencySOS students={sosStudents} coachId={coach.id} />
+          </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-5 pb-28">
+      <div className="lg:pl-56">
+      <main className="max-w-4xl lg:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-28 lg:pb-12">
         <CoachTabs
           initialTab={initialTab}
           badges={{ today: activeToday.reduce((n, s) => n + s.trials.filter((t) => t.status === "PENDING" || t.status === "CONFIRMED").length, 0) || undefined }}
           panels={{ today: todayPanel, squad: squadPanel, plan: planPanel, inbox: inboxPanel, me: mePanel }}
         />
       </main>
+      </div>
     </div>
   );
 }

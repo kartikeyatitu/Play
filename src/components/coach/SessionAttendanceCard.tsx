@@ -22,7 +22,7 @@ import {
   ClipboardCheck,
   PenLine,
 } from "lucide-react";
-import { AttendanceToggle } from "@/components/coach/AttendanceToggle";
+import { AttendanceTile, AttendanceToggle } from "@/components/coach/AttendanceToggle";
 import { ShareRecapButton } from "@/components/coach/ShareRecapButton";
 import { markBatchAttendance } from "@/app/actions/attendance";
 import {
@@ -33,6 +33,7 @@ import {
 } from "@/app/actions/coach-session";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { statusIsPresent, shortMedicalLabel, firstName, type AttendanceStatus } from "@/lib/coach";
+import { absentMessage } from "@/lib/coach-today";
 
 export interface TodayStudent {
   id: string;
@@ -45,6 +46,9 @@ export interface TodayStudent {
   /** Active injury logged in the last 21 days (alert). */
   injury: string | null;
   feeDue: boolean;
+  /** For the "message parents of absent kids" drafts. */
+  parentName?: string | null;
+  parentPhone?: string | null;
 }
 
 export interface TodayTrial {
@@ -116,10 +120,16 @@ interface WatchItem {
 export function SessionAttendanceCard({
   session,
   isNextUp = false,
+  heroLabel = "Up next",
+  missed = false,
   shareContext,
 }: {
   session: TodaySession;
   isNextUp?: boolean;
+  /** Label above the hero card's title: "Now", "Up next" or "Not marked yet". */
+  heroLabel?: string;
+  /** The slot has ended and nothing is marked: the collapsed chip says so instead of "Start". */
+  missed?: boolean;
   shareContext?: TodayShareContext;
 }) {
   const router = useRouter();
@@ -130,6 +140,7 @@ export function SessionAttendanceCard({
   const [expanded, setExpanded] = useState(false);
   const [rosterOpen, setRosterOpen] = useState(false);
   const [watchOpen, setWatchOpen] = useState(false);
+  const [view, setView] = useState<"grid" | "list">("grid");
 
   const cancelled = session.status === "CANCELLED";
   const hero = isNextUp && !cancelled;
@@ -309,7 +320,44 @@ export function SessionAttendanceCard({
     </button>
   );
 
-  const roster = (
+  const viewSwitch = (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-xs text-ink-subtle">{view === "grid" ? "Tap a face: Present → Absent → Late" : "P present · L late · A absent · E excused"}</span>
+      <div role="tablist" aria-label="Attendance view" className="inline-flex rounded-lg border border-line p-0.5 text-xs font-semibold">
+        {(["grid", "list"] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            role="tab"
+            aria-selected={view === v}
+            onClick={() => setView(v)}
+            className={`px-2.5 h-8 rounded-md ${view === v ? "bg-surface-2 text-ink" : "text-ink-muted"}`}
+          >
+            {v === "grid" ? "Faces" : "List"}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const grid = (
+    <ul className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 min-w-0">
+      {session.students.map((s) => (
+        <li key={s.id}>
+          <AttendanceTile
+            batchId={session.batchId}
+            studentId={s.id}
+            name={s.name}
+            initials={initials(s.name)}
+            initialStatus={s.status}
+            alert={[s.medical, s.injury].filter(Boolean).join(" · ") || null}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+
+  const list = (
     <ul className="rounded-2xl bg-zinc-950/40 px-3 py-1 divide-y divide-zinc-800/40 min-w-0">
       {session.students.map((s) => {
         const alertText = [s.medical, s.injury].filter(Boolean).join(" · ");
@@ -332,6 +380,13 @@ export function SessionAttendanceCard({
         );
       })}
     </ul>
+  );
+
+  const roster = (
+    <div className="space-y-2">
+      {viewSwitch}
+      {view === "grid" ? grid : list}
+    </div>
   );
 
   let actionArea: ReactNode = null;
@@ -449,10 +504,52 @@ export function SessionAttendanceCard({
     </div>
   );
 
+  const absentees = session.students.filter((st) => st.status === "ABSENT");
+  const waNumber = (raw?: string | null) => {
+    const d = String(raw ?? "").replace(/\D/g, "");
+    return d.length === 10 ? `91${d}` : d.length > 10 ? d : "";
+  };
+  const absentBlock =
+    absentees.length > 0 ? (
+      <div className="rounded-2xl border border-line p-3 space-y-2 min-w-0">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-ink-subtle">Absent today · {absentees.length}</div>
+        <ul className="space-y-1.5">
+          {absentees.map((st) => {
+            const num = waNumber(st.parentPhone);
+            const text = absentMessage({
+              parentName: st.parentName || "",
+              childName: st.name,
+              batchName: session.batchName,
+              coachName: shareContext?.coachName || "",
+            });
+            return (
+              <li key={st.id} className="flex items-center justify-between gap-2 min-w-0">
+                <span className="text-sm text-ink truncate">{st.name}</span>
+                {num ? (
+                  <a
+                    href={`https://wa.me/${num}?text=${encodeURIComponent(text)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 h-8 px-3 rounded-lg border border-line text-xs font-semibold text-ink hover:bg-surface-2 inline-flex items-center gap-1.5"
+                  >
+                    <Send className="w-3.5 h-3.5" aria-hidden /> Message {firstName(st.parentName || "") || "parent"}
+                  </a>
+                ) : (
+                  <span className="shrink-0 text-xs text-ink-subtle">No parent number</span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <p className="text-[11px] text-ink-subtle">Opens WhatsApp with a short check-in message you can edit.</p>
+      </div>
+    ) : null;
+
   const body = (
     <div className="space-y-3 min-w-0">
       {watchRow}
       {actionArea}
+      {absentBlock}
       {recapBlock}
       {trialsBlock}
       {footer}
@@ -468,7 +565,7 @@ export function SessionAttendanceCard({
         <div className="flex items-start gap-3 min-w-0">
           <div className="min-w-0 flex-1">
             <div className="text-[13px] font-medium text-ink-subtle">
-              Up next · {session.time || "Today"}
+              {heroLabel} · {session.time || "Today"}
             </div>
             <h3 className="mt-1 text-xl font-semibold tracking-[-0.02em] leading-tight break-words text-ink">{session.batchName}</h3>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -500,8 +597,12 @@ export function SessionAttendanceCard({
     <span className="shrink-0 h-8 px-3 rounded-full bg-emerald-500/10 text-emerald-300 text-xs font-bold flex items-center gap-1">
       Done <Check className="w-3.5 h-3.5" />
     </span>
+  ) : missed && marked === 0 ? (
+    <span className="shrink-0 h-8 px-3 rounded-full bg-warn/10 text-warn text-xs font-bold flex items-center gap-1">
+      <AlertTriangle className="w-3.5 h-3.5" aria-hidden /> Mark now
+    </span>
   ) : (
-    <span className="shrink-0 h-8 px-3.5 rounded-full bg-zinc-800 text-zinc-100 text-xs font-bold flex items-center">
+    <span className="shrink-0 h-8 px-3.5 rounded-full bg-surface-2 text-ink text-xs font-bold flex items-center">
       {marked > 0 ? "Resume" : "Start"}
     </span>
   );

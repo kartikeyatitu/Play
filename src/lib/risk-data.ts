@@ -27,7 +27,10 @@ export type AtRiskSummary = { high: number; medium: number; low: number; checked
 
 const MAX_LISTED = 100;
 
-export async function loadAtRiskStudents(orgId: string, opts: { canContact: boolean; now?: Date }): Promise<AtRiskSummary> {
+export async function loadAtRiskStudents(
+  orgId: string,
+  opts: { canContact: boolean; now?: Date; /** Limit to students in these batches (a coach's own). */ batchIds?: string[] },
+): Promise<AtRiskSummary> {
   const org = await db.organization.findUnique({
     where: { id: orgId },
     select: { name: true, timezone: true, country: true, currency: true, locale: true, phoneCountry: true },
@@ -41,12 +44,15 @@ export async function loadAtRiskStudents(orgId: string, opts: { canContact: bool
 
   const [students, marks, unpaid] = await Promise.all([
     db.student.findMany({
-      where: { orgId, enrollments: { some: { batch: { orgId } } } },
+      where: { orgId, enrollments: { some: { batch: { orgId, ...(opts.batchIds ? { id: { in: opts.batchIds } } : {}) } } } },
       select: {
         id: true,
         name: true,
         parent: { select: { name: true, phone: true } },
-        enrollments: { where: { batch: { orgId } }, select: { joinedAt: true, batch: { select: { name: true } } } },
+        enrollments: {
+          where: { batch: { orgId, ...(opts.batchIds ? { id: { in: opts.batchIds } } : {}) } },
+          select: { joinedAt: true, batch: { select: { name: true } } },
+        },
       },
     }),
     db.$queryRaw<{ studentId: string; present: boolean; date: string }[]>`

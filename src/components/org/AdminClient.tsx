@@ -293,6 +293,12 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
             <a href={orgSlug ? `/trial?academy=${encodeURIComponent(orgSlug)}` : "/trial"} target="_blank" rel="noopener noreferrer" className="text-xs text-zinc-500 hover:text-zinc-200 transition">Trial ↗</a>
             <ProductTour onNavigate={(tab) => setActiveTabRef.current(tab)} isFirstVisit={tourFirstVisit && batches.length > 0 && students.length > 0} />
           </div>
+          <a
+            href="/coach"
+            className="min-h-[44px] inline-flex items-center text-xs sm:text-sm text-ink-muted hover:text-ink border border-line px-3 rounded-xl transition whitespace-nowrap"
+          >
+            Coach view
+          </a>
           <form action={logoutAction}>
             <button className="min-h-[44px] text-xs sm:text-sm text-zinc-400 hover:text-white border border-zinc-800 px-3 rounded-xl transition whitespace-nowrap">
               Sign Out

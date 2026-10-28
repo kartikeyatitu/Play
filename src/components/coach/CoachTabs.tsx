@@ -52,9 +52,9 @@ export function CoachTabs({
 
       <nav
         aria-label="Coach navigation"
-        className="fixed bottom-0 inset-x-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-0 inset-x-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] lg:top-14 lg:right-auto lg:w-56 lg:border-t-0 lg:border-r lg:pb-0 lg:bg-surface"
       >
-        <div className="max-w-4xl mx-auto grid grid-cols-5">
+        <div className="max-w-4xl mx-auto grid grid-cols-5 lg:max-w-none lg:flex lg:flex-col lg:gap-1 lg:p-3">
           {TABS.map(({ id, label, icon: Icon }) => {
             const active = id === tab;
             const badge = badges[id];
@@ -64,11 +64,11 @@ export function CoachTabs({
                 type="button"
                 onClick={() => select(id)}
                 aria-current={active ? "page" : undefined}
-                className={`relative h-16 flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors ${
-                  active ? "brand-text" : "text-ink-subtle hover:text-ink"
+                className={`relative h-16 flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors lg:h-11 lg:flex-row lg:justify-start lg:gap-3 lg:px-3 lg:rounded-lg lg:text-sm ${
+                  active ? "brand-text lg:bg-surface-2" : "text-ink-subtle hover:text-ink lg:hover:bg-surface-2/60"
                 }`}
               >
-                {active && <span className="absolute top-0 h-0.5 w-10 rounded-full brand-bar" />}
+                {active && <span className="absolute top-0 h-0.5 w-10 rounded-full brand-bar lg:hidden" />}
                 <span className="relative">
                   <Icon className="w-5 h-5" strokeWidth={active ? 2 : 1.75} />
                   {badge ? (
