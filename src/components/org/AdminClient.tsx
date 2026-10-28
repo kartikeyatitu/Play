@@ -77,6 +77,7 @@ const CalendarExport = dynamic(() => import("@/components/org/CalendarExport").t
 const ImportExcelButton = dynamic(() => import("@/components/org/ImportExcelButton").then((m) => m.ImportExcelButton), { loading: inlineLoading });
 const ExcelImport = dynamic(() => import("@/components/org/ExcelImport").then((m) => m.ExcelImport), { loading: sectionLoading });
 const WhatsAppRosterImport = dynamic(() => import("@/components/org/WhatsAppRosterImport").then((m) => m.WhatsAppRosterImport), { loading: inlineLoading });
+const AtRiskStudents = dynamic(() => import("@/components/org/AtRiskStudents").then((m) => m.AtRiskStudents), { loading: sectionLoading });
 const OwnerInsights = dynamic(() => import("@/components/org/OwnerInsights").then((m) => m.OwnerInsights), { loading: sectionLoading });
 const RegisterPhotoImport = dynamic(() => import("@/components/org/RegisterPhotoImport").then((m) => m.RegisterPhotoImport), { loading: inlineLoading });
 const PaymentPlans = dynamic(() => import("@/components/org/PaymentPlans").then((m) => m.PaymentPlans), { loading: sectionLoading });
@@ -661,6 +662,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {activeTab === "analytics" && (
             <div className="space-y-6">
               {FEATURES.ownerInsights && <OwnerInsights />}
+              {FEATURES.atRiskStudents && <AtRiskStudents />}
               {/* `sessions` is unused by AnalyticsDashboard — no longer fetched/shipped */}
               <AnalyticsDashboard students={students} batches={batches} feeSummary={feeSummary} sessions={[]} />
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

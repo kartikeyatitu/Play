@@ -30,7 +30,7 @@ export function BusinessReport({ currentMonth }: { currentMonth: string }) {
   const [explainError, setExplainError] = useState<string | null>(null);
 
   useEffect(() => {
-    getAiStatus()
+    getAiStatus("reports.view")
       .then((r) => setAiAvailable(r.available))
       .catch(() => setAiAvailable(false));
   }, []);

@@ -54,7 +54,7 @@ export function RegisterPhotoImport({ batches = [] }: { batches?: Batch[] }) {
   const [result, setResult] = useState<ImportResult | null>(null);
 
   useEffect(() => {
-    getAiStatus()
+    getAiStatus("students.manage")
       .then((r) => setAvailable(r.available))
       .catch(() => setAvailable(false));
   }, []);

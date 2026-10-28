@@ -93,6 +93,8 @@ export const FEATURES = {
   aiAssist: flag("AI_ASSIST", true),
   /** Owner insights on the Analytics tab: daily snapshot, fee ageing, 12-month trends. Read-only, no schema. */
   ownerInsights: flag("OWNER_INSIGHTS", true),
+  /** At-risk students on the Analytics tab: risk score from attendance, overdue fees and tenure, with a WhatsApp draft. */
+  atRiskStudents: flag("AT_RISK_STUDENTS", true),
 } as const;
 
 export type FeatureName = keyof typeof FEATURES;

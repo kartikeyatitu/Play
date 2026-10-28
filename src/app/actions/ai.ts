@@ -16,10 +16,16 @@ import { computeBusinessReport, isReportMonth } from "@/lib/business-report";
 type Result = { success: true; text: string } | { success: false; error: string };
 
 /** Whether AI buttons should be shown. Signed-in staff only; reveals nothing else. */
-export async function getAiStatus(): Promise<{ available: boolean }> {
+export async function getAiStatus(permission?: "students.manage" | "reports.view"): Promise<{ available: boolean }> {
   const session = await getSession();
   if (!session || session.role === "PARENT") return { available: false };
-  return { available: aiConfigured() };
+  if (!aiConfigured()) return { available: false };
+  // Hide buttons the viewer couldn't use anyway (e.g. a manager without students.manage).
+  if (permission === "students.manage" || permission === "reports.view") {
+    const check = await checkPermission(permission);
+    if (!check.ok) return { available: false };
+  }
+  return { available: true };
 }
 
 /**
