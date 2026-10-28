@@ -99,6 +99,10 @@ export const FEATURES = {
   funnelCohorts: flag("FUNNEL_COHORTS", true),
   /** Ask TRIQ: plain-language questions routed by AI to approved reports (needs ANTHROPIC_API_KEY). */
   askTriq: flag("ASK_TRIQ", true),
+  /** Coach insights (current month: sessions marked, attendance, evaluations) on the Analytics tab. */
+  coachInsights: flag("COACH_INSIGHTS", true),
+  /** Weekly summary on the Analytics tab with a Share on WhatsApp button (no automatic sending). */
+  weeklyDigest: flag("WEEKLY_DIGEST", true),
 } as const;
 
 export type FeatureName = keyof typeof FEATURES;

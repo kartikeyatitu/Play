@@ -77,6 +77,8 @@ const CalendarExport = dynamic(() => import("@/components/org/CalendarExport").t
 const ImportExcelButton = dynamic(() => import("@/components/org/ImportExcelButton").then((m) => m.ImportExcelButton), { loading: inlineLoading });
 const ExcelImport = dynamic(() => import("@/components/org/ExcelImport").then((m) => m.ExcelImport), { loading: sectionLoading });
 const WhatsAppRosterImport = dynamic(() => import("@/components/org/WhatsAppRosterImport").then((m) => m.WhatsAppRosterImport), { loading: inlineLoading });
+const CoachInsights = dynamic(() => import("@/components/org/CoachInsights").then((m) => m.CoachInsights), { loading: sectionLoading });
+const WeeklyDigest = dynamic(() => import("@/components/org/WeeklyDigest").then((m) => m.WeeklyDigest), { loading: sectionLoading });
 const AskTriq = dynamic(() => import("@/components/org/AskTriq").then((m) => m.AskTriq), { loading: inlineLoading });
 const FunnelAndRetention = dynamic(() => import("@/components/org/FunnelAndRetention").then((m) => m.FunnelAndRetention), { loading: sectionLoading });
 const AtRiskStudents = dynamic(() => import("@/components/org/AtRiskStudents").then((m) => m.AtRiskStudents), { loading: sectionLoading });
@@ -664,6 +666,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {activeTab === "analytics" && (
             <div className="space-y-6">
               {FEATURES.askTriq && <AskTriq />}
+              {FEATURES.weeklyDigest && <WeeklyDigest />}
               {FEATURES.ownerInsights && <OwnerInsights />}
               {FEATURES.atRiskStudents && <AtRiskStudents />}
               {FEATURES.funnelCohorts && <FunnelAndRetention />}
@@ -673,7 +676,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
                 <RevenueProjection paidCount={stats.paidFeesCount} totalStudents={stats.totalStudents} ratePerStudent={stats.typicalFee ?? 0} collectedAmount={stats.revenueThisMonth} targetAmount={stats.billedThisMonth} />
                 <CapacityAlerts batches={batches} />
               </div>
-              <CoachPerformance coaches={coaches as any} sessionRate={coachRate} />
+              {FEATURES.coachInsights ? <CoachInsights /> : <CoachPerformance coaches={coaches as any} sessionRate={coachRate} />}
               <SectionHeader title="Export Data" />
               <Card className="bg-zinc-900/30 border-zinc-800/50 p-6">
                 <ExportCSV students={exportStudents} />
