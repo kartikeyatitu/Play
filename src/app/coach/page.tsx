@@ -21,6 +21,9 @@ import { CoachAtRisk } from "@/components/coach/CoachAtRisk";
 import { AttendanceSync } from "@/components/coach/AttendanceSync";
 import { needsYou, planToday, scheduleRange, sessionPhase } from "@/lib/coach-today";
 import { loadAtRiskStudents } from "@/lib/risk-data";
+import { FEATURES } from "@/lib/features";
+import { listLiveMatches } from "@/lib/live-match-data";
+import { LiveMatchesPanel } from "@/components/live/LiveMatchesPanel";
 
 const TAB_IDS: CoachTab[] = ["today", "squad", "plan", "inbox", "me"];
 
@@ -128,6 +131,12 @@ export default async function CoachDashboard({
   if (!coach) redirect("/login");
 
   const batchIds = batches.map((b) => b.id);
+  const liveMatches = FEATURES.liveScoring ? await listLiveMatches(orgId).catch(() => []) : [];
+  const liveSquad = (() => {
+    const seen = new Map<string, { id: string; name: string; group: string | null }>();
+    for (const b of batches) for (const e of b.enrollments) if (!seen.has(e.student.id)) seen.set(e.student.id, { id: e.student.id, name: e.student.name, group: b.name });
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  })();
   const recentAnnouncements = await db.announcement.findMany({
     where: { orgId, batchId: { in: batchIds.length ? batchIds : ["__none__"] } },
     orderBy: { createdAt: "desc" },
@@ -402,6 +411,7 @@ export default async function CoachDashboard({
 
   const planPanel = (
     <div className="space-y-4">
+      {FEATURES.liveScoring && <LiveMatchesPanel rows={liveMatches} squad={liveSquad} />}
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight">Matches &amp; events</h2>

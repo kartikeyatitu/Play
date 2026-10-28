@@ -733,6 +733,15 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {activeTab === "events" && FEATURES.events && (
             <div className="space-y-6">
               <SectionHeader title="Competitions & Certificates" />
+              {FEATURES.liveScoring && (
+                <a href="/org/live" className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3 hover:bg-surface-2">
+                  <span>
+                    <span className="block text-sm font-semibold text-ink">Live scoring</span>
+                    <span className="block text-xs text-ink-muted">Score badminton, table tennis, volleyball, squash, pickleball and tennis point by point, with a live link for parents.</span>
+                  </span>
+                  <span aria-hidden className="text-ink-subtle">→</span>
+                </a>
+              )}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="lg:col-span-2">
                   <CompetitionManager batches={batches.map((b: any) => ({ id: b.id, name: b.name }))} />

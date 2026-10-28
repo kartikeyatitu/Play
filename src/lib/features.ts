@@ -95,6 +95,8 @@ export const FEATURES = {
   ownerInsights: flag("OWNER_INSIGHTS", true),
   /** At-risk students on the Analytics tab: risk score from attendance, overdue fees and tenure, with a WhatsApp draft. */
   atRiskStudents: flag("AT_RISK_STUDENTS", true),
+  /** Live scoring: point-by-point scorer, live scoreboard and share link (prisma/sql/2026-10-28_live_scoring.sql, applied). */
+  liveScoring: flag("LIVE_SCORING", true),
   /** Enquiry funnel by source and new-student retention cohorts on the Analytics tab. Read-only, no schema. */
   funnelCohorts: flag("FUNNEL_COHORTS", true),
   /** Ask TRIQ: plain-language questions routed by AI to approved reports (needs ANTHROPIC_API_KEY). */
