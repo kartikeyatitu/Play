@@ -95,6 +95,8 @@ export const FEATURES = {
   ownerInsights: flag("OWNER_INSIGHTS", true),
   /** At-risk students on the Analytics tab: risk score from attendance, overdue fees and tenure, with a WhatsApp draft. */
   atRiskStudents: flag("AT_RISK_STUDENTS", true),
+  /** Enquiry funnel by source and new-student retention cohorts on the Analytics tab. Read-only, no schema. */
+  funnelCohorts: flag("FUNNEL_COHORTS", true),
 } as const;
 
 export type FeatureName = keyof typeof FEATURES;
