@@ -172,3 +172,16 @@
     --n-1000: 0 0 0;
   }
 }
+
+/* ── Chart colours (validated with the dataviz palette checker, 2026-10-28) ──
+   Two-series charts: billed = blue, collected = lime. Each pair passes lightness band,
+   chroma floor, colour-blind separation and ≥3:1 contrast on its theme's surface. */
+:root,
+[data-theme="light"] {
+  --viz-billed: #2a78d6;
+  --viz-collected: #4d7a00;
+}
+[data-theme="dark"] {
+  --viz-billed: #3987e5;
+  --viz-collected: #6f9f12;
+}

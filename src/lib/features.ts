@@ -91,6 +91,8 @@ export const FEATURES = {
    * Also needs ANTHROPIC_API_KEY; without it no AI button is shown. Spend capped by AI_MONTHLY_BUDGET_INR.
    */
   aiAssist: flag("AI_ASSIST", true),
+  /** Owner insights on the Analytics tab: daily snapshot, fee ageing, 12-month trends. Read-only, no schema. */
+  ownerInsights: flag("OWNER_INSIGHTS", true),
 } as const;
 
 export type FeatureName = keyof typeof FEATURES;
