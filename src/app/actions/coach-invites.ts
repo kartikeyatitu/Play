@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 import { cleanPhone } from "@/lib/coach";
 import { getAppUrl } from "@/lib/app-url";
 
@@ -62,7 +62,7 @@ export async function createParentInviteLinks(studentIds?: string[]): Promise<Cr
   const orgId = session.orgId;
   if (!orgId) return { success: false, error: "No academy found for your account." };
 
-  const rl = rateLimit(`parent-invites:${session.id}`, 10, 10 * 60_000);
+  const rl = await rateLimitDb(`parent-invites:${session.id}`, 10, 10 * 60_000);
   if (!rl.allowed) return { success: false, error: "Too many invite requests. Please wait a few minutes and try again." };
 
   const ids = Array.isArray(studentIds)

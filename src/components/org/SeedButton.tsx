@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 export function SeedButton() {
   const [loading, setLoading] = useState(false);
+  // Never offer demo seeding in production (the server action refuses there too).
+  if (process.env.NODE_ENV === "production") return null;
   return (
     <button
       onClick={async () => {

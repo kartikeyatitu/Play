@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { getSession, requireAuth } from "@/lib/auth";
 import { checkPermission } from "@/lib/membership";
 import { FEATURES } from "@/lib/features";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 import { getOrgRazorpay } from "@/lib/razorpay-org";
 import { createRazorpayCustomer, createRazorpayMandateOrder, fetchRazorpayPayment, verifyRazorpayCheckoutSignature } from "@/lib/gateways/razorpay";
 import { formatMoney, orgCurrentMonth } from "@/lib/i18n";
@@ -94,7 +94,7 @@ export async function startAutopayMandate(input: { studentId: string; maxAmountR
 > {
   if (!FEATURES.upiAutopay) return { success: false, error: UPI_AUTOPAY_DISABLED_ERROR };
   const session = await requireAuth(["PARENT"]);
-  if (!rateLimit(`autopay:${session.id}`, 5, 10 * 60_000).allowed) return { success: false, error: "Too many attempts. Please wait a few minutes." };
+  if (!(await rateLimitDb(`autopay:${session.id}`, 5, 10 * 60_000)).allowed) return { success: false, error: "Too many attempts. Please wait a few minutes." };
   if (input?.consent !== true) return { success: false, error: "Please read and accept the AutoPay terms." };
   const student = await parentStudent(session.id, input?.studentId);
   if (!student?.orgId) return { success: false, error: "Student not found." };
@@ -286,7 +286,7 @@ export async function createAutopayCharges(): Promise<({ success: true } & Charg
   if (!FEATURES.upiAutopay) return { success: false, error: UPI_AUTOPAY_DISABLED_ERROR };
   const auth = await checkPermission("fees.manage");
   if (!auth.ok) return { success: false, error: auth.error };
-  if (!rateLimit(`autopay-run:${auth.session.orgId}`, 6, 10 * 60_000).allowed) return { success: false, error: "Please wait a few minutes before running again." };
+  if (!(await rateLimitDb(`autopay-run:${auth.session.orgId}`, 6, 10 * 60_000)).allowed) return { success: false, error: "Please wait a few minutes before running again." };
   const r = await createChargesForOrg(auth.session.orgId, auth.session.id);
   await db.auditLog.create({
     data: { userId: auth.session.id, orgId: auth.session.orgId, action: "AUTOPAY_CHARGE_RUN", details: JSON.stringify({ submitted: r.submitted, failed: r.failed, skipped: r.skipped.length }) },

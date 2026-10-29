@@ -4,7 +4,7 @@ import { concessionAdjustedFee } from "@/lib/concession-fees";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { checkPermission } from "@/lib/membership";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 import { resolveStudentFee } from "@/lib/fees";
 import { finalizePayment } from "@/lib/payment-service";
 import { getOrgRazorpay } from "@/lib/razorpay-org";
@@ -23,7 +23,7 @@ export async function createFeePaymentLink(studentId: string, month: string): Pr
   const { session } = auth;
   try {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) return { success: false, error: "Invalid month." };
-    if (!rateLimit(`plink:${session.orgId}`, 30, 60_000).allowed) return { success: false, error: "Too many links at once. Please wait a minute." };
+    if (!(await rateLimitDb(`plink:${session.orgId}`, 30, 60_000)).allowed) return { success: false, error: "Too many links at once. Please wait a minute." };
 
     const creds = await getOrgRazorpay(session.orgId);
     if (!creds) return { success: false, error: "Connect your Razorpay account in Settings first." };

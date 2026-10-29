@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { cleanIndianPhone } from "@/lib/import-utils";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -54,8 +54,8 @@ export async function registerAcademy(formData: {
 
     // --- Rate limit: 5 per hour per email and per phone ---
     const HOUR = 60 * 60_000;
-    const byEmail = rateLimit(`register:email:${email}`, 5, HOUR);
-    const byPhone = rateLimit(`register:phone:${phone}`, 5, HOUR);
+    const byEmail = await rateLimitDb(`register:email:${email}`, 5, HOUR);
+    const byPhone = await rateLimitDb(`register:phone:${phone}`, 5, HOUR);
     if (!byEmail.allowed || !byPhone.allowed) {
       return { success: false, error: "Too many registration attempts. Please try again later." };
     }

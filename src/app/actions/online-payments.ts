@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { getSession, requireAuth } from "@/lib/auth";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 import { finalizePayment } from "@/lib/payment-service";
 import {
   createRazorpayOrder,
@@ -89,7 +89,7 @@ export async function startOnlineFeePayment(feeRecordId: string): Promise<StartP
   const session = await requireAuth(["PARENT"]);
   try {
     if (!feeRecordId) return { success: false, error: "Fee not found." };
-    if (!rateLimit(`pay:${session.id}`, 10, 60_000).allowed) {
+    if (!(await rateLimitDb(`pay:${session.id}`, 10, 60_000)).allowed) {
       return { success: false, error: "Too many attempts. Please wait a minute." };
     }
 

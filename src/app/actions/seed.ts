@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { checkPermission } from "@/lib/membership";
 
 export async function seedDemoData(inputOrgId?: string) {
+  // Demo data must never be written into a real (production) academy.
+  if (process.env.NODE_ENV === "production") {
+    return { success: false, message: "Demo data is disabled in production." };
+  }
   // Demo data writes users, fees and content into the academy: owner-level (settings.manage)
   const auth = await checkPermission("settings.manage");
   if (!auth.ok) return { success: false, message: auth.error === "No academy found" ? "Create your academy first." : auth.error };

@@ -1,7 +1,7 @@
 # TRIQ Play — live scoring and game analytics for every sport
 
-Status (2026-10-28): **scoring engines built and tested** (`src/lib/scoring/*`, 18 tests). **Database not applied**
-(`prisma/sql/2026-10-28_live_scoring.sql`, awaiting founder approval). No screens yet.
+Status (2026-10-28): **scoring engines built and tested** (`src/lib/scoring/*`, 18 tests). **Database APPLIED to production**
+(`prisma/sql/2026-10-28_live_scoring.sql`, applied 2026-10-28 with founder approval). No screens yet.
 
 ## 1. One system, seven scoring families
 

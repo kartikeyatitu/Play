@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { cleanIndianPhone, parseDob } from "@/lib/import-utils";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 
 export type RegisterParentState = { error?: string };
 
@@ -43,7 +43,7 @@ export async function registerParent(
     // headers() unavailable: fall back to "unknown" bucket
   }
   const HOUR = 60 * 60_000;
-  if (!rateLimit(`join:phone:${phone}`, 5, HOUR).allowed || !rateLimit(`join:ip:${ip}`, 20, HOUR).allowed) {
+  if (!(await rateLimitDb(`join:phone:${phone}`, 5, HOUR)).allowed || !(await rateLimitDb(`join:ip:${ip}`, 20, HOUR)).allowed) {
     return { error: "Too many attempts. Please try again later." };
   }
 

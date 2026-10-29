@@ -3,7 +3,7 @@
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
-import { rateLimit } from "@/lib/rate-limit"
+import { rateLimitDb } from "@/lib/rate-limit"
 
 // PUBLIC (unauthenticated) actions used by the /trial?academy=<slug> page.
 // They must never require auth, but must only expose/write data for the resolved org.
@@ -66,7 +66,7 @@ export async function bookTrial(
   } catch {
     // headers() unavailable: shared bucket
   }
-  if (!rateLimit(`trial:phone:${parentPhone}`, 5, 60 * 60_000).allowed || !rateLimit(`trial:ip:${ip}`, 20, 60 * 60_000).allowed) {
+  if (!(await rateLimitDb(`trial:phone:${parentPhone}`, 5, 60 * 60_000)).allowed || !(await rateLimitDb(`trial:ip:${ip}`, 20, 60 * 60_000)).allowed) {
     throw new Error("Too many requests. Please try again later.");
   }
 
