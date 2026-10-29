@@ -7,7 +7,7 @@ import { Faq } from "@/components/marketing/sections";
 import { DemoSection, buildUtm } from "@/components/marketing/demo-section";
 
 const title = `Pricing — Triq | Free up to ${FREE_PLAN.maxStudents} students`;
-const description = `Free up to ${FREE_PLAN.maxStudents} students. Growth from ${formatINR(GROWTH_PLAN.perStudentMonthly)} per active student per month, lower above 100 students (minimum ${formatINR(GROWTH_PLAN.minMonthly)}, plus GST). 0% commission on fees and bookings. Founding academies get ${FOUNDING_OFFER.discountPercent}% off for ${FOUNDING_OFFER.months} months.`;
+const description = `Free up to ${FREE_PLAN.maxStudents} students. Growth from ${formatINR(GROWTH_PLAN.perStudentMonthly)} per active student per month (minimum ${formatINR(GROWTH_PLAN.minMonthly)}, plus GST). 0% commission on fees and bookings. Founding academies get ${FOUNDING_OFFER.discountPercent}% off for ${FOUNDING_OFFER.months} months.`;
 
 export const metadata: Metadata = {
   title,
@@ -35,7 +35,7 @@ export default async function PricingPage({
             </h1>
             <p className="mt-5 text-pretty text-lg text-ink-muted">
               Free up to {FREE_PLAN.maxStudents} students. After that, {formatINR(GROWTH_PLAN.perStudentMonthly)} per active student
-              per month, and less for every student above 100. No setup charges, no lock-in, and 0% commission on your fees and bookings.
+              per month, the same rate for every student. No setup charges, no lock-in, and 0% commission on your fees and bookings.
             </p>
           </div>
           <PlanCards />

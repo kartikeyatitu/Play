@@ -64,12 +64,12 @@ export const GROWTH_PLAN = {
   id: "growth",
   name: "Growth",
   tiers: [
-    { upTo: 100, perStudent: 20 },
-    { upTo: 500, perStudent: 12 },
-    { upTo: null, perStudent: 8 },
+    { upTo: 100, perStudent: 150 },
+    { upTo: 500, perStudent: 150 },
+    { upTo: null, perStudent: 150 },
   ] as ReadonlyArray<{ upTo: number | null; perStudent: number }>,
-  /** Headline rate (first band). */
-  perStudentMonthly: 20,
+  /** Headline rate (flat per student, founder-set 2026-10-29). */
+  perStudentMonthly: 150,
   /** Minimum monthly bill (INR). */
   minMonthly: 699,
 } as const;
@@ -201,7 +201,7 @@ export const PLANS: PlanCard[] = [
     name: GROWTH_PLAN.name,
     price: formatINR(GROWTH_PLAN.perStudentMonthly),
     priceSuffix: "per active student / month",
-    blurb: `For growing academies. ${formatINR(GROWTH_PLAN.tiers[1].perStudent)} per student from the 101st, ${formatINR(GROWTH_PLAN.tiers[2].perStudent)} from the 501st. Minimum ${formatINR(GROWTH_PLAN.minMonthly)}/month, plus GST.`,
+    blurb: `For growing academies. ${formatINR(GROWTH_PLAN.perStudentMonthly)} per active student, the same rate for everyone. Minimum ${formatINR(GROWTH_PLAN.minMonthly)}/month, plus GST.`,
     features: [
       "Everything in Free, plus:",
       `AI assistant: ${AI_MONTHLY_ACTIONS.growth.toLocaleString("en-IN")} actions a month`,
