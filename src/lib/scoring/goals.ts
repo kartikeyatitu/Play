@@ -10,15 +10,17 @@ export type GoalsConfig = {
   scoreTypes: Record<string, number>; // e.g. { goal: 1 } or { "3pt": 3, "2pt": 2, ft: 1 }
   /** Score types credited to the opponent (e.g. own goal). */
   creditOpponent?: string[];
+  /** Minutes per period (senior default; academies often play shorter). Used for the match clock. */
+  periodMinutes?: number;
 };
 
 export const GOALS_SPORTS: Record<string, GoalsConfig> = {
-  football: { sport: "Football", periods: 2, periodLabel: "Half", scoreTypes: { goal: 1, penalty: 1, own_goal: 1 }, creditOpponent: ["own_goal"] },
-  futsal: { sport: "Futsal", periods: 2, periodLabel: "Half", scoreTypes: { goal: 1, penalty: 1, own_goal: 1 }, creditOpponent: ["own_goal"] },
-  hockey: { sport: "Hockey", periods: 4, periodLabel: "Quarter", scoreTypes: { field_goal: 1, penalty_corner: 1, penalty_stroke: 1 } },
-  handball: { sport: "Handball", periods: 2, periodLabel: "Half", scoreTypes: { goal: 1, seven_metre: 1 } },
-  basketball: { sport: "Basketball", periods: 4, periodLabel: "Quarter", scoreTypes: { "3pt": 3, "2pt": 2, ft: 1 } },
-  kabaddi: { sport: "Kabaddi", periods: 2, periodLabel: "Half", scoreTypes: { raid_touch: 1, bonus: 1, tackle: 1, super_tackle: 2, all_out: 2 } },
+  football: { sport: "Football", periods: 2, periodLabel: "Half", scoreTypes: { goal: 1, penalty: 1, own_goal: 1 }, creditOpponent: ["own_goal"], periodMinutes: 45 },
+  futsal: { sport: "Futsal", periods: 2, periodLabel: "Half", scoreTypes: { goal: 1, penalty: 1, own_goal: 1 }, creditOpponent: ["own_goal"], periodMinutes: 20 },
+  hockey: { sport: "Hockey", periods: 4, periodLabel: "Quarter", scoreTypes: { field_goal: 1, penalty_corner: 1, penalty_stroke: 1 }, periodMinutes: 15 },
+  handball: { sport: "Handball", periods: 2, periodLabel: "Half", scoreTypes: { goal: 1, seven_metre: 1 }, periodMinutes: 30 },
+  basketball: { sport: "Basketball", periods: 4, periodLabel: "Quarter", scoreTypes: { "3pt": 3, "2pt": 2, ft: 1 }, periodMinutes: 10 },
+  kabaddi: { sport: "Kabaddi", periods: 2, periodLabel: "Half", scoreTypes: { raid_touch: 1, bonus: 1, tackle: 1, super_tackle: 2, all_out: 2 }, periodMinutes: 20 },
 };
 
 export type GoalsEvent =

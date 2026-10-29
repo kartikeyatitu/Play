@@ -23,7 +23,7 @@ describe("config", () => {
     expect(buildLiveConfig("table_tennis", 5)).toMatchObject({ pointsToWin: 11, setsToWin: 3 });
     expect(buildLiveConfig("badminton", 1)).toMatchObject({ setsToWin: 1 });
     expect(buildLiveConfig("badminton", 4)).toMatchObject({ setsToWin: 2 });
-    expect(buildLiveConfig("cricket")).toBeNull();
+    expect(buildLiveConfig("curling")).toBeNull();
   });
   it("reads stored config defensively", () => {
     expect(readLiveConfig("badminton", { setsToWin: 1, pointsToWin: "x", evil: 5 })).toMatchObject({ setsToWin: 1, pointsToWin: 21 });

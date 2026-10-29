@@ -1,32 +1,83 @@
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { getMembership, hasPermission } from "@/lib/membership";
-import { buildLiveView, canViewMatch, liveSport, parseLiveEvent, publicName, type LiveEvent, type LiveView } from "@/lib/live-match";
+import {
+  buildLiveView,
+  canViewMatch,
+  liveSport,
+  parseLiveEvent,
+  publicName,
+  readLiveConfig,
+  type LiveEvent,
+  type LiveMatchRecord,
+  type LiveView,
+  type RosterEntry,
+} from "@/lib/live-match";
 import { isMissingTableError } from "@/lib/schema-pending";
 import type { Prisma } from "@prisma/client";
 
 type Client = Prisma.TransactionClient | typeof db;
 
-/** Non-voided events in order, parsed for the match's family (anything malformed is skipped). */
-export async function loadLiveEvents(client: Client, matchId: string, sport: string): Promise<LiveEvent[]> {
+/** Non-voided events in order, parsed for the match's family (anything malformed is skipped), plus when the last period started. */
+export async function loadLiveLog(client: Client, matchId: string, sport: string, config?: unknown) {
   const def = liveSport(sport);
-  if (!def) return [];
+  if (!def) return { events: [] as LiveEvent[], periodStartedAt: null as Date | null };
+  const cfg = readLiveConfig(sport, config);
   const rows = await client.liveMatchEvent.findMany({
     where: { matchId, voidedAt: null },
     orderBy: { seq: "asc" },
-    select: { payload: true },
+    select: { payload: true, createdAt: true },
   });
-  const out: LiveEvent[] = [];
+  const events: LiveEvent[] = [];
+  let periodStartedAt: Date | null = null;
   for (const r of rows) {
-    const p = parseLiveEvent(def.family, r.payload);
-    if (p.ok) out.push(p.event);
+    const p = parseLiveEvent(def.family, r.payload, cfg);
+    if (!p.ok) continue;
+    events.push(p.event);
+    if (p.event.type === "period_start") periodStartedAt = r.createdAt;
+    if (p.event.type === "period_end") periodStartedAt = null;
   }
-  return out;
+  return { events, periodStartedAt };
+}
+
+export async function loadLiveEvents(client: Client, matchId: string, sport: string, config?: unknown): Promise<LiveEvent[]> {
+  return (await loadLiveLog(client, matchId, sport, config)).events;
 }
 
 /** Coaches score; owners/managers need competitions.manage. */
 export function canScoreAs(membership: { role: string; staffRole?: string | null; permissions?: string | null }): boolean {
   return membership.role === "COACH" || hasPermission(membership, "competitions.manage");
+}
+
+type PlayerRow = { side: string; studentId: string | null; displayName: string };
+
+function rosterOf(players: PlayerRow[]): RosterEntry[] {
+  return players.map((p) => ({ name: p.displayName, side: p.side === "away" ? "away" : p.side === "field" ? "field" : "home", academy: !!p.studentId }));
+}
+
+/** Builds the view for a match row (used by actions after a write, and by the viewer). */
+export async function viewForMatch(
+  client: Client,
+  match: LiveMatchRecord & { players: PlayerRow[] },
+  opts: { canScore: boolean; staff: boolean; publicNames?: boolean },
+): Promise<LiveView | null> {
+  const { events, periodStartedAt } = await loadLiveLog(client, match.id, match.sport, match.config);
+  let sideNames: { home: string; away: string } | undefined;
+  if (opts.publicNames) {
+    const side = (s: string, fallback: string) => {
+      const linked = match.players.filter((p) => p.side === s && p.studentId);
+      return linked.length ? linked.map((p) => publicName(p.displayName)).join(" / ") : fallback;
+    };
+    sideNames = { home: side("home", match.homeName), away: side("away", match.awayName || "Opponent") };
+  }
+  return buildLiveView(match, events, {
+    canScore: opts.canScore && (match.status === "LIVE" || match.status === "SCHEDULED"),
+    staff: opts.staff,
+    publicNames: opts.publicNames,
+    roster: rosterOf(match.players),
+    periodStartedAt,
+    sideNames,
+  });
 }
 
 /**
@@ -36,7 +87,7 @@ export function canScoreAs(membership: { role: string; staffRole?: string | null
 export async function getLiveViewForViewer(matchId: string, token?: string | null): Promise<LiveView | null> {
   let match;
   try {
-    match = await db.liveMatch.findUnique({ where: { id: matchId }, include: { players: { select: { side: true, studentId: true, displayName: true } } } });
+    match = await db.liveMatch.findUnique({ where: { id: matchId }, include: { players: { select: { side: true, studentId: true, displayName: true }, orderBy: { createdAt: "asc" } } } });
   } catch (e) {
     if (isMissingTableError(e)) return null;
     throw e;
@@ -61,18 +112,8 @@ export async function getLiveViewForViewer(matchId: string, token?: string | nul
   }
   if (!canViewMatch(match, { staffOfOrg, parentOfPlayer, token })) return null;
 
-  // Outsiders on a share link see short names for linked athletes (first name + initial).
-  let publicNames: { home: string; away: string } | undefined;
-  if (!staffOfOrg && !parentOfPlayer) {
-    const side = (s: string, fallback: string) => {
-      const linked = match.players.filter((p) => p.side === s && p.studentId);
-      return linked.length ? linked.map((p) => publicName(p.displayName)).join(" / ") : fallback;
-    };
-    publicNames = { home: side("home", match.homeName), away: side("away", match.awayName || "Opponent") };
-  }
-
-  const events = await loadLiveEvents(db, match.id, match.sport);
-  return buildLiveView(match, events, { canScore: canScore && (match.status === "LIVE" || match.status === "SCHEDULED"), staff: staffOfOrg, publicNames });
+  // Outsiders on a share link see every person as first name + initial.
+  return viewForMatch(db, match, { canScore, staff: staffOfOrg, publicNames: !staffOfOrg && !parentOfPlayer });
 }
 
 export type LiveMatchRow = { id: string; title: string; sport: string; status: string; homeName: string; awayName: string | null; line: string; updatedAt: string };

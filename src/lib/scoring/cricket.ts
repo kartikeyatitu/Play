@@ -44,6 +44,12 @@ export type InningsState = {
   lastBowler: string | null;
   complete: boolean;
   thisOver: string[]; // display symbols for the current over: "1", "4", "W", "wd", "nb+4"
+  /** Runs scored in each over (index 0 = first over), including the over in progress. */
+  overRuns: number[];
+  /** Fall of wickets: score, wicket number and overs when each wicket fell. */
+  fow: { runs: number; wicket: number; player: string; overs: string }[];
+  /** Current partnership. */
+  partnership: { runs: number; balls: number };
 };
 export type CricketState = {
   innings: InningsState[];
@@ -76,6 +82,9 @@ function newInnings(number: number): InningsState {
     lastBowler: null,
     complete: false,
     thisOver: [],
+    overRuns: [],
+    fow: [],
+    partnership: { runs: 0, balls: 0 },
   };
 }
 
@@ -185,6 +194,11 @@ export function scoreCricket(events: ReadonlyArray<CricketEvent>, config: Cricke
     }
     inn.extras.total = inn.extras.wides + inn.extras.noballs + inn.extras.byes + inn.extras.legbyes;
     inn.runs += total;
+    const overIndex = Math.floor(inn.legalBalls / bpo);
+    while (inn.overRuns.length <= overIndex) inn.overRuns.push(0);
+    inn.overRuns[overIndex] += total;
+    inn.partnership.runs += total;
+    if (legal) inn.partnership.balls += 1;
     overRunsByBowler += kind === "bye" || kind === "legbye" ? 0 : total;
 
     if (ev.wicket) {
@@ -192,6 +206,8 @@ export function scoreCricket(events: ReadonlyArray<CricketEvent>, config: Cricke
       const out = bat(inn, ev.wicket.playerOut);
       out.out = ev.wicket.kind === "caught" && ev.wicket.fielder ? `c ${ev.wicket.fielder} b ${ev.bowler}` : ev.wicket.kind === "runout" ? `run out${ev.wicket.fielder ? ` (${ev.wicket.fielder})` : ""}` : ev.wicket.kind === "retired" ? "retired" : `${ev.wicket.kind} b ${ev.bowler}`;
       if (!LEGAL_BREAKERS.includes(ev.wicket.kind)) bowler.wickets++;
+      inn.fow.push({ runs: inn.runs, wicket: inn.wickets, player: ev.wicket.playerOut, overs: oversText(inn.legalBalls + (legal ? 1 : 0), bpo) });
+      inn.partnership = { runs: 0, balls: 0 };
       symbol = symbol === "0" ? "W" : `${symbol}W`;
       if (ev.wicket.playerOut === inn.striker) inn.striker = null;
       else if (ev.wicket.playerOut === inn.nonStriker) inn.nonStriker = null;
