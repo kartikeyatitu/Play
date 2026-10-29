@@ -6,17 +6,22 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/app-url";
+import { maskStudentName } from "@/lib/receipt-privacy";
 
 export async function generateMetadata(props: {
   params: Promise<{ token: string }>;
 }): Promise<Metadata> {
   const { token } = await props.params;
   const data = await getReceiptByToken(token);
-  if (!data) return { title: "Receipt Not Found · Triq" };
+  // Receipts are shared links, not search landing pages: keep them out of search indexes.
+  const robots = { index: false, follow: false };
+  if (!data) return { title: "Receipt Not Found · Triq", robots };
 
+  const student = maskStudentName(data.receipt.studentName);
   return {
-    title: `Receipt ${data.receipt.receiptNumber} · ${data.receipt.studentName} · ${data.org?.name || "Triq"}`,
-    description: `Official payment receipt for ${data.receipt.studentName} (${data.receipt.month}). Verified by Triq Sports OS.`,
+    title: `Receipt ${data.receipt.receiptNumber} · ${student} · ${data.org?.name || "Triq"}`,
+    description: `Official payment receipt ${data.receipt.receiptNumber} from ${data.org?.name || "the academy"}. Verified by Triq Sports OS.`,
+    robots,
   };
 }
 
@@ -40,6 +45,8 @@ export default async function ReceiptPage(props: {
 
   const { receipt, org } = data;
   const formattedMonth = formatMonthHuman(receipt.month);
+  // Public page: child shown as "First L." only; no parent name, phone or email.
+  const studentLabel = maskStudentName(receipt.studentName);
 
   // Generate QR code as SVG/data URI for live receipt verification
   const verificationUrl = `${getAppUrl()}/r/${token}`;
@@ -57,7 +64,7 @@ export default async function ReceiptPage(props: {
     qrDataUri = "";
   }
 
-  const shareText = `*Fee Payment Receipt*\nStudent: ${receipt.studentName}\nAcademy: ${org?.name || "Academy"}\nMonth: ${formattedMonth}\nAmount: ${receipt.amount.toLocaleString()}\nReceipt #: ${receipt.receiptNumber}\n\nView & verify official receipt:\n${verificationUrl}`;
+  const shareText = `*Fee Payment Receipt*\nStudent: ${studentLabel}\nAcademy: ${org?.name || "Academy"}\nMonth: ${formattedMonth}\nAmount: ${receipt.amount.toLocaleString()}\nReceipt #: ${receipt.receiptNumber}\n\nView & verify official receipt:\n${verificationUrl}`;
   const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
   return (
@@ -123,27 +130,11 @@ export default async function ReceiptPage(props: {
           </div>
         </div>
 
-        {/* Student & Payment Summary */}
-        <div className="grid grid-cols-2 gap-4 py-4 rounded-xl bg-zinc-950/60 border border-zinc-800/60 px-4 mb-6 print:bg-zinc-50 print:border-zinc-200">
+        {/* Student Summary (masked: first name + last initial only) */}
+        <div className="grid grid-cols-1 gap-4 py-4 rounded-xl bg-zinc-950/60 border border-zinc-800/60 px-4 mb-6 print:bg-zinc-50 print:border-zinc-200">
           <div>
             <div className="text-[11px] text-zinc-500 uppercase tracking-wide">Student</div>
-            <div className="text-sm font-semibold text-white mt-0.5 print:text-black">{receipt.studentName}</div>
-            {receipt.batchName && (
-              <div className="text-xs text-zinc-400 mt-0.5 print:text-zinc-600">
-                {receipt.batchName} {receipt.sport ? `(${receipt.sport})` : ""}
-              </div>
-            )}
-          </div>
-          <div>
-            <div className="text-[11px] text-zinc-500 uppercase tracking-wide">Parent / Guardian</div>
-            <div className="text-sm font-medium text-zinc-200 mt-0.5 print:text-black">
-              {receipt.parentName || "Parent"}
-            </div>
-            {receipt.parentPhone && (
-              <div className="text-xs font-mono text-zinc-400 mt-0.5 print:text-zinc-600">
-                {receipt.parentPhone}
-              </div>
-            )}
+            <div className="text-sm font-semibold text-white mt-0.5 print:text-black">{studentLabel}</div>
           </div>
         </div>
 
@@ -169,19 +160,9 @@ export default async function ReceiptPage(props: {
           </div>
         </div>
 
-        {/* Verification & Transaction Metadata */}
+        {/* Verification */}
         <div className="border-t border-zinc-800/80 pt-5 flex items-center justify-between print:border-zinc-300">
           <div className="space-y-1.5 text-xs text-zinc-400 print:text-zinc-600">
-            <div>
-              <span className="text-zinc-500">Mode:</span>{" "}
-              <span className="text-zinc-300 font-medium print:text-black">{receipt.paymentMode}</span>
-            </div>
-            {receipt.transactionRef && (
-              <div>
-                <span className="text-zinc-500">Ref / Txn ID:</span>{" "}
-                <span className="font-mono text-zinc-300 print:text-black">{receipt.transactionRef}</span>
-              </div>
-            )}
             <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 pt-1 print:text-emerald-700">
               <ShieldCheck className="w-4 h-4 text-emerald-400 print:text-emerald-700" />
               <span>Verified & Settled · Triq Sports OS</span>

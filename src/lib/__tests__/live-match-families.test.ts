@@ -180,7 +180,8 @@ describe("public names", () => {
       roster: [{ name: "Aarav Sharma", side: "home", academy: true }],
     })!;
     expect(view.home).toBe("Academy");
-    expect(view.roster[0].name).toBe("Aarav S.");
+    expect(view.roster).toEqual([]);
+    expect(JSON.stringify(view)).not.toContain("Aarav Sharma");
     expect(view.shareToken).toBeNull();
   });
 });

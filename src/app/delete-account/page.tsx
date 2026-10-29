@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { requestAccountDeletion } from "@/app/actions/account-deletion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,18 +11,27 @@ export default function DeleteAccountPage() {
   const [phone, setPhone] = useState("");
   const [reason, setReason] = useState("");
   const [confirmed, setConfirmed] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [referenceId, setReferenceId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone || phone.length < 10 || !confirmed) return;
+    if (!confirmed || submitting) return;
+    setError(null);
     setSubmitting(true);
-    // Record request and notify user
-    setTimeout(() => {
+    try {
+      const result = await requestAccountDeletion({ phone, reason, confirmed });
+      if (result.ok) {
+        setReferenceId(result.referenceId);
+      } else {
+        setError(result.error);
+      }
+    } catch {
+      setError("Something went wrong. Please try again, or email privacy@triq.app.");
+    } finally {
       setSubmitting(false);
-      setSubmitted(true);
-    }, 800);
+    }
   };
 
   return (
@@ -45,7 +55,7 @@ export default function DeleteAccountPage() {
           </CardHeader>
 
           <CardContent className="p-6">
-            {submitted ? (
+            {referenceId ? (
               <div className="text-center py-6 space-y-4">
                 <div className="w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center text-2xl">
                   <CheckCircle2 className="w-7 h-7" />
@@ -53,7 +63,10 @@ export default function DeleteAccountPage() {
                 <div>
                   <h3 className="text-lg font-semibold text-zinc-100">Deletion Request Received</h3>
                   <p className="text-xs text-zinc-400 mt-2 leading-relaxed max-w-xs mx-auto">
-                    Your request for <span className="text-zinc-200 font-mono font-medium">{phone}</span> has been logged. In accordance with DPDP regulations, personal profile data, linked children details, and login tokens will be completely purged within 7 business days.
+                    Your request has been recorded. Reference: <span className="text-zinc-200 font-mono font-medium break-all">{referenceId}</span>
+                  </p>
+                  <p className="text-xs text-zinc-400 mt-3 leading-relaxed max-w-xs mx-auto">
+                    Nothing has been deleted yet. Each request is reviewed manually, and your personal data is deleted within 7 business days after that review.
                   </p>
                 </div>
                 <div className="pt-2">
@@ -102,6 +115,12 @@ export default function DeleteAccountPage() {
                     I understand that once processed, my attendance history and player profiles cannot be restored.
                   </span>
                 </label>
+
+                {error && (
+                  <div role="alert" className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 leading-relaxed">
+                    {error}
+                  </div>
+                )}
 
                 <div className="pt-2">
                   <Button

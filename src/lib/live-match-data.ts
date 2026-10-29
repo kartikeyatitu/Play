@@ -6,7 +6,6 @@ import {
   canViewMatch,
   liveSport,
   parseLiveEvent,
-  publicName,
   readLiveConfig,
   type LiveEvent,
   type LiveMatchRecord,
@@ -59,24 +58,17 @@ function rosterOf(players: PlayerRow[]): RosterEntry[] {
 export async function viewForMatch(
   client: Client,
   match: LiveMatchRecord & { players: PlayerRow[] },
-  opts: { canScore: boolean; staff: boolean; publicNames?: boolean },
+  opts: { canScore: boolean; staff: boolean; publicNames?: boolean; ownNames?: ReadonlySet<string> },
 ): Promise<LiveView | null> {
   const { events, periodStartedAt } = await loadLiveLog(client, match.id, match.sport, match.config);
-  let sideNames: { home: string; away: string } | undefined;
-  if (opts.publicNames) {
-    const side = (s: string, fallback: string) => {
-      const linked = match.players.filter((p) => p.side === s && p.studentId);
-      return linked.length ? linked.map((p) => publicName(p.displayName)).join(" / ") : fallback;
-    };
-    sideNames = { home: side("home", match.homeName), away: side("away", match.awayName || "Opponent") };
-  }
+  // Names are masked inside buildLiveView (side labels and title included), so no side labels are built here.
   return buildLiveView(match, events, {
     canScore: opts.canScore && (match.status === "LIVE" || match.status === "SCHEDULED"),
     staff: opts.staff,
     publicNames: opts.publicNames,
+    ownNames: opts.ownNames,
     roster: rosterOf(match.players),
     periodStartedAt,
-    sideNames,
   });
 }
 
@@ -98,22 +90,32 @@ export async function getLiveViewForViewer(matchId: string, token?: string | nul
   let staffOfOrg = false;
   let canScore = false;
   let parentOfPlayer = false;
+  // A parent's own children in this match (their displayNames); everyone else is masked for them.
+  const ownNames = new Set<string>();
   if (session?.id) {
     const membership = await getMembership(String(session.id), match.orgId);
     if (membership) {
       staffOfOrg = true;
       canScore = canScoreAs(membership);
     } else {
-      const ids = match.players.map((p) => p.studentId).filter((x): x is string => !!x);
-      if (ids.length) {
-        parentOfPlayer = (await db.student.count({ where: { id: { in: ids }, parentId: String(session.id), orgId: match.orgId } })) > 0;
+      const linked = match.players.filter((p) => p.studentId);
+      if (linked.length) {
+        const own = await db.student.findMany({
+          where: { id: { in: linked.map((p) => p.studentId as string) }, parentId: String(session.id), orgId: match.orgId },
+          select: { id: true },
+        });
+        const ownIds = new Set(own.map((s) => s.id));
+        for (const p of linked) if (ownIds.has(p.studentId as string)) ownNames.add(p.displayName);
+        parentOfPlayer = ownIds.size > 0;
       }
     }
   }
   if (!canViewMatch(match, { staffOfOrg, parentOfPlayer, token })) return null;
 
-  // Outsiders on a share link see every person as first name + initial.
-  return viewForMatch(db, match, { canScore, staff: staffOfOrg, publicNames: !staffOfOrg && !parentOfPlayer });
+  if (staffOfOrg) return viewForMatch(db, match, { canScore, staff: true });
+  // Parents see their own children by name; outsiders on a share link see no names at all.
+  if (parentOfPlayer) return viewForMatch(db, match, { canScore: false, staff: false, ownNames });
+  return viewForMatch(db, match, { canScore: false, staff: false, publicNames: true });
 }
 
 export type LiveMatchRow = { id: string; title: string; sport: string; status: string; homeName: string; awayName: string | null; line: string; updatedAt: string };

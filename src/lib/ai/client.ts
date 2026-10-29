@@ -2,12 +2,17 @@ import { db } from "@/lib/db";
 import { FEATURES } from "@/lib/features";
 import { AI_MONTHLY_ACTIONS, canonicalPlan } from "@/lib/pricing";
 import { DEFAULT_AI_MODEL, aiActionsRemaining, costUsd, monthStartUtc, monthlyBudgetUsd, sumLoggedCost, withinBudget } from "./usage";
+import { redactForModel, type NamedPerson } from "./redact-names";
+import { loadNameRoster } from "./name-roster";
 
 /**
  * Server-only Claude API client. Every call:
  *  1. needs the aiAssist flag and an ANTHROPIC_API_KEY,
  *  2. checks the platform-wide monthly budget (AI_MONTHLY_BUDGET_INR),
- *  3. logs model, tokens and cost to AuditLog (action AI_USAGE) — never the prompt or the reply.
+ *  3. replaces student and parent names with [Child n] / [Parent n] and strips contact details and
+ *     dates of birth from the system prompt and prompt before sending; names are restored in the reply
+ *     on the server only (fails closed if the roster cannot be loaded),
+ *  4. logs model, tokens and cost to AuditLog (action AI_USAGE) — never the prompt or the reply.
  */
 
 export const AI_USAGE_ACTION = "AI_USAGE";
@@ -63,6 +68,17 @@ export async function callClaude(opts: {
     return { ok: false, error: "This month's AI budget has been used up. It resets on the 1st." };
   }
 
+  // Names come from this academy's own roster. If it cannot be loaded, do not send the text unredacted.
+  let roster: NamedPerson[];
+  try {
+    roster = opts.orgId ? await loadNameRoster(opts.orgId) : [];
+  } catch (e) {
+    console.error("[ai] name roster failed", e instanceof Error ? e.message : e);
+    return { ok: false, error: "The AI service isn't available right now. Please try again." };
+  }
+  const system = redactForModel(opts.system, roster);
+  const prompt = redactForModel(opts.prompt, roster);
+
   let res: Response;
   try {
     res = await fetch(API_URL, {
@@ -75,16 +91,16 @@ export async function callClaude(opts: {
       body: JSON.stringify({
         model,
         max_tokens: opts.maxTokens,
-        system: opts.system,
+        system: system.redacted,
         messages: [
           {
             role: "user",
             content: opts.image
               ? [
                   { type: "image", source: { type: "base64", media_type: opts.image.mediaType, data: opts.image.base64 } },
-                  { type: "text", text: opts.prompt },
+                  { type: "text", text: prompt.redacted },
                 ]
-              : opts.prompt,
+              : prompt.redacted,
           },
         ],
       }),
@@ -104,7 +120,8 @@ export async function callClaude(opts: {
     content?: { type: string; text?: string }[];
     usage?: { input_tokens?: number; output_tokens?: number };
   } | null;
-  const text = (body?.content ?? []).filter((c) => c.type === "text" && c.text).map((c) => c.text).join("\n").trim();
+  // Map placeholders back to names here on the server; the model never saw the names.
+  const text = prompt.restore((body?.content ?? []).filter((c) => c.type === "text" && c.text).map((c) => c.text).join("\n").trim());
   const inputTokens = body?.usage?.input_tokens ?? 0;
   const outputTokens = body?.usage?.output_tokens ?? 0;
 

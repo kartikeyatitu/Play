@@ -327,7 +327,7 @@ export function parseLiveEvent(family: LiveFamily, raw: unknown, config?: LiveCo
   }
 }
 
-/** Renames every player reference in an event (used for first-name-plus-initial on public links). */
+/** Renames every player reference in an event. */
 export function renameInEvent(e: LiveEvent, rename: (n: string) => string): LiveEvent {
   const x: Record<string, unknown> = { ...e };
   for (const k of ["player", "assist", "striker", "nonStriker", "bowler", "playerIn", "playerOut", "athlete"]) {
@@ -754,32 +754,78 @@ export type LiveMatchRecord = {
   endedAt: Date | null;
 };
 
+/** What a person's name is replaced with wherever the viewer may not see it. */
+export const HIDDEN_NAME = "—";
+
+/** Event fields that hold a person's name (wicket.playerOut and wicket.fielder are read separately). */
+const PERSON_FIELDS = ["player", "assist", "striker", "nonStriker", "bowler", "playerIn", "playerOut", "athlete", "fielder", "judge"];
+
+/** Every person named in the match: event fields (wickets included) and the roster. */
+function personNames(events: ReadonlyArray<LiveEvent>, roster: ReadonlyArray<RosterEntry>): string[] {
+  const out = new Set<string>();
+  const add = (v: unknown) => {
+    if (typeof v === "string" && v.trim()) out.add(v);
+  };
+  for (const e of events) {
+    const x = e as Record<string, unknown>;
+    for (const k of PERSON_FIELDS) add(x[k]);
+    if (x.wicket && typeof x.wicket === "object") {
+      add((x.wicket as Record<string, unknown>).playerOut);
+      add((x.wicket as Record<string, unknown>).fielder);
+    }
+  }
+  for (const r of roster) add(r.name);
+  return [...out];
+}
+
+/** Matches any of the names as whole words (case-insensitive), longest first, so "Om Jain" wins over "Om". */
+function nameMatcher(names: string[]): RegExp | null {
+  if (!names.length) return null;
+  const alt = [...names]
+    .sort((a, b) => b.length - a.length)
+    .map((n) => n.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  return new RegExp(`(?<![\\p{L}\\p{N}])(?:${alt})(?![\\p{L}\\p{N}])`, "giu");
+}
+
+/** Copy of a view with every name match replaced in strings and object keys (so composed text such as "c Om Jain b Dev Patel" is covered too). */
+function maskNames<T>(value: T, re: RegExp): T {
+  if (typeof value === "string") return value.replace(re, HIDDEN_NAME) as T;
+  if (Array.isArray(value)) return value.map((v) => maskNames(v, re)) as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k.replace(re, HIDDEN_NAME), maskNames(v, re)])) as T;
+  }
+  return value;
+}
+
 export function buildLiveView(
   m: LiveMatchRecord,
   rawEvents: ReadonlyArray<LiveEvent>,
   opts: {
     canScore: boolean;
     staff: boolean;
-    /** Public link: shortens every person's name. */
+    /**
+     * Public share link: every person's name is replaced with "—" (events, roster, stat lines) and the
+     * roster is dropped. Team names and scores are kept. The state is replayed from the real names first.
+     */
     publicNames?: boolean;
+    /** Logged-in parent: the names they may see (their own children). Every other person is replaced with "—". */
+    ownNames?: ReadonlySet<string>;
     roster?: RosterEntry[];
     /** When the latest period started (goals clock). */
     periodStartedAt?: Date | null;
-    /** Side names to show instead of the stored ones (public links shorten athletes' names). */
-    sideNames?: { home: string; away: string };
   },
 ): LiveView | null {
   const def = liveSport(m.sport);
   const cfg = def ? readLiveConfig(m.sport, m.config) : null;
   if (!def || !cfg) return null;
-  const rename = opts.publicNames ? publicName : (n: string) => n;
-  const events = opts.publicNames ? rawEvents.map((e) => renameInEvent(e, rename)) : rawEvents;
+  const events = rawEvents;
   const finished = m.status === "COMPLETED";
   const state = replayLive(def.family, cfg, events, finished);
   const battingFirst: LiveSide = (cfg as CricketLiveConfig).battingFirst ?? "home";
   const homeName = m.homeName;
   const awayName = m.awayName || (def.family === "performance" ? "" : "Opponent");
-  const roster = (opts.roster ?? []).map((r) => ({ ...r, name: rename(r.name) }));
+  const roster = opts.publicNames ? [] : (opts.roster ?? []);
   const names = { home: homeName, away: awayName };
 
   let detail: LiveDetail;
@@ -837,15 +883,16 @@ export function buildLiveView(
       break;
   }
 
-  return {
+  const view: LiveView = {
     id: m.id,
     sport: m.sport,
     sportLabel: def.label,
     unit: def.unit,
     family: def.family,
-    title: m.title,
-    home: opts.sideNames?.home ?? homeName,
-    away: opts.sideNames?.away ?? awayName,
+    // Public titles are built from full names by the caller, so a public view uses the sport name instead.
+    title: opts.publicNames ? def.label : m.title,
+    home: homeName,
+    away: awayName,
     venue: m.venue,
     status: (["SCHEDULED", "LIVE", "COMPLETED", "ABANDONED"].includes(m.status) ? m.status : "SCHEDULED") as LiveStatus,
     visibility: (["PRIVATE", "ACADEMY", "LINK"].includes(m.visibility) ? m.visibility : "ACADEMY") as LiveVisibility,
@@ -862,4 +909,9 @@ export function buildLiveView(
     canScore: opts.canScore,
     staff: opts.staff,
   };
+
+  // Every person not visible to this viewer is masked wherever their name appears, including inside side labels and the title.
+  const hidden = personNames(rawEvents, opts.roster ?? []).filter((n) => opts.publicNames || (opts.ownNames !== undefined && !opts.ownNames.has(n)));
+  const re = nameMatcher(hidden);
+  return re ? maskNames(view, re) : view;
 }
