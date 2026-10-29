@@ -15,7 +15,7 @@ export type AccountDeletionResult =
   | { ok: true; referenceId: string; method: "session" | "phone" }
   | { ok: false; error: string };
 
-export const ACCOUNT_DELETION_AUDIT_ACTION = "ACCOUNT_DELETION_REQUEST";
+const ACCOUNT_DELETION_AUDIT_ACTION = "ACCOUNT_DELETION_REQUEST";
 
 const HOUR_MS = 60 * 60_000;
 const MAX_REASON_LENGTH = 500;
