@@ -136,7 +136,8 @@ async function loadStudentAttendance(studentIds: string[]): Promise<Map<string, 
  * and run concurrently with the core queries, but the page does not wait for them: the promise
  * is streamed to the client and unwrapped with `use()` inside a <Suspense> when its tab opens.
  */
-async function loadSecondaryData(orgId: string): Promise<AdminSecondaryData> {
+async function loadSecondaryData(orgId: string, access: { canSeeFees: boolean; canSeeReports: boolean }): Promise<AdminSecondaryData> {
+  const { canSeeFees, canSeeReports } = access;
   const orgFilter = { orgId };
   const [
     products,
@@ -179,21 +180,21 @@ async function loadSecondaryData(orgId: string): Promise<AdminSecondaryData> {
     db.facility.findMany({ where: orgFilter }),
     db.equipment.findMany({ where: orgFilter, include: { assignedTo: userBrief } }),
     db.waitlist.findMany({ where: orgFilter, include: { batch: { select: { id: true, name: true, sport: true } } }, orderBy: { createdAt: "desc" }, take: 300 }),
-    db.coupon.findMany({ where: orgFilter, orderBy: { createdAt: "desc" } }),
+    canSeeFees ? db.coupon.findMany({ where: orgFilter, orderBy: { createdAt: "desc" } }) : Promise.resolve([]),
     db.galleryPhoto.findMany({ where: orgFilter, include: { uploadedBy: userBrief }, orderBy: { createdAt: "desc" }, take: 200 }),
     db.transportRoute.findMany({ where: orgFilter, orderBy: { createdAt: "desc" } }),
-    db.feePlan.findMany({ where: { isActive: true, ...orgFilter }, orderBy: { duration: "asc" } }),
+    canSeeFees ? db.feePlan.findMany({ where: { isActive: true, ...orgFilter }, orderBy: { duration: "asc" } }) : Promise.resolve([]),
     db.feedback.findMany({ where: orgFilter, include: { parent: userBrief }, orderBy: { createdAt: "desc" }, take: 200 }),
     db.referral.findMany({ where: { referrer: orgFilter }, include: { referrer: userBrief }, orderBy: { createdAt: "desc" }, take: 300 }),
     getLeadStats(orgId),
     // These scope to the caller's own academy internally (the argument is ignored).
     // Their only consumer is the "AI Insights" tab, which exists only when FEATURES.experimental
     // is on — so skip the work entirely otherwise (the tab can't be opened; nothing changes on screen).
-    FEATURES.experimental ? getAttendanceAnalytics(orgId) : null,
-    FEATURES.experimental ? getRevenueAnalytics(orgId) : null,
-    FEATURES.experimental ? getBatchHealthAnalytics(orgId) : null,
-    FEATURES.experimental ? getStudentGrowthAnalytics(orgId) : null,
-    FEATURES.experimental ? getParentEngagementAnalytics(orgId) : null,
+    FEATURES.experimental && canSeeReports ? getAttendanceAnalytics(orgId) : null,
+    FEATURES.experimental && canSeeReports ? getRevenueAnalytics(orgId) : null,
+    FEATURES.experimental && canSeeReports ? getBatchHealthAnalytics(orgId) : null,
+    FEATURES.experimental && canSeeReports ? getStudentGrowthAnalytics(orgId) : null,
+    FEATURES.experimental && canSeeReports ? getParentEngagementAnalytics(orgId) : null,
   ]);
 
   return toClient({
@@ -230,6 +231,11 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
   const orgFilter = { orgId };
   // Match by student org too (older fee records may lack orgId)
   const orgFeeScope: Prisma.FeeRecordWhereInput = { OR: [orgFilter, { student: orgFilter }] };
+  // Money and reports follow the person's permissions, not just the ADMIN app role (a manager may lack them).
+  const myMembership = await getMembership(session.id, orgId);
+  const myPerms = myMembership ? effectivePermissions(myMembership.role, myMembership.staffRole, myMembership.permissions) : null;
+  const canSeeFees = !!myPerms?.has("fees.collect");
+  const canSeeReports = !!myPerms?.has("reports.view");
 
   const currentMonth = istMonthString();
 
@@ -287,18 +293,22 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
     // All-time fee totals per (month, status) instead of every fee record ever (was unbounded:
     // students × months). At most months × statuses rows; every fee number on the dashboard
     // (KPIs, dues, overdue, sparkline, analytics charts) is derived from these buckets.
-    db.feeRecord.groupBy({
-      by: ["month", "status"],
-      where: orgFeeScope,
-      _count: { _all: true },
-      _sum: { amount: true },
-    }),
+    canSeeFees
+      ? db.feeRecord.groupBy({
+          by: ["month", "status"],
+          where: orgFeeScope,
+          _count: { _all: true },
+          _sum: { amount: true },
+        })
+      : Promise.resolve([]),
     // "Today's collection" needs individual payments (filtered by IST day on the client):
     // only rows paid in the last 48h — a superset of "paid today in IST" — instead of all history.
-    db.feeRecord.findMany({
-      where: { AND: [orgFeeScope, { status: "PAID", paidAt: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) } }] },
-      select: { id: true, amount: true, status: true, paidAt: true },
-    }),
+    canSeeFees
+      ? db.feeRecord.findMany({
+          where: { AND: [orgFeeScope, { status: "PAID", paidAt: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) } }] },
+          select: { id: true, amount: true, status: true, paidAt: true },
+        })
+      : Promise.resolve([]),
     db.trialBooking.findMany({
       where: { batch: orgFilter },
       include: { batch: { select: { id: true, name: true, sport: true } } },
@@ -306,17 +316,19 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
       take: 200,
     }),
     // Payments parents reported via "I've paid" that the admin must confirm
-    db.feeRecord.findMany({
-      where: { status: "PENDING_VERIFICATION", student: { orgId } },
-      include: { student: { select: { id: true, name: true, parent: { select: { name: true, phone: true } } } } },
-      orderBy: { updatedAt: "desc" },
-    }),
+    canSeeFees
+      ? db.feeRecord.findMany({
+          where: { status: "PENDING_VERIFICATION", student: { orgId } },
+          include: { student: { select: { id: true, name: true, parent: { select: { name: true, phone: true } } } } },
+          orderBy: { updatedAt: "desc" },
+        })
+      : Promise.resolve([]),
     db.organization.findUnique({ where: { id: orgId } }),
     getLeads(orgId),
   ]);
 
   // Kick off the secondary (non-overview) queries now, concurrently — but do NOT await them.
-  const secondary = loadSecondaryData(orgId);
+  const secondary = loadSecondaryData(orgId, { canSeeFees, canSeeReports });
   // Today-screen insights (attendance today / low attendance) run alongside the core queries; a
   // failure here must never take the dashboard down, so it degrades to "no insights".
   const insightsPromise = loadTodayInsights(orgId).catch(() => null);
@@ -350,8 +362,11 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
 
   // Same per-student shape the UI read before: `attendances` (sessionId DESC, bounded — see
   // loadStudentAttendance) plus `attendanceSummary` (all-time counts for the analytics chart).
+  // Fee amounts and fee records only leave the server for people with fees.collect.
   const students = studentRows.map((s) => ({
     ...s,
+    feeRecords: canSeeFees ? s.feeRecords : [],
+    enrollments: s.enrollments.map((e) => ({ ...e, batch: { ...e.batch, monthlyFee: canSeeFees ? e.batch.monthlyFee : null } })),
     ...(studentAttendance.get(s.id) ?? { attendances: [], attendanceSummary: { present: 0, total: 0 } }),
   }));
 
@@ -386,10 +401,10 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
 
   // Resolved monthly fee per student on this page (override → batch → academy default; 0 = not set)
   const studentFees: Record<string, number> = {};
-  for (const s of students) studentFees[s.id] = resolveStudentFee(s, org?.defaultMonthlyFee);
+  if (canSeeFees) for (const s of students) studentFees[s.id] = resolveStudentFee(s, org?.defaultMonthlyFee);
   // Typical fee across batches (for projections) — null when no fee is configured anywhere
   const configuredFees = batches.map((b) => b.monthlyFee).filter((f): f is number => !!f && f > 0);
-  const typicalFee = configuredFees.length
+  const typicalFee = !canSeeFees ? null : configuredFees.length
     ? configuredFees.sort((a, b) => a - b)[Math.floor(configuredFees.length / 2)]
     : org?.defaultMonthlyFee || null;
 
@@ -412,7 +427,7 @@ export default async function AdminDashboard(props: { searchParams: Promise<{ [k
       session={session}
       org={toClient(publicOrg(org))}
       students={toClient(students)}
-      batches={toClient(batches)}
+      batches={toClient(batches.map((b) => ({ ...b, monthlyFee: canSeeFees ? b.monthlyFee : null })))}
       coaches={toClient(coaches)}
       feeSummary={feeSummary}
       recentPaidFees={toClient(recentPaidFees)}

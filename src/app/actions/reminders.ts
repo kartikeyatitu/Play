@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db"
 import { requireAuth } from "@/lib/auth";
+import { checkPermission } from "@/lib/membership";
 
 export type ReminderType = 
   | 'SESSION_TOMORROW' 
@@ -263,7 +264,10 @@ export async function getAutoReminders(): Promise<Reminder[]> {
   // 8. 💰 FEE DUE — Gentle reminder (capped at 5 max, not 30)
   // ═══════════════════════════════════════════════════════════
   let feeCount = 0;
+  // Fee dues are money: only staff with fees.collect get these reminders.
+  const canSeeFees = (await checkPermission("fees.collect")).ok;
   for (const st of students) {
+    if (!canSeeFees) break;
     if (!st.parent?.phone || !st.feeRecords?.length) continue;
     if (feeCount >= 5) break;
     const fee = st.feeRecords[0];

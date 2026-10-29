@@ -48,75 +48,49 @@ export async function registerParent(
   }
 
   // NOTE: redirect() throws, so it must stay outside this try/catch.
+  // A public sign-up never creates a student, parent account or batch enrolment. It creates a NEW lead
+  // (Lead.status is the existing approval state) that the academy reviews and converts with
+  // convertLeadToStudent (leads.manage), which is where the enrolment is approved.
   try {
     const org = await db.organization.findUnique({ where: { slug } });
     if (!org || !org.isActive) return { error: "Academy not found." };
 
-    // Batch must belong to THIS academy (cross-tenant guard)
-    let batch: { id: string; name: string; capacity: number | null } | null = null;
+    // Batch must belong to THIS academy (cross-tenant guard). Stored as a note, not as an enrolment.
+    let batchName: string | null = null;
     if (batchId) {
-      batch = await db.batch.findFirst({
-        where: { id: batchId, orgId: org.id },
-        select: { id: true, name: true, capacity: true },
-      });
+      const batch = await db.batch.findFirst({ where: { id: batchId, orgId: org.id }, select: { name: true } });
       if (!batch) return { error: "The selected batch is not available. Please choose another batch." };
-
-      if (batch.capacity) {
-        const enrolled = await db.batchEnrollment.count({ where: { batchId: batch.id } });
-        if (enrolled >= batch.capacity) {
-          return {
-            error: `${batch.name} is currently full. Please choose another batch, or ask the academy to add you to the waitlist.`,
-          };
-        }
-      }
+      batchName = batch.name;
     }
 
-    // Phone may be stored with or without country code
-    // Phone may be stored with or without country code — try common variants
-    const phoneVariants = [phone, `+${phone}`, phone.replace(/^\+/, "")];
-    if (phone.length === 10) phoneVariants.push(`91${phone}`, `+91${phone}`);
-    const existingUser = await db.user.findFirst({ where: { phone: { in: phoneVariants } } });
-    if (existingUser) {
-      if (existingUser.orgId !== org.id) {
-        return {
-          error:
-            "This phone number is already registered with a different academy. Please use another number or contact your academy.",
-        };
-      }
-      if (existingUser.role !== "PARENT") {
-        return { error: "This phone number belongs to a staff account. Please use a parent's phone number." };
-      }
-      // Duplicate child under same parent (case-insensitive)
-      const dup = await db.student.findFirst({
-        where: {
-          parentId: existingUser.id,
-          orgId: org.id,
-          name: { equals: childName, mode: "insensitive" },
-        },
-        select: { id: true },
-      });
-      if (dup) return { error: `${childName} is already registered with this phone number.` };
-    }
-
-    await db.$transaction(async (tx) => {
-      const parent =
-        existingUser ??
-        (await tx.user.create({
-          data: { name: parentName, phone, role: "PARENT", orgId: org.id },
-        }));
-
-      const student = await tx.student.create({
-        data: { name: childName, parentId: parent.id, dob, orgId: org.id },
-      });
-
-      if (batch) {
-        await tx.batchEnrollment.create({ data: { studentId: student.id, batchId: batch.id } });
-      }
+    // Don't stack duplicate pending sign-ups for the same child and phone.
+    const pending = await db.lead.findFirst({
+      where: { orgId: org.id, parentPhone: phone, status: "NEW", childName: { equals: childName, mode: "insensitive" } },
+      select: { id: true },
     });
-  } catch (err: any) {
-    if (err?.code === "P2002") {
-      return { error: "This phone number is already registered. Please contact your academy." };
+    if (!pending) {
+      const childAge = dob ? Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 60 * 60_000)) : null;
+      const notes = [
+        "Public registration form (pending academy approval)",
+        batchName ? `Preferred batch: ${batchName}` : null,
+        dob ? `Date of birth: ${dob.toISOString().slice(0, 10)}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      await db.lead.create({
+        data: {
+          orgId: org.id,
+          parentName,
+          parentPhone: phone,
+          childName,
+          childAge: childAge !== null && childAge >= 0 && childAge < 100 ? childAge : null,
+          source: "WEBSITE",
+          status: "NEW",
+          notes,
+        },
+      });
     }
+  } catch (err: any) {
     console.error("registerParent failed:", err);
     return { error: GENERIC_ERROR };
   }

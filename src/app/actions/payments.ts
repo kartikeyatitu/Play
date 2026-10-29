@@ -165,6 +165,8 @@ async function setFeeStatusAsAdmin(feeRecordId: string, status: "PAID" | "PENDIN
 }
 
 export async function getFeeReceiptAction(feeRecordId: string) {
+  const auth = await checkPermission("fees.collect");
+  if (!auth.ok) return { success: false, error: auth.error };
   try {
     const receipt = await db.receipt.findUnique({
       where: { feeRecordId },

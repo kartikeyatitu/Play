@@ -86,7 +86,8 @@ export async function markFeeAsPaid(studentId: string, month: string) {
  * the gateway, not just marked unpaid in the DB.
  */
 export async function reverseFeePayment(studentId: string, month: string, reason: string) {
-  const auth = await checkPermission("fees.collect");
+  // Undoing a recorded payment changes what the academy owes, so it needs fees.manage (not just fees.collect).
+  const auth = await checkPermission("fees.manage");
   if (!auth.ok) return { success: false, error: auth.error };
   const { session } = auth;
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) {
@@ -137,7 +138,7 @@ export async function reverseFeePayment(studentId: string, month: string, reason
         details: JSON.stringify({ feeRecordId: existing.id, studentId, month, amount: existing.amount, reason: reason.trim().slice(0, 300) }),
       },
     })
-    .catch(() => {});
+    .catch((e) => console.error("[fees] REVERSE_FEE_PAYMENT audit write failed:", e?.message || e));
 
   // GST (flag gstInvoices): a reversed payment gets a credit note against its invoice. Never blocks the reversal.
   if (FEATURES.gstInvoices) {

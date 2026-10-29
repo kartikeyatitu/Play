@@ -94,11 +94,16 @@ export async function getOrCreateReceipt(params: CreateReceiptParams) {
  * Fetch a receipt by its public token along with academy details for public display
  */
 export async function getReceiptByToken(token: string) {
-  const receipt = await db.receipt.findUnique({
+  const row = await db.receipt.findUnique({
     where: { token },
+    include: { feeRecord: { select: { status: true } } },
   });
 
-  if (!receipt) return null;
+  if (!row) return null;
+  // A receipt is void once its fee is no longer PAID (payment reversed via reverseFeePayment).
+  // Linked fee deleted (feeRecordId null) keeps the receipt valid; a linked fee that is not PAID does not.
+  if (row.feeRecordId && row.feeRecord?.status !== "PAID") return null;
+  const { feeRecord: _feeRecord, ...receipt } = row;
 
   const org = await db.organization.findUnique({
     where: { id: receipt.orgId },

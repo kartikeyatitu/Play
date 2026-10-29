@@ -1,14 +1,15 @@
 'use server'
 import { db } from '@/lib/db'
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/membership";
 
 // NOTE: every function below scopes to the caller's own academy (session.orgId).
 // The optional `orgId` argument is kept for backwards compatibility but is never
 // trusted — server actions can be invoked directly from the browser.
 const NO_ORG = "__no_org__";
 
+/** Analytics are reports: owner, or a manager/member holding reports.view in this academy. */
 async function adminOrgId() {
-  const session = await requireAuth(['ADMIN']);
+  const { session } = await requirePermission("reports.view");
   return session.orgId || NO_ORG;
 }
 
