@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TriqMark, TriqWordmark } from "@/components/ui/triq-logo";
 import "./marketing.css";
 
 /** wa.me link for the sales WhatsApp number, or null when NEXT_PUBLIC_SALES_WHATSAPP is unset. */
@@ -10,26 +11,18 @@ export function salesWhatsAppHref(message = "Hi Triq team, I run a sports academ
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
-export function LogoMark({ className }: { className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--brand)] text-[10px] font-black tracking-tight text-volt-fg",
-        className,
-      )}
-    >
-      TRQ
-    </span>
-  );
+/** Brand mark (the T square from src/components/ui/triq-logo.tsx). Kept as an alias for older imports. */
+export function LogoMark({ className, size = 30 }: { className?: string; size?: number }) {
+  return <TriqMark size={size} className={className} />;
 }
+
+export const TAGLINE = "The operating system for sports";
 
 export function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-volt">
-      <LogoMark />
-      <span className="text-lg font-bold tracking-tight text-ink">Triq</span>
-      <span className="sr-only">— home</span>
+    <Link href="/" className="flex items-center rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-volt">
+      <TriqWordmark size={30} />
+      <span className="sr-only"> home</span>
     </Link>
   );
 }
@@ -79,7 +72,7 @@ function SiteNav() {
           <Link href="/#faq" className="hover:text-ink">FAQ</Link>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link href="/login" className="rounded-full px-3 py-2 text-sm font-medium text-ink-muted hover:text-white">
+          <Link href="/login" className="rounded-full px-3 py-2 text-sm font-medium text-ink-muted hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-volt">
             Log in
           </Link>
           <Link href="/register" className={cn(primaryCta, "h-9 px-4 text-sm shadow-none")}>
@@ -97,8 +90,9 @@ function SiteFooter() {
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <div className="space-y-3">
           <Logo />
+          <p className="text-sm font-semibold text-ink">{TAGLINE}.</p>
           <p className="max-w-xs text-sm text-ink-muted">
-            Fees on time, parents informed, zero WhatsApp chaos. Built for sports coaches and academies.
+            Attendance, fees, live scores and parent updates. Fees on time, parents informed, zero WhatsApp chaos. Built for sports coaches and academies.
           </p>
         </div>
         <div>

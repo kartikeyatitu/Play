@@ -5,6 +5,8 @@
  * Rules implemented (standard limited-overs):
  *  - Wides and no-balls are not legal deliveries (the over doesn't advance) and add 1 penalty run (configurable).
  *  - Wide: all runs are extras; no-ball: off-bat runs go to the batter, the penalty is an extra and counts against the bowler.
+ *  - No-ball plus byes or leg byes (`extra.runs` with `extra.off`): the penalty and the runs run are extras, the ball isn't
+ *    counted, the batter isn't credited with runs (the ball still counts as faced) and the byes don't count against the bowler.
  *  - Byes / leg byes: legal deliveries, runs are extras and don't count against the bowler.
  *  - Strike rotates on odd runs actually run (bat runs, byes, leg byes, wide/no-ball runs beyond the penalty) and at over end.
  *  - Bowler's wicket: not for run out, retired, obstructing; run out is credited to the fielder only.
@@ -21,7 +23,8 @@ export type CricketBall = {
   bowler: string;
   /** Runs off the bat (or run on a no-ball). */
   runs: number;
-  extra?: { kind: ExtraKind; runs?: number }; // runs = runs run on the extra (byes/leg byes/wides beyond the penalty)
+  /** runs = runs run on the extra (byes/leg byes/wides beyond the penalty; on a no-ball, byes or leg byes per `off`). */
+  extra?: { kind: ExtraKind; runs?: number; off?: "bye" | "legbye" };
   wicket?: { kind: WicketKind; playerOut: string; fielder?: string };
 };
 export type CricketEndInnings = { type: "end_innings"; reason?: "declared" | "abandoned" };
@@ -159,6 +162,7 @@ export function scoreCricket(events: ReadonlyArray<CricketEvent>, config: Cricke
     inn.lastBowler = ev.bowler;
 
     let total = 0;
+    let bowlerRuns: number | null = null;
     let symbol = "";
     if (kind === "wide") {
       const r = penalty + extraRuns;
@@ -168,15 +172,23 @@ export function scoreCricket(events: ReadonlyArray<CricketEvent>, config: Cricke
       total = r;
       symbol = extraRuns > 0 ? `wd+${extraRuns}` : "wd";
     } else if (kind === "noball") {
+      // Runs off the bat and byes can't both happen on one delivery: off-bat runs win.
+      const byes = batRuns > 0 ? 0 : extraRuns;
+      const legbye = ev.extra?.off === "legbye";
       inn.extras.noballs += penalty;
+      if (byes) {
+        if (legbye) inn.extras.legbyes += byes;
+        else inn.extras.byes += byes;
+      }
       bowler.noballs += penalty;
       bowler.runs += penalty + batRuns;
       striker.runs += batRuns;
       striker.balls += 1; // a no-ball counts as a ball faced
       if (batRuns === 4) striker.fours++;
       if (batRuns === 6) striker.sixes++;
-      total = penalty + batRuns;
-      symbol = batRuns > 0 ? `nb+${batRuns}` : "nb";
+      total = penalty + batRuns + byes;
+      bowlerRuns = penalty + batRuns;
+      symbol = batRuns > 0 ? `nb+${batRuns}` : byes > 0 ? `nb+${byes}${legbye ? "lb" : "b"}` : "nb";
     } else if (kind === "bye" || kind === "legbye") {
       if (kind === "bye") inn.extras.byes += extraRuns;
       else inn.extras.legbyes += extraRuns;
@@ -199,7 +211,7 @@ export function scoreCricket(events: ReadonlyArray<CricketEvent>, config: Cricke
     inn.overRuns[overIndex] += total;
     inn.partnership.runs += total;
     if (legal) inn.partnership.balls += 1;
-    overRunsByBowler += kind === "bye" || kind === "legbye" ? 0 : total;
+    overRunsByBowler += bowlerRuns ?? (kind === "bye" || kind === "legbye" ? 0 : total);
 
     if (ev.wicket) {
       inn.wickets++;
@@ -220,7 +232,7 @@ export function scoreCricket(events: ReadonlyArray<CricketEvent>, config: Cricke
     inn.thisOver.push(symbol);
 
     // Strike rotation: odd runs actually run.
-    const ran = kind === "wide" ? extraRuns : kind === "noball" ? batRuns : kind === "bye" || kind === "legbye" ? extraRuns : batRuns;
+    const ran = kind === "wide" ? extraRuns : kind === "noball" ? (batRuns > 0 ? batRuns : extraRuns) : kind === "bye" || kind === "legbye" ? extraRuns : batRuns;
     const boundary = !kind && (batRuns === 4 || batRuns === 6);
     if (ran % 2 === 1 && !boundary && inn.striker && inn.nonStriker) [inn.striker, inn.nonStriker] = [inn.nonStriker, inn.striker];
     if (legal && inn.legalBalls % bpo === 0) {

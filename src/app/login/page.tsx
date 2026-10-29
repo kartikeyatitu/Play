@@ -142,18 +142,19 @@ export default function LoginPage() {
             from one screen.
           </h2>
           <p className="mt-4 max-w-md text-base leading-relaxed text-ink-muted">
-            Attendance, fees, payroll and parent updates for sports academies, in one place.
+            The operating system for sports. Attendance, fees, live scores and parent updates for your academy, in one place.
           </p>
           <ProductPreview />
         </div>
-        <p className="relative text-[13px] text-ink-subtle">Built for badminton, cricket, football, tennis and swimming academies.</p>
+        <p className="relative text-[13px] text-ink-subtle">Built for cricket, football, badminton, tennis, swimming and 17 more sports.</p>
       </aside>
 
       {/* Form side */}
       <section className="flex-1 flex flex-col items-center justify-start lg:justify-center px-4 pt-[max(2.5rem,env(safe-area-inset-top))] pb-10 lg:p-10">
         <div className="w-full max-w-[400px] lg:hidden mb-8">
           <TriqWordmark />
-          <p className="mt-3 text-sm text-ink-muted">Attendance, fees, payroll and parent updates for your sports academy.</p>
+          <p className="mt-3 text-sm font-medium text-ink">The operating system for sports.</p>
+          <p className="mt-1 text-sm text-ink-muted">Attendance, fees, live scores and parent updates for your academy.</p>
         </div>
 
         <div className="w-full max-w-[400px] space-y-6 rounded-2xl border border-line bg-surface p-6 sm:p-8 shadow-[0_1px_2px_rgb(var(--shadow-rgb)/0.04),0_12px_32px_-16px_rgb(var(--shadow-rgb)/0.12)]">
@@ -200,6 +201,8 @@ export default function LoginPage() {
                       />
                     </div>
                   ) : process.env.NODE_ENV !== "production" ? (
+                    // Development only: no Google client ID, so the server action signs in with a test credential.
+                    <div className="space-y-2">
                     <button
                       type="button"
                       onClick={() => handleGoogleSuccess({})}
@@ -212,8 +215,14 @@ export default function LoginPage() {
                         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                       </svg>
-                      Continue with Google (Mock Mode)
+                      Continue with Google
                     </button>
+                    <p className="flex justify-center">
+                      <span className="inline-flex items-center rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-200">
+                        Test sign-in · not shown in production
+                      </span>
+                    </p>
+                    </div>
                   ) : null}
                   <div className="flex items-center gap-3 text-[12px] text-ink-subtle" aria-hidden>
                     <span className="h-px flex-1 bg-line" />

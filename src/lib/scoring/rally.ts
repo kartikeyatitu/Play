@@ -31,7 +31,7 @@ export function scoreRally(events: ReadonlyArray<RallyEvent>, cfg: RallyConfig):
   for (const e of events) {
     if (st.winner || e.type !== "point") continue;
     st.current[e.side]++;
-    if (e.player) st.pointsByPlayer[e.player] = (st.pointsByPlayer[e.player] ?? 0) + 1;
+    if (e.player) Object.defineProperty(st.pointsByPlayer, e.player, { value: (Object.hasOwn(st.pointsByPlayer, e.player) ? st.pointsByPlayer[e.player] : 0) + 1, enumerable: true, writable: true, configurable: true });
     const other: Side = e.side === "home" ? "away" : "home";
     const target = setTarget(cfg, st.sets.length);
     if (setWon(st.current[e.side], st.current[other], target, cfg.winBy, cfg.cap)) {

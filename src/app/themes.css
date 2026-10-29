@@ -155,6 +155,8 @@
   --c-success: var(--em-400);
   --c-warn: var(--am-400);
   --c-danger: var(--ro-400);
+  /* Plain colour form of the accent, for var() fallbacks such as sportAccentVar() */
+  --volt: rgb(var(--c-accent));
 
   /* White-label brand colour (per-org override on the app shell keeps working) */
   --brand: rgb(var(--a-400));
@@ -184,4 +186,62 @@
 [data-theme="dark"] {
   --viz-billed: #3987e5;
   --viz-collected: #6f9f12;
+}
+
+/* ── Sport accents (src/lib/sports-visual.ts maps sport keys to these) ─────
+   Identity colour per sport for icons, chips, live-card rails and section markers.
+   Never used for body text on its own, never encodes state, and never replaces --brand
+   (the academy override). Every value is >= 4.5:1 on canvas and surface in its theme
+   (light vs #F7F7F5 / #FFFFFF, dark vs #0E1116 / #151A21), so it passes the 3:1
+   non-text minimum with room to spare. */
+:root,
+[data-theme="light"] {
+  --sport-cricket: #15803d;
+  --sport-football: #3f6212;
+  --sport-futsal: #0f766e;
+  --sport-basketball: #c2410c;
+  --sport-hockey: #1d4ed8;
+  --sport-kabaddi: #a16207;
+  --sport-handball: #be123c;
+  --sport-badminton: #2563eb;
+  --sport-table-tennis: #dc2626;
+  --sport-volleyball: #b45309;
+  --sport-squash: #7c3aed;
+  --sport-pickleball: #4d7c0f;
+  --sport-tennis: #65730a;
+  --sport-karate: #57534e;
+  --sport-taekwondo: #1e40af;
+  --sport-wrestling: #9f1239;
+  --sport-boxing: #b91c1c;
+  --sport-athletics: #b4462a;
+  --sport-swimming: #0e7490;
+  --sport-skating: #6d28d9;
+  --sport-cycling: #a21caf;
+  --sport-chess: #3f3f46;
+  --sport-generic: #4b5565;
+}
+[data-theme="dark"] {
+  --sport-cricket: #4ade80;
+  --sport-football: #a3e635;
+  --sport-futsal: #2dd4bf;
+  --sport-basketball: #fb923c;
+  --sport-hockey: #60a5fa;
+  --sport-kabaddi: #facc15;
+  --sport-handball: #fb7185;
+  --sport-badminton: #7aa7ff;
+  --sport-table-tennis: #f87171;
+  --sport-volleyball: #fbbf24;
+  --sport-squash: #a78bfa;
+  --sport-pickleball: #bef264;
+  --sport-tennis: #d9f26b;
+  --sport-karate: #d6d3d1;
+  --sport-taekwondo: #93b4fd;
+  --sport-wrestling: #fda4af;
+  --sport-boxing: #fca5a5;
+  --sport-athletics: #f4987a;
+  --sport-swimming: #22d3ee;
+  --sport-skating: #c4b5fd;
+  --sport-cycling: #e879f9;
+  --sport-chess: #d4d4d8;
+  --sport-generic: #9aa4b2;
 }

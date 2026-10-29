@@ -43,7 +43,20 @@ export type GoalsState = {
   winner: Side | "draw" | null;
 };
 
+/** Points for a score kind, read only from the config's own keys ("constructor" or "__proto__" never match). */
+export function scoreValue(config: GoalsConfig, kind: string): number | null {
+  if (typeof kind !== "string" || !Object.hasOwn(config.scoreTypes, kind)) return null;
+  const v = config.scoreTypes[kind];
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
 export function scoreGoals(events: ReadonlyArray<GoalsEvent>, config: GoalsConfig): GoalsState {
+  // Null-prototype copy of the score table, so a lookup can never reach Object.prototype.
+  const table: Record<string, number> = Object.create(null);
+  for (const k of Object.keys(config.scoreTypes)) {
+    const v = scoreValue(config, k);
+    if (v != null) table[k] = v;
+  }
   const st: GoalsState = { score: { home: 0, away: 0 }, byPeriod: [], period: 0, live: false, finished: false, players: [], timeline: [], winner: null };
   const p = (player: string, side: Side) => {
     let l = st.players.find((x) => x.player === player && x.side === side);
@@ -68,15 +81,15 @@ export function scoreGoals(events: ReadonlyArray<GoalsEvent>, config: GoalsConfi
       st.timeline.push({ text: `${config.periodLabel} ${e.period} ended` });
       if (e.period >= config.periods) st.finished = true;
     } else if (e.type === "score") {
-      const value = config.scoreTypes[e.kind];
-      if (value == null) continue;
+      const value = Object.hasOwn(table, e.kind) ? table[e.kind] : undefined;
+      if (typeof value !== "number") continue;
       const credited: Side = config.creditOpponent?.includes(e.kind) ? (e.side === "home" ? "away" : "home") : e.side;
       st.score[credited] += value;
       per()[credited] += value;
       if (e.player && !config.creditOpponent?.includes(e.kind)) {
         const l = p(e.player, e.side);
         l.points += value;
-        l.scores[e.kind] = (l.scores[e.kind] ?? 0) + 1;
+        l.scores[e.kind] = (Object.hasOwn(l.scores, e.kind) ? l.scores[e.kind] : 0) + 1;
       }
       if (e.assist) p(e.assist, e.side).assists++;
       st.timeline.push({ minute: e.minute, text: `${e.kind.replace(/_/g, " ")}${e.player ? ` – ${e.player}` : ""} (${e.side})` });

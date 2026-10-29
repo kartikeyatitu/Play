@@ -26,8 +26,8 @@ import {
   type ExtraKind,
   type WicketKind,
 } from "@/lib/scoring/cricket";
-import { GOALS_SPORTS, scoreGoals, type GoalsConfig, type GoalsEvent, type GoalsState } from "@/lib/scoring/goals";
-import { BOUT_SPORTS, scoreBout, type BoutConfig, type BoutEvent, type BoutState } from "@/lib/scoring/bout";
+import { GOALS_SPORTS, scoreGoals, scoreValue, type GoalsConfig, type GoalsEvent, type GoalsState } from "@/lib/scoring/goals";
+import { BOUT_SPORTS, judgeTotals, scoreBout, type BoutConfig, type BoutEvent, type BoutState } from "@/lib/scoring/bout";
 import { formatDistance, formatTime, rankResults, type MeasureKind, type RankedResult } from "@/lib/scoring/performance";
 import type { ChessResult } from "@/lib/scoring/chess";
 
@@ -182,10 +182,12 @@ export type LiveEvent = PointEvent | CricketEvent | GoalsEvent | BoutEvent | Per
 type Parsed = { ok: true; event: LiveEvent } | { ok: false; error: string };
 
 const isSide = (v: unknown): v is LiveSide => v === "home" || v === "away";
+/** Keys that mean something to every JS object; never accepted as a name or a lookup key. */
+const RESERVED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const name = (v: unknown): string | undefined => {
   if (typeof v !== "string") return undefined;
   const t = v.trim().replace(/\s+/g, " ");
-  return t.length > 0 && t.length <= 60 ? t : undefined;
+  return t.length > 0 && t.length <= 60 && !RESERVED_KEYS.has(t) ? t : undefined;
 };
 const EXTRAS: ExtraKind[] = ["wide", "noball", "bye", "legbye"];
 const WICKETS: WicketKind[] = ["bowled", "caught", "lbw", "stumped", "runout", "hitwicket", "retired", "obstructing"];
@@ -228,6 +230,11 @@ export function parseLiveEvent(family: LiveFamily, raw: unknown, config?: LiveCo
         if (xr == null) return bad("Extra runs must be 0 to 7");
         ev.extra = { kind: x.kind as ExtraKind, runs: xr };
         if (ev.extra.kind === "wide" || ev.extra.kind === "bye" || ev.extra.kind === "legbye") ev.runs = 0;
+        if (ev.extra.kind === "noball" && xr > 0) {
+          // No-ball plus byes or leg byes: the runs were run, not hit.
+          if (runs > 0) return bad("A no-ball has runs off the bat or byes, not both");
+          ev.extra.off = x.off === "legbye" ? "legbye" : "bye";
+        }
       }
       if (r.wicket != null) {
         const w = r.wicket as Record<string, unknown>;
@@ -254,7 +261,7 @@ export function parseLiveEvent(family: LiveFamily, raw: unknown, config?: LiveCo
       }
       if (!isSide(r.side)) return bad("Pick a team");
       if (r.type === "score") {
-        if (typeof r.kind !== "string" || (cfg && !(r.kind in cfg.scoreTypes))) return bad("Unknown score type");
+        if (typeof r.kind !== "string" || RESERVED_KEYS.has(r.kind) || (cfg && scoreValue(cfg, r.kind) == null)) return bad("Unknown score type");
         const ev: GoalsEvent = { type: "score", side: r.side, kind: r.kind };
         const p = name(r.player);
         const a = name(r.assist);
@@ -293,7 +300,9 @@ export function parseLiveEvent(family: LiveFamily, raw: unknown, config?: LiveCo
         if (!isSide(r.side)) return bad("Pick a corner");
         const award = r.awardOpponent == null ? 0 : int(r.awardOpponent, 0, 5);
         if (award == null) return bad("Award must be 0 to 5");
-        return { ok: true, event: { type: "penalty", side: r.side, round, ...(award ? { awardOpponent: award } : {}) } };
+        const deduct = r.deduct == null ? 0 : int(r.deduct, 0, 5);
+        if (deduct == null) return bad("Deduction must be 0 to 5");
+        return { ok: true, event: { type: "penalty", side: r.side, round, ...(award ? { awardOpponent: award } : {}), ...(deduct ? { deduct } : {}) } };
       }
       if (r.type === "judge_card") {
         const judge = name(r.judge);
@@ -525,6 +534,13 @@ export function parseMark(input: string, measure: MeasureKind): number | null {
   return v > 0 ? v : null;
 }
 
+/** A bout's shown score: the judges' totals (after deductions) when cards were entered, otherwise points after deductions. */
+export function boutTotals(b: BoutState): Record<LiveSide, number> {
+  const cards = Object.values(judgeTotals(b));
+  if (cards.length) return { home: cards.reduce((t, j) => t + j.home, 0), away: cards.reduce((t, j) => t + j.away, 0) };
+  return { home: Math.max(0, b.points.home - b.deductions.home), away: Math.max(0, b.points.away - b.deductions.away) };
+}
+
 /** Short score line for lists: "21–18 · 5–3", "142/6 (20) v 98/3 (12.4)", "2–1", "Aarav 12.45". */
 export function summaryLine(state: LiveState, config: LiveConfig, names: { home: string; away: string }): string {
   switch (state.family) {
@@ -540,8 +556,10 @@ export function summaryLine(state: LiveState, config: LiveConfig, names: { home:
     }
     case "goals":
       return `${state.goals.score.home}–${state.goals.score.away}`;
-    case "bout":
-      return `${state.bout.points.home}–${state.bout.points.away}${state.bout.method ? ` · ${state.bout.method}` : ""}`;
+    case "bout": {
+      const t = boutTotals(state.bout);
+      return `${t.home}–${t.away}${state.bout.method ? ` · ${state.bout.method}` : ""}`;
+    }
     case "performance": {
       const top = state.ranked.find((r) => r.rank === 1);
       return top ? `${top.athlete} ${formatMark(top.best, (config as PerformanceConfig).measure)}` : "";
@@ -648,7 +666,8 @@ export function playerStatLine(
     }
     case "bout": {
       const other: LiveSide = s === "home" ? "away" : "home";
-      return { family, result: resultFor(outcome, s), pointsFor: state.bout.points[s], pointsAgainst: state.bout.points[other], method: state.bout.method };
+      const t = boutTotals(state.bout);
+      return { family, result: resultFor(outcome, s), pointsFor: t[s], pointsAgainst: t[other], deducted: state.bout.deductions[s], method: state.bout.method };
     }
     case "performance": {
       const r = state.ranked.find((x) => x.athlete === player);
