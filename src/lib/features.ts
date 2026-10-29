@@ -105,6 +105,39 @@ export const FEATURES = {
   coachInsights: flag("COACH_INSIGHTS", true),
   /** Weekly summary on the Analytics tab with a Share on WhatsApp button (no automatic sending). */
   weeklyDigest: flag("WEEKLY_DIGEST", true),
+
+  // ---- Wave 2 (all default OFF). Tables: prisma/sql/2026-10-29_wave2.sql — NOT APPLIED; never query
+  // ---- them while the flag is off. Spec: docs/specs/wave2-schema.md.
+  /** Rewards: points/XP ledgers, badges, reward catalogue, redemptions, leaderboard opt-in. */
+  rewards: flag("REWARDS", false),
+  /** Photo/video uploads with student tagging, per-scope guardian media consent and audit (MediaAsset*). */
+  media: flag("MEDIA", false),
+  /** Family accounts: several guardians per child, several children per guardian (GuardianLink). */
+  familyAccounts: flag("FAMILY_ACCOUNTS", false),
+  /** Versioned liability waivers and guardian e-signatures (WaiverTemplate, WaiverSignature). */
+  waivers: flag("WAIVERS", false),
+  /** DPDP verifiable parental consent ledger, per purpose (ConsentRecord). */
+  consentLedger: flag("CONSENT_LEDGER", false),
+  /** Drill library and coach session plans (Drill, SessionPlan, SessionPlanItem). */
+  drillLibrary: flag("DRILL_LIBRARY", false),
+  /** Competition fixtures UI extras on the existing Fixture table + computed standings. No new table. */
+  fixtures: flag("FIXTURES", false),
+  /** Per-event waitlist with offers that expire (EventWaitlist). */
+  eventWaitlist: flag("EVENT_WAITLIST", false),
+  /** Outbound WhatsApp/email/SMS delivery log with retries, and notification preferences. */
+  messageDelivery: flag("MESSAGE_DELIVERY", false),
+  /** Parent/user data deletion and export requests (DataRequest). */
+  dataRequests: flag("DATA_REQUESTS", false),
+  /** Void a receipt (kept, marked, with reason) instead of deleting it (Receipt.voidedAt/voidReason/voidedById). */
+  receiptVoid: flag("RECEIPT_VOID", false),
+  /** Standardised fitness tests with decimal values and units (FitnessResult). */
+  fitnessTests: flag("FITNESS_TESTS", false),
+  /** Parent-reported absences, stored as Attendance status EXCUSED (no new table). */
+  absenceNotices: flag("ABSENCE_NOTICES", false),
+  /** TRIQ's own per-active-student plan invoices in paise with GST (SubscriptionInvoice). */
+  triqBilling: flag("TRIQ_BILLING", false),
+  /** Parent premium plan placeholder (ParentPlan). */
+  parentPremium: flag("PARENT_PREMIUM", false),
 } as const;
 
 export type FeatureName = keyof typeof FEATURES;

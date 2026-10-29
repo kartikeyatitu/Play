@@ -1,3 +1,5 @@
+-- SUPERSEDED by prisma/sql/2026-10-29_wave2.sql (section 8). DO NOT RUN THIS FILE; run the wave2 file instead.
+-- (Kept for history. The wave2 copy uses TIMESTAMP(3) for "voidedAt", and the Prisma models are already in schema.prisma.)
 -- NOT APPLIED. Needs founder approval.
 -- Trust batch (2026-10-29). Additive only: two nullable-column groups and one new table. No data is changed.
 -- (a) Receipt void fields: a receipt is voided (kept, marked, with a reason), never deleted.
@@ -9,7 +11,7 @@
 BEGIN;
 
 -- (a) Receipt voiding ---------------------------------------------------------------------------
-ALTER TABLE "Receipt" ADD COLUMN IF NOT EXISTS "voidedAt"   TIMESTAMPTZ(3);
+ALTER TABLE "Receipt" ADD COLUMN IF NOT EXISTS "voidedAt"   TIMESTAMP(3);
 ALTER TABLE "Receipt" ADD COLUMN IF NOT EXISTS "voidReason" TEXT;
 ALTER TABLE "Receipt" ADD COLUMN IF NOT EXISTS "voidedById" TEXT;
 -- Lists usually want "live receipts for this academy"
@@ -44,7 +46,7 @@ COMMIT;
 Matching Prisma model text (NOT yet in prisma/schema.prisma; add only after this SQL is applied).
 
 // In model Receipt, add:
-  voidedAt        DateTime?  @db.Timestamptz(3)
+  voidedAt        DateTime?
   voidReason      String?
   voidedById      String?
 

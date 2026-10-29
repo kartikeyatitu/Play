@@ -1060,6 +1060,9 @@ model Receipt {
   issuedAt        DateTime   @default(now())
   createdAt       DateTime   @default(now())
 
+  // Wave 2 trust: voidedAt / voidReason / voidedById are added by prisma/sql/2026-10-29_wave2.sql.
+  // Add the three fields here ONLY AFTER that SQL has run on production, or every receipt query breaks.
+
   student         Student?   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   feeRecord       FeeRecord? @relation(fields: [feeRecordId], references: [id], onDelete: SetNull)
 
@@ -2187,5 +2190,520 @@ model PerformanceResult {
   match LiveMatch? @relation(fields: [matchId], references: [id], onDelete: SetNull)
 
   @@index([studentId, sport, eventName, recordedAt])
+  @@index([orgId])
+}
+
+// ==========================================
+// WAVE 2 (additive, 2026-10-29). SQL: prisma/sql/2026-10-29_wave2.sql — NOT APPLIED.
+// Spec: docs/specs/wave2-schema.md. Every table below is read/written only behind its FEATURES flag
+// (all default false). Foreign keys to existing models (Organization, User, Student, Batch, Session,
+// Event, Subscription) live in the SQL only and are plain fields here, so no back-relations are added
+// to existing models and existing queries are untouched. Money is integer minor units (paise).
+// Append-only tables (ledgers, audit, signatures) have no updatedAt on purpose.
+// ==========================================
+
+// ---- Rewards (flag rewards; spec: triq-rewards-spec.md §8) -------------------------------------
+
+/// Append-only points ledger. Balance = sum of unexpired rows; never stored. Expiry writes a negative row.
+/// idempotencyKey = <sourceType>:<sourceId>[:<studentId>], so retries can't double-award.
+model PointsLedger {
+  id             String    @id @default(cuid())
+  orgId          String
+  studentId      String
+  delta          Int       // signed
+  sourceType     String    // ATTENDANCE | SKILL_REPORT | BADGE | REDEMPTION | MANUAL | EXPIRY | REVERSAL
+  sourceRef      String?
+  reasonCode     String
+  note           String?
+  createdById    String?   // null = system job
+  createdAt      DateTime  @default(now())
+  expiresAt      DateTime? // set on earned (positive) rows
+  idempotencyKey String    @unique
+
+  @@index([orgId, studentId, createdAt])
+  @@index([studentId, expiresAt])
+}
+
+/// Append-only XP ledger (levels). Same shape as PointsLedger, no expiry, never spent.
+model XpLedger {
+  id             String   @id @default(cuid())
+  orgId          String
+  studentId      String
+  delta          Int
+  sourceType     String
+  sourceRef      String?
+  reasonCode     String
+  note           String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+  idempotencyKey String   @unique
+
+  @@index([orgId, studentId, createdAt])
+}
+
+/// orgId null = global (TRIQ library) badge.
+model BadgeDefinition {
+  id          String   @id @default(cuid())
+  orgId       String?
+  key         String
+  name        String
+  description String?
+  rule        Json?    // auto-award rule; null = manual only
+  icon        String?
+  active      Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  awards      StudentBadge[]
+
+  @@unique([orgId, key])
+  @@index([orgId])
+}
+
+model StudentBadge {
+  id          String    @id @default(cuid())
+  orgId       String
+  studentId   String
+  badgeId     String
+  awardedAt   DateTime  @default(now())
+  awardedById String?   // null = auto
+  reason      String?
+  revokedAt   DateTime?
+  revokedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  badge       BadgeDefinition @relation(fields: [badgeId], references: [id], onDelete: Restrict)
+
+  @@unique([studentId, badgeId])
+  @@index([orgId, awardedAt])
+}
+
+model RewardItem {
+  id          String   @id @default(cuid())
+  orgId       String
+  name        String
+  description String?
+  costPoints  Int
+  stock       Int?     // null = unlimited
+  eligibility Json     @default("{}")
+  active      Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  redemptions Redemption[]
+
+  @@index([orgId, active])
+}
+
+/// status: REQUESTED | APPROVED | FULFILLED | CANCELLED. pointsLedgerRef = the debit PointsLedger.id.
+model Redemption {
+  id              String    @id @default(cuid())
+  orgId           String
+  studentId       String
+  rewardItemId    String
+  costPoints      Int       // snapshot at request time
+  status          String    @default("REQUESTED")
+  requestedById   String
+  approvedById    String?
+  approvedAt      DateTime?
+  fulfilledAt     DateTime?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  pointsLedgerRef String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  rewardItem      RewardItem @relation(fields: [rewardItemId], references: [id], onDelete: Restrict)
+
+  @@index([orgId, status])
+  @@index([studentId, createdAt])
+}
+
+/// Leaderboards show only students with an active opt-in (optedOutAt null).
+model LeaderboardOptIn {
+  id          String    @id @default(cuid())
+  orgId       String
+  studentId   String
+  optedInAt   DateTime  @default(now())
+  optedOutAt  DateTime?
+  setById     String?   // guardian who chose
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([orgId, studentId])
+}
+
+// ---- Media (flag media). Named MediaAsset because legacy model/table "Media" (video links) exists. ----
+
+/// contextType: MATCH | SESSION | TOURNAMENT | GALLERY. kind: PHOTO | VIDEO.
+/// status: PENDING | READY | QUARANTINED | DELETED. Files live in object storage under storageKey.
+model MediaAsset {
+  id          String    @id @default(cuid())
+  orgId       String
+  contextType String
+  contextId   String?
+  uploaderId  String
+  kind        String
+  status      String    @default("PENDING")
+  storageKey  String    @unique
+  mimeType    String?
+  variants    Json?     // { thumb: key, web: key, ... }
+  durationSec Int?
+  bytes       Int?
+  caption     String?
+  deleteAfter DateTime? // retention: purge job hard-deletes the file after this
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  subjects    MediaSubject[]
+  audits      MediaAudit[]
+
+  @@index([orgId, contextType, contextId])
+  @@index([orgId, createdAt])
+  @@index([status, deleteAfter])
+}
+
+/// A student tagged in a media item. Visibility = intersection of every subject's active MediaConsent scopes.
+model MediaSubject {
+  id         String   @id @default(cuid())
+  orgId      String
+  mediaId    String
+  studentId  String
+  taggedById String
+  createdAt  DateTime @default(now())
+
+  media      MediaAsset @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaId, studentId])
+  @@index([studentId])
+  @@index([orgId])
+}
+
+/// scope: internal_coaching | parents_of_batch | academy_public | tournament_public.
+/// Withdrawal sets withdrawnAt (row kept); a new grant is a new row.
+model MediaConsent {
+  id                 String    @id @default(cuid())
+  orgId              String
+  studentId          String
+  guardianUserId     String
+  scope              String
+  grantedAt          DateTime  @default(now())
+  withdrawnAt        DateTime?
+  verificationMethod String    // OTP | IN_PERSON | SIGNED_FORM
+  noticeVersion      String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([studentId, scope])
+  @@index([orgId])
+}
+
+/// Append-only: upload, tag, untag, view-share, quarantine, delete, consent-driven hide.
+model MediaAudit {
+  id          String   @id @default(cuid())
+  orgId       String
+  mediaId     String?
+  actorUserId String?  // null = system
+  action      String
+  details     Json?
+  createdAt   DateTime @default(now())
+
+  media       MediaAsset? @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+
+  @@index([mediaId, createdAt])
+  @@index([orgId, createdAt])
+}
+
+// ---- Family, waivers, consent (flags familyAccounts, waivers, consentLedger) --------------------
+
+/// Many-to-many guardian <-> student. Student.parentId stays the legacy primary parent.
+model GuardianLink {
+  id                 String    @id @default(cuid())
+  orgId              String?   // student's org at link time (Student.orgId is nullable)
+  userId             String
+  studentId          String
+  relation           String    // MOTHER | FATHER | GUARDIAN | OTHER
+  isPrimary          Boolean   @default(false)
+  verifiedAt         DateTime?
+  verificationMethod String?   // OTP | IN_PERSON | ADMIN
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([userId, studentId])
+  @@index([studentId])
+  @@index([orgId])
+}
+
+model WaiverTemplate {
+  id          String   @id @default(cuid())
+  orgId       String
+  title       String
+  body        String
+  version     Int      @default(1)
+  active      Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  signatures  WaiverSignature[]
+
+  @@unique([orgId, title, version])
+  @@index([orgId, active])
+}
+
+/// Append-only. ipHash = sha256(ip + server salt); the raw IP is never stored.
+model WaiverSignature {
+  id             String   @id @default(cuid())
+  orgId          String
+  templateId     String
+  version        Int
+  studentId      String
+  guardianUserId String
+  signedName     String
+  signedAt       DateTime @default(now())
+  ipHash         String?
+  createdAt      DateTime @default(now())
+
+  template       WaiverTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
+  @@unique([templateId, version, studentId])
+  @@index([orgId, signedAt])
+  @@index([studentId])
+}
+
+/// DPDP Act verifiable parental consent, per purpose. Withdrawal sets withdrawnAt; history is kept.
+model ConsentRecord {
+  id             String    @id @default(cuid())
+  orgId          String
+  studentId      String
+  guardianUserId String
+  purpose        String    // e.g. CORE_SERVICE | PROGRESS_SHARING | MARKETING | AI_PROCESSING
+  granted        Boolean
+  grantedAt      DateTime?
+  withdrawnAt    DateTime?
+  method         String    // OTP | IN_PERSON | SIGNED_FORM
+  noticeVersion  String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([studentId, purpose])
+  @@index([orgId, purpose])
+}
+
+// ---- Training (flag drillLibrary) ---------------------------------------------------------------
+
+/// orgId null = TRIQ library drill.
+model Drill {
+  id          String    @id @default(cuid())
+  orgId       String?
+  sport       String
+  title       String
+  description String?
+  durationMin Int?
+  equipment   String[]  @default([])
+  ageGroup    String?
+  skillKeys   Json      @default("[]")
+  createdById String?
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  planItems   SessionPlanItem[]
+
+  @@index([orgId, sport])
+  @@index([sport])
+}
+
+model SessionPlan {
+  id          String    @id @default(cuid())
+  orgId       String
+  batchId     String?
+  title       String
+  sport       String
+  date        DateTime?
+  notes       String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  items       SessionPlanItem[]
+
+  @@index([orgId, date])
+  @@index([batchId])
+}
+
+model SessionPlanItem {
+  id          String   @id @default(cuid())
+  orgId       String
+  planId      String
+  drillId     String?
+  order       Int
+  title       String?  // free-text item when drillId is null
+  durationMin Int?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  plan        SessionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  drill       Drill?      @relation(fields: [drillId], references: [id], onDelete: SetNull)
+
+  @@index([planId, order])
+  @@index([drillId])
+}
+
+// ---- Event waitlist (flag eventWaitlist) --------------------------------------------------------
+
+/// status: WAITING | OFFERED | ACCEPTED | EXPIRED. (Waitlist is batch enquiries; this is per Event.)
+model EventWaitlist {
+  id             String    @id @default(cuid())
+  orgId          String?   // Event.orgId is nullable
+  eventId        String
+  studentId      String
+  position       Int
+  status         String    @default("WAITING")
+  offeredAt      DateTime?
+  offerExpiresAt DateTime?
+  respondedAt    DateTime?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([eventId, studentId])
+  @@index([eventId, status, position])
+  @@index([orgId])
+}
+
+// ---- Messaging (flag messageDelivery) -----------------------------------------------------------
+
+/// channel: WHATSAPP | EMAIL | SMS. status: QUEUED | SENT | DELIVERED | READ | FAILED.
+/// toRef = sha256 of the normalised recipient; the address is resolved at send time, never stored here.
+model MessageDelivery {
+  id                String    @id @default(cuid())
+  orgId             String?   // null = platform message (e.g. OTP)
+  channel           String
+  toRef             String
+  template          String
+  status            String    @default("QUEUED")
+  attempts          Int       @default(0)
+  providerMessageId String?   @unique
+  lastError         String?
+  nextAttemptAt     DateTime?
+  relatedType       String?   // FEE_REMINDER | RECEIPT | ANNOUNCEMENT | ...
+  relatedId         String?
+  idempotencyKey    String?   @unique
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([orgId, createdAt])
+  @@index([relatedType, relatedId])
+}
+
+model NotificationPreference {
+  id        String   @id @default(cuid())
+  userId    String
+  channel   String   // WHATSAPP | EMAIL | SMS | PUSH
+  category  String   // FEES | ATTENDANCE | ANNOUNCEMENTS | REWARDS | MEDIA | MARKETING
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, channel, category])
+}
+
+// ---- Trust (flag dataRequests; Receipt void fields above, flag receiptVoid) ---------------------
+
+/// Parent/user request to delete or export personal data (DPDP). Kept after resolution as an audit trail.
+model DataRequest {
+  id           String    @id @default(cuid())
+  orgId        String?
+  userId       String?
+  phone        String?
+  type         String    // DELETE | EXPORT
+  status       String    @default("REQUESTED") // REQUESTED | IN_REVIEW | DONE | REJECTED
+  reason       String?
+  referenceId  String    @unique
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  resolvedAt   DateTime?
+  resolvedById String?
+
+  @@index([orgId, status])
+  @@index([userId])
+  @@index([phone])
+  @@index([status, createdAt])
+}
+
+// ---- Fitness (flag fitnessTests) ----------------------------------------------------------------
+
+/// Standardised fitness tests (beep test level, sit-and-reach cm, push-ups reps, 20 m sprint s).
+/// Separate from PerformanceResult, which is integer-only with a fixed measure set (time|distance|height|points).
+model FitnessResult {
+  id           String   @id @default(cuid())
+  orgId        String
+  studentId    String
+  testKey      String   // e.g. beep_test, sit_reach, pushups_60s, sprint_20m
+  value        Decimal  @db.Decimal(12, 3)
+  unit         String   // s | cm | m | reps | level | kg | bpm
+  sessionId    String?
+  notes        String?
+  recordedAt   DateTime @default(now())
+  recordedById String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([studentId, testKey, recordedAt])
+  @@index([orgId, recordedAt])
+}
+
+// ---- TRIQ's own billing (flag triqBilling). Subscription is reused. -----------------------------
+
+/// Per-active-student invoice for TRIQ's plan. Integer paise (BillingInvoice stores whole rupees, no GST
+/// split and no student count, so it is left as-is for legacy rows). status: DRAFT | ISSUED | PAID | VOID.
+model SubscriptionInvoice {
+  id                String    @id @default(cuid())
+  orgId             String
+  subscriptionId    String?
+  periodStart       DateTime
+  periodEnd         DateTime
+  activeStudents    Int
+  amountPaise       Int       // taxable value
+  gstPaise          Int       @default(0)
+  currency          String    @default("INR")
+  status            String    @default("DRAFT")
+  invoiceNumber     String    @unique
+  issuedAt          DateTime?
+  paidAt            DateTime?
+  providerPaymentId String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([orgId, periodStart])
+  @@index([orgId, status])
+}
+
+// ---- Parent premium placeholder (flag parentPremium) --------------------------------------------
+
+/// status: TRIAL | ACTIVE | CANCELLED | EXPIRED. Placeholder; nothing reads it while the flag is off.
+model ParentPlan {
+  id         String    @id @default(cuid())
+  userId     String
+  orgId      String?
+  status     String    @default("TRIAL")
+  startedAt  DateTime  @default(now())
+  endsAt     DateTime?
+  priceMinor Int       @default(0)
+  currency   String    @default("INR")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId, status])
   @@index([orgId])
 }
