@@ -9,6 +9,7 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-sans", display: "swa
 
 import { ThemedToaster } from "@/components/ui/themed-toaster";
 import { AnalyticsInit } from "@/components/analytics/AnalyticsInit";
+import { Analytics } from "@vercel/analytics/next";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -62,6 +63,7 @@ export default function RootLayout({
         <main>{children}</main>
         <ThemedToaster />
         <AnalyticsInit />
+        <Analytics />
       </body>
     </html>
   );
