@@ -114,3 +114,11 @@ Status values: **Accepted** · **Superseded**.
 - **Status:** Accepted.
 - **Decision:** `AI_PROCESSING` is the consent purpose for including a child's data in AI features, matching the schema comment on `ConsentRecord.purpose`.
 - **Reason:** One name in code and docs.
+
+## D-13. Blood group on the coach's emergency SOS screen
+
+- **Date:** 2026-11-06
+- **Status:** Accepted.
+- **Decision:** Coaches see an athlete's blood group on the emergency SOS screen only. Everywhere else in the coach view, coaches see only allergies and the emergency contact.
+- **Reason:** In an emergency, blood group can matter to first responders, and the SOS screen is used only in that situation. Founder delegated the call ("You can decide it").
+- **Source:** Founder, 2026-11-06.

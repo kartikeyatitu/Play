@@ -5,6 +5,7 @@
 // "coach must know" flag on conditions, so for coaches the safety-critical set is allergies and the
 // emergency contact. Blood group, conditions, doctor, insurance, signature and consent stay with
 // owners/managers (subject to health.view when the wellness flag is on) and the athlete's parent.
+// One exception (decision D-13): the coach's emergency SOS screen also shows blood group.
 
 import { parseMedicalJson } from "@/lib/health";
 

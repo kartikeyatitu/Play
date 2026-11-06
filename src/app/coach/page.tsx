@@ -140,6 +140,11 @@ export default async function CoachDashboard({
         enrollments: b.enrollments.map((e) => ({ ...e, student: withMedicalView(e.student, "safety") })),
       }));
 
+  // Emergency exception (decision D-13): the SOS screen shows each athlete's blood group to their coach,
+  // because it can matter for first responders. It is not shown anywhere else in the coach view.
+  const emergencyBloodGroup = new Map<string, string | null>();
+  for (const b of loadedBatches) for (const e of b.enrollments) emergencyBloodGroup.set(e.student.id, e.student.bloodGroup ?? null);
+
   const batchIds = batches.map((b) => b.id);
   const liveMatches = FEATURES.liveScoring ? await listLiveMatches(orgId).catch(() => []) : [];
   const liveSquad = (() => {
@@ -233,7 +238,7 @@ export default async function CoachDashboard({
       id: s.id,
       name: s.name,
       batchName: firstBatch?.name || "",
-      bloodGroup: s.bloodGroup || null,
+      bloodGroup: emergencyBloodGroup.get(s.id) || null,
       medical: med.hasAny ? med.summary : null,
       parentName: s.parent?.name || "Parent",
       parentPhone: cleanPhone(med.emergencyContactPhone || s.parent?.phone),
