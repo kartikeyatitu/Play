@@ -5,7 +5,12 @@ import { checkPermission } from "@/lib/membership";
 
 export async function seedDemoData(inputOrgId?: string) {
   // Demo data must never be written into a real (production) academy.
-  if (process.env.NODE_ENV === "production") {
+  // Vercel builds previews with NODE_ENV=production too, so use VERCEL_ENV when it is set:
+  // allowed on preview (staging database, fictional data), refused on the production deployment.
+  const isProductionDeployment = process.env.VERCEL_ENV
+    ? process.env.VERCEL_ENV === "production"
+    : process.env.NODE_ENV === "production";
+  if (isProductionDeployment) {
     return { success: false, message: "Demo data is disabled in production." };
   }
   // Demo data writes users, fees and content into the academy: owner-level (settings.manage)

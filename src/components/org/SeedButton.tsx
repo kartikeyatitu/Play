@@ -6,7 +6,9 @@ import { toast } from "sonner";
 export function SeedButton() {
   const [loading, setLoading] = useState(false);
   // Never offer demo seeding in production (the server action refuses there too).
-  if (process.env.NODE_ENV === "production") return null;
+  // NEXT_PUBLIC_VERCEL_ENV is set by Vercel ("preview" on preview deployments, "production" on production).
+  const deployment = process.env.NEXT_PUBLIC_VERCEL_ENV;
+  if (deployment ? deployment === "production" : process.env.NODE_ENV === "production") return null;
   return (
     <button
       onClick={async () => {
