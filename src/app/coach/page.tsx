@@ -24,6 +24,7 @@ import { loadAtRiskStudents } from "@/lib/risk-data";
 import { FEATURES } from "@/lib/features";
 import { listLiveMatches } from "@/lib/live-match-data";
 import { LiveMatchesPanel } from "@/components/live/LiveMatchesPanel";
+import { withMedicalView } from "@/lib/athlete/medical-visibility";
 
 const TAB_IDS: CoachTab[] = ["today", "squad", "plan", "inbox", "me"];
 
@@ -64,7 +65,7 @@ export default async function CoachDashboard({
   const batchWhere = isAdmin && scope === "all" ? { orgId } : { coachId: session.id, orgId };
   const injuryWindow = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000);
 
-  const [coach, batches, existingTodaySessions, events, org, currentMonthFeeRecords, trialsToday, recentInjuries] =
+  const [coach, loadedBatches, existingTodaySessions, events, org, currentMonthFeeRecords, trialsToday, recentInjuries] =
     await Promise.all([
       db.user.findUnique({ where: { id: session.id } }),
       db.batch.findMany({
@@ -129,6 +130,15 @@ export default async function CoachDashboard({
     ]);
 
   if (!coach) redirect("/login");
+
+  // Medical visibility (sprint 1 item 10): coaches only ever receive safety-critical fields (allergies and
+  // the emergency contact). Owners/managers using the coach view keep the full record.
+  const batches = isAdmin
+    ? loadedBatches
+    : loadedBatches.map((b) => ({
+        ...b,
+        enrollments: b.enrollments.map((e) => ({ ...e, student: withMedicalView(e.student, "safety") })),
+      }));
 
   const batchIds = batches.map((b) => b.id);
   const liveMatches = FEATURES.liveScoring ? await listLiveMatches(orgId).catch(() => []) : [];

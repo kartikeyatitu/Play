@@ -97,7 +97,7 @@ type Base = {
   won: number;
   drawn: number;
   lost: number;
-  /** won / decided matches, 0–1; null with no decided matches. */
+  /** (won + drawn / 2) / decided matches, 0–1; null with no decided matches. */
   winRate: number | null;
   lastPlayedAt: string | null;
 };

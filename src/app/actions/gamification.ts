@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { safeHttpUrl } from "@/lib/safe-url";
+import { validAward } from "@/lib/athlete/points-rules";
 
 // Tenant/role scope: ADMIN → any student in their academy; COACH → students in their own batches.
 function staffStudentWhere(session: { id: string; role: string; orgId: string | null }, studentId: string) {
@@ -15,10 +16,12 @@ function staffStudentWhere(session: { id: string; role: string; orgId: string | 
 // COACH added: these are triggered from the coach dashboard (CoachActions).
 export async function awardPoints(studentId: string, points: number) {
     const session = await requireAuth(['ADMIN', 'COACH']);
-  if (!Number.isFinite(points)) return { success: false, error: "Invalid points" };
+  // Awards only add points; nothing here can deduct (e.g. for a missed session).
+  const award = validAward(points);
+  if (award == null) return { success: false, error: "Invalid points" };
   const result = await db.student.updateMany({
     where: staffStudentWhere(session, studentId),
-    data: { points: { increment: Math.trunc(points) } }
+    data: { points: { increment: award } }
   });
   if (result.count === 0) return { success: false, error: "Student not found" };
   revalidatePath("/coach");

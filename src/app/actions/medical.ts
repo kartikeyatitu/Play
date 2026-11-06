@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/auth";
 import { checkPermission } from "@/lib/membership";
 import { FEATURES } from "@/lib/features";
 import { medicalAuditDetails, medicalFieldsChanged, parseMedicalJson, whitelistMedical } from "@/lib/health";
+import { COACH_SAFE_MEDICAL_FIELDS } from "@/lib/athlete/medical-visibility";
 
 // Tenant/role scope for a student:
 // ADMIN → any student in their academy; COACH → students in their own batches;
@@ -48,8 +49,17 @@ export async function updateMedicalInfo(studentId: string, data: MedicalInfoInpu
 
     const { bloodGroup, ...rest } = data || {};
     // Flag on: only whitelisted medical keys are stored (unknown keys are dropped).
-    const stored: Record<string, unknown> = FEATURES.wellness ? whitelistMedical(rest) : rest;
-    const nextBloodGroup = typeof bloodGroup === "string" && bloodGroup.trim() ? bloodGroup.trim().slice(0, 10) : null;
+    let stored: Record<string, unknown> = FEATURES.wellness ? whitelistMedical(rest) : rest;
+    let nextBloodGroup = typeof bloodGroup === "string" && bloodGroup.trim() ? bloodGroup.trim().slice(0, 10) : null;
+    if (session.role === "COACH") {
+      // Coaches only see the safety-critical fields, so they may only change those: merge them into the
+      // existing record and keep everything else (including blood group) exactly as it was.
+      const safe = whitelistMedical(rest) as Record<string, unknown>;
+      const merged: Record<string, unknown> = { ...parseMedicalJson(student.medicalInfo) };
+      for (const key of COACH_SAFE_MEDICAL_FIELDS) if (key in safe) merged[key] = safe[key];
+      stored = merged;
+      nextBloodGroup = student.bloodGroup;
+    }
     await db.student.update({
       where: { id: student.id },
       data: {

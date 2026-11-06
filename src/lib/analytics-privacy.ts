@@ -3,7 +3,7 @@
  * (master plan risk 4: no analytics on child pages). Matching is on the path prefix.
  */
 export const PRIVATE_ANALYTICS_PREFIXES = [
-  "/parent", "/parents", "/student", "/coach", "/org", "/staff", "/ops", "/live", "/r",
+  "/parent", "/parents", "/student", "/athlete", "/coach", "/org", "/staff", "/ops", "/live", "/r",
   "/join", "/delete-account", "/onboarding", "/rewards", "/gallery", "/family", "/consent",
 ] as const;
 

@@ -14,6 +14,7 @@ import { listAthleteRecords } from "@/app/actions/athlete";
 import { AthletePanel } from "@/components/athlete/AthletePanel";
 import { canViewMedical } from "@/lib/health";
 import { checkPermission } from "@/lib/membership";
+import { medicalForView, medicalViewFor } from "@/lib/athlete/medical-visibility";
 
 export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -71,8 +72,13 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
   const hasHealthView = FEATURES.wellness && session.role === "ADMIN" ? (await checkPermission("health.view")).ok : true;
   const showMedical = canViewMedical({ wellness: FEATURES.wellness, appRole: session.role, hasHealthView });
 
+  // Coaches see only safety-critical fields (allergies, emergency contact); owners/managers with access
+  // and the athlete's parent see the full record.
+  const medicalView = medicalViewFor({ appRole: session.role, fullAllowed: showMedical });
+  const visibleMedical = medicalForView(student, medicalView);
+  const medical = parseMedicalInfo(visibleMedical.medicalInfo);
+
   // Calculate attendance
-  const medical = parseMedicalInfo(showMedical ? student.medicalInfo : null);
   const totalAttended = student.attendances.filter((a) => a.isPresent).length;
   const totalSessions = student.attendances.length;
   const attendancePercentage = totalSessions > 0 ? Math.round((totalAttended / totalSessions) * 100) : 0;
@@ -97,9 +103,16 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                 <div className="mt-2 text-zinc-400 space-y-1 text-sm">
                   <p>Parent: {student.parent?.name} ({student.parent?.phone || "No phone"})</p>
                   {student.dob && <p>DOB: {new Date(student.dob).toLocaleDateString()}</p>}
-                  {showMedical && student.bloodGroup && <p>Blood Group: {student.bloodGroup}</p>}
+                  {visibleMedical.bloodGroup && <p>Blood Group: {visibleMedical.bloodGroup}</p>}
                   {medical.hasAny && (
-                    <p className={medical.severity === "alert" ? "text-rose-400" : "text-zinc-300"}>Medical: {medical.summary}</p>
+                    <p className={medical.severity === "alert" ? "text-rose-400" : "text-zinc-300"}>
+                      {medicalView === "safety" ? "Safety" : "Medical"}: {medical.summary}
+                    </p>
+                  )}
+                  {medicalView === "safety" && (medical.emergencyContactName || medical.emergencyContactPhone) && (
+                    <p>
+                      Emergency contact: {[medical.emergencyContactName, medical.emergencyContactPhone].filter(Boolean).join(" · ")}
+                    </p>
                   )}
                 </div>
               </div>
@@ -285,7 +298,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
           <p className="text-sm text-zinc-500">Achievements &amp; goals: {athleteRecords.error}</p>
         )}
 
-        {showMedical && (
+        {medicalView === "full" && (
           <div className="mt-8">
             {/* medicalInfo is passed so the form starts from the saved values (it used to start blank
                 and saving wiped the existing record). */}
