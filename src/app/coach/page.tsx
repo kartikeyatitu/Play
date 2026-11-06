@@ -415,6 +415,18 @@ export default async function CoachDashboard({
   // Cast: DB rows carry extra Prisma fields beyond BatchRecord's shape.
   const squadPanel = (
     <div className="space-y-6">
+      <nav aria-label="Coach tools" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          { href: "/coach/day", label: "Today's grid" },
+          { href: "/coach/roster", label: "Roster" },
+          { href: "/coach/assess", label: "Assess" },
+          { href: "/coach/availability", label: "Availability" },
+        ].map((l) => (
+          <a key={l.href} href={l.href} className="inline-flex h-11 items-center justify-center rounded-xl border border-line bg-surface text-sm font-semibold text-ink hover:bg-surface-2">
+            {l.label}
+          </a>
+        ))}
+      </nav>
       {atRisk && atRisk.high + atRisk.medium + atRisk.low > 0 && (
         <div id="at-risk" className="scroll-mt-20">
           <CoachAtRisk data={atRisk} />
