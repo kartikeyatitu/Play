@@ -38,7 +38,12 @@ export function FeeHistory({ studentId }: { studentId: string }) {
 
   return (
     <div className="rounded-md border border-zinc-800 bg-zinc-950 p-3 sm:p-4">
-      <h3 className="text-base sm:text-lg font-medium text-zinc-100 mb-4">Fee History</h3>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h3 className="text-base sm:text-lg font-medium text-zinc-100">Fee History</h3>
+        <a href={`/parent/statement?child=${encodeURIComponent(studentId)}`} className="text-sm text-ink-muted underline-offset-2 hover:text-ink hover:underline">
+          Statement
+        </a>
+      </div>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -61,10 +66,16 @@ export function FeeHistory({ studentId }: { studentId: string }) {
                 <TableCell className="text-zinc-100">₹{record.amount}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant={record.status === "PAID" ? "emerald" : "rose"}>
-                      {record.status}
-                    </Badge>
-                    <PaymentMethodBadge status={record.status} method={record.paymentMethod} />
+                    {record.paymentMethod === "PLAN_COVERED" ? (
+                      <Badge variant="outline">Covered by plan</Badge>
+                    ) : (
+                      <>
+                        <Badge variant={record.status === "PAID" ? "emerald" : "rose"}>
+                          {record.status}
+                        </Badge>
+                        <PaymentMethodBadge status={record.status} method={record.paymentMethod} />
+                      </>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

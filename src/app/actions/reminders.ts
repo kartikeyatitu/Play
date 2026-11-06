@@ -315,3 +315,74 @@ export async function markReminderSent(type: string, parentPhone: string) {
     console.log(`Reminder logged: ${type} to ${parentPhone}`);
   }
 }
+
+/**
+ * Overdue panel, one tap: record that a fee reminder went to a family over WhatsApp (the panel opens
+ * the wa.me link itself, the same path as the other reminders here). Written to AuditLog with the
+ * same action markReminderSent uses for FEE_DUE, plus the family and fee records.
+ */
+export async function recordFamilyFeeReminder(familyId: string, bucket?: string) {
+  const auth = await checkPermission("fees.collect");
+  if (!auth.ok) return { success: false as const, error: auth.error };
+  const { session } = auth;
+  if (typeof familyId !== "string" || !familyId) return { success: false as const, error: "Family not found." };
+  const { rateLimitDb } = await import("@/lib/rate-limit");
+  const rl = await rateLimitDb(`fee-remind:${session.orgId}:${session.id}`, 60, 60_000);
+  if (!rl.allowed) return { success: false as const, error: "Too many reminders in a minute. Please wait a moment." };
+
+  // The family must have a child in this academy with an unpaid fee.
+  const fees = await db.feeRecord.findMany({
+    where: { orgId: session.orgId, status: "PENDING", amount: { gt: 0 }, student: { parentId: familyId, orgId: session.orgId } },
+    select: { id: true, amount: true, student: { select: { parent: { select: { phone: true } } } } },
+  });
+  if (!fees.length) return { success: false as const, error: "This family has nothing overdue." };
+  const { FEE_REMINDER_ACTION } = await import("@/lib/fee-reminders");
+  await db.auditLog.create({
+    data: {
+      userId: session.id,
+      orgId: session.orgId,
+      action: FEE_REMINDER_ACTION,
+      details: JSON.stringify({
+        to: fees[0].student?.parent?.phone ?? null,
+        familyId,
+        feeRecordIds: fees.map((f) => f.id),
+        amount: fees.reduce((s, f) => s + f.amount, 0),
+        bucket: typeof bucket === "string" ? bucket.slice(0, 20) : null,
+        channel: "WHATSAPP_LINK",
+        timestamp: new Date().toISOString(),
+      }),
+    },
+  });
+  return { success: true as const, remindedAt: new Date().toISOString() };
+}
+
+/**
+ * Overdue panel, "Remind all" for one bucket: the families to remind now (phone on file, not reminded
+ * in the last 20 hours, at most 40), in amount order. Rate limited per academy with rateLimitDb.
+ * Each family is then sent with one tap and recorded by recordFamilyFeeReminder.
+ */
+export async function startBucketReminders(bucketKey: string) {
+  const auth = await checkPermission("fees.collect");
+  if (!auth.ok) return { success: false as const, error: auth.error };
+  const { session } = auth;
+  if (!["d0_7", "d8_15", "d16_30", "d30_plus"].includes(bucketKey)) return { success: false as const, error: "Unknown bucket." };
+  const { rateLimitDb } = await import("@/lib/rate-limit");
+  const rl = await rateLimitDb(`fee-remind-bulk:${session.orgId}`, 6, 60 * 60_000);
+  if (!rl.allowed) return { success: false as const, error: "Bulk reminders are limited to 6 runs an hour. Try again later." };
+
+  const [{ loadOverdueReport }, { pickBulkReminderFamilies }] = await Promise.all([
+    import("@/lib/fee-overdue-server"),
+    import("@/lib/fee-reminders"),
+  ]);
+  const { view } = await loadOverdueReport(session.orgId);
+  const bucket = view.buckets.find((b) => b.key === bucketKey);
+  if (!bucket) return { success: false as const, error: "Unknown bucket." };
+  const picked = pickBulkReminderFamilies(bucket.families, new Date());
+  return {
+    success: true as const,
+    send: picked.send,
+    skippedRecent: picked.skippedRecent.length,
+    skippedNoPhone: picked.skippedNoPhone.length,
+    skippedOverLimit: picked.skippedOverLimit.length,
+  };
+}

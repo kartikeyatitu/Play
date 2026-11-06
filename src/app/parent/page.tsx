@@ -6,6 +6,14 @@ import { istMonthString } from '@/lib/fees';
 
 import { requireAuth } from '@/lib/auth';
 import { coachesOfOrg } from '@/lib/membership';
+import {
+  homeFeeStatus,
+  latestProgressNote,
+  nextSession,
+  privateLeaderboard,
+  weekAttendance,
+  weekRange,
+} from '@/components/parent/home-summary';
 
 /** Keep only step names + statuses of a coach's verification JSON (drops uploaded document URLs). */
 function publicVerificationSummary(raw: string | null): string | null {
@@ -68,7 +76,7 @@ export default async function ParentPage() {
       select: { id: true, name: true, sport: true, schedule: true, monthlyFee: true },
     }),
     session.orgId
-      ? db.organization.findUnique({ where: { id: session.orgId }, select: { id: true, name: true, upiId: true } })
+      ? db.organization.findUnique({ where: { id: session.orgId }, select: { id: true, name: true, upiId: true, timezone: true } })
       : Promise.resolve(null),
   ]);
 
@@ -137,6 +145,56 @@ export default async function ParentPage() {
   ]);
   const chatMessages = chatMessagesDesc.reverse();
 
+  // Round 3 — top card per child: next session, this week's attendance, fee status, latest note.
+  // Everything is scoped to this parent's own children (childrenRaw is filtered by parentId).
+  const tz = org?.timezone || 'Asia/Kolkata';
+  const week = weekRange(now, tz);
+  const childIds = childrenRaw.map((c) => c.id);
+  const horizonEnd = new Date(Date.parse(`${week.today}T00:00:00.000Z`) + 15 * 86_400_000);
+  const [cardSessions, presentRows, latestReceipts] = await Promise.all([
+    childBatchIds.length
+      ? db.session.findMany({
+          where: { batchId: { in: childBatchIds }, date: { gte: new Date(`${week.start}T00:00:00.000Z`), lte: horizonEnd } },
+          select: { id: true, batchId: true, date: true, status: true },
+        })
+      : Promise.resolve([]),
+    childIds.length && childBatchIds.length
+      ? db.attendance.findMany({
+          where: {
+            studentId: { in: childIds },
+            isPresent: true,
+            session: { batchId: { in: childBatchIds }, date: { gte: new Date(`${week.start}T00:00:00.000Z`) } },
+          },
+          select: { studentId: true, sessionId: true },
+        })
+      : Promise.resolve([]),
+    Promise.all(
+      childIds.map((id) =>
+        db.receipt.findFirst({ where: { studentId: id, orgId }, orderBy: { issuedAt: 'desc' }, select: { studentId: true, token: true } })
+      )
+    ),
+  ]);
+  const homeCards = children.map((child) => {
+    const batchIds = new Set(child.enrollments.map((e) => e.batchId));
+    const sessionsForChild = cardSessions.filter((s) => batchIds.has(s.batchId));
+    const present = presentRows.filter((a) => a.studentId === child.id).map((a) => a.sessionId);
+    return {
+      id: child.id,
+      name: child.name,
+      batchName: child.enrollments[0]?.batch?.name ?? null,
+      nextSession: nextSession(
+        child.enrollments.map((e) => ({ id: e.batchId, name: e.batch.name, schedule: e.batch.schedule })),
+        sessionsForChild,
+        now,
+        tz
+      ),
+      week: weekAttendance(sessionsForChild, present, now, tz),
+      fee: homeFeeStatus(child.dueFees, now, tz),
+      latestReceiptToken: latestReceipts.find((r) => r?.studentId === child.id)?.token ?? null,
+      note: latestProgressNote(child.skillReports),
+    };
+  });
+
   // Kept for components that still take a single number: sum of the children's real session counts
   const totalSessions = children.reduce((sum, c) => sum + c.attendanceSummary.totalSessions, 0);
 
@@ -146,7 +204,10 @@ export default async function ParentPage() {
       parent={JSON.parse(JSON.stringify({ ...parent, password: undefined }))}
       children={JSON.parse(JSON.stringify(children))}
       products={JSON.parse(JSON.stringify(products))}
-      leaderboard={JSON.parse(JSON.stringify(leaderboard))}
+      // Other families' children are never named to a parent (rank and points only).
+      leaderboard={privateLeaderboard(leaderboard, childrenRaw.map((c) => c.id))}
+      homeCards={JSON.parse(JSON.stringify(homeCards))}
+      today={week.today}
       chatMessages={JSON.parse(JSON.stringify(chatMessages))}
       announcements={JSON.parse(JSON.stringify(announcements))}
       totalSessions={totalSessions}

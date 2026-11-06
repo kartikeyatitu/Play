@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Copy, Check, Sparkles, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { createFeePlan, deleteFeePlan } from "@/app/actions/fee-plans";
+import { FeePlanAssign } from "@/components/org/FeePlanAssign";
 
 export type FeePlanItem = {
   id: string;
@@ -74,7 +75,7 @@ export function PaymentPlans({
         setPlans((prev) => [
           ...prev,
           {
-            id: `temp-${Date.now()}`,
+            id: res.plan?.id ?? `temp-${Date.now()}`,
             name: name.trim(),
             duration: parsedDuration,
             amount: parsedAmount,
@@ -170,10 +171,14 @@ export function PaymentPlans({
                     onChange={(e) => setDuration(e.target.value)}
                     className="w-full h-10 px-3 rounded-md bg-zinc-900 border border-zinc-800 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-lime-400"
                   >
-                    <option value="1">1 Month</option>
-                    <option value="3">3 Months (Quarterly)</option>
-                    <option value="6">6 Months (Half-Yearly)</option>
-                    <option value="12">12 Months (Annual)</option>
+                    <option value="1">Monthly</option>
+                    <option value="3">Quarterly (3 months)</option>
+                    <option value="2">Term: 2 months</option>
+                    <option value="4">Term: 4 months</option>
+                    <option value="6">Term: 6 months (half-yearly)</option>
+                    <option value="9">Term: 9 months</option>
+                    <option value="10">Term: 10 months (school year)</option>
+                    <option value="12">Term: 12 months (annual)</option>
                   </select>
                 </div>
 
@@ -277,6 +282,7 @@ export function PaymentPlans({
                   )}
                   {copiedId === plan.id ? "Copied" : "Share Info"}
                 </Button>
+                {!plan.id.startsWith("temp-") && <FeePlanAssign plan={plan} />}
                 <Button
                   size="sm"
                   variant="ghost"

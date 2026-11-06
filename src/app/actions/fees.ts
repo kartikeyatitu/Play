@@ -293,3 +293,28 @@ export async function getFeeReceiptToken(feeRecordId: string): Promise<{ token: 
 }
 
 
+
+/**
+ * Overdue panel: unpaid fees in aging buckets (0–7, 8–15, 16–30, 30+ days past the 1st of the fee's
+ * month, academy-local time), with families per bucket sorted by amount owed.
+ * Staff with fees.collect get the families (names, amounts, one-tap WhatsApp links). Staff with only
+ * reports.view get the bucket totals and counts, without any family or child names.
+ */
+export async function getOverdueAging() {
+  const collect = await checkPermission("fees.collect");
+  const auth = collect.ok ? collect : await checkPermission("reports.view");
+  if (!auth.ok) return { success: false as const, error: auth.error };
+  try {
+    const { loadOverdueReport } = await import("@/lib/fee-overdue-server");
+    const { view } = await loadOverdueReport(auth.session.orgId);
+    if (collect.ok) return { success: true as const, canRemind: true, view };
+    return {
+      success: true as const,
+      canRemind: false,
+      view: { ...view, buckets: view.buckets.map((b) => ({ ...b, families: [] })) },
+    };
+  } catch (e: any) {
+    console.error("getOverdueAging failed:", e?.message || e);
+    return { success: false as const, error: "Couldn't load overdue fees." };
+  }
+}

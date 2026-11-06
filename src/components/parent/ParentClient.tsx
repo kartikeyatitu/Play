@@ -3,13 +3,12 @@ import { Suspense, useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { PaymentReturnHandler } from '@/components/parent/PaymentReturnHandler';
 import { DashboardShell, SectionHeader, NAV_ICONS } from '@/components/ui/dashboard-shell';
-import { CheckoutModal } from '@/components/parent/CheckoutModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogOut } from 'lucide-react';
 import { FamilyDashboard } from '@/components/parent/FamilyDashboard';
 import { enrollAdditionalChild } from '@/app/actions/enroll-child';
 import { toast } from 'sonner';
-import { AvatarRing } from '@/components/ui/avatar-ring';
+import { ChildTopCard, type ChildTopCardData } from '@/components/parent/ChildTopCard';
 import { FEATURES } from '@/lib/features';
 
 // ── Code-splitting ──────────────────────────────────────────────────────────────
@@ -49,6 +48,8 @@ export function ParentClient({
   currentMonth,
   org,
   logoutAction,
+  homeCards,
+  today,
 }: any) {
   const [enrollForm, setEnrollForm] = useState({ childName: '', dob: '', batchId: '' });
   const [isEnrolling, startTransition] = useTransition();
@@ -95,148 +96,37 @@ export function ParentClient({
           </Suspense>
           {activeTab === 'home' && (
             <div className="space-y-6">
-              <SectionHeader title="Announcements" />
-              <div className="grid gap-4">
-                {announcements?.map((a: any) => (
-                  <Card key={a.id}>
-                    <CardContent className="p-4">
-                      <p className="font-semibold text-zinc-100">{a.title}</p>
-                      <p className="text-sm text-zinc-400">{a.message}</p>
-                    </CardContent>
-                  </Card>
+              {/* Top card per child: next session, this week, fees, latest coach note (phone-first) */}
+              <div className="grid gap-4 md:grid-cols-2">
+                {(homeCards || []).map((card: ChildTopCardData) => (
+                  <ChildTopCard key={card.id} data={card} today={today} academyName={org?.name} upiId={org?.upiId} />
                 ))}
+                {(!homeCards || homeCards.length === 0) && (
+                  <p className="rounded-2xl border border-line bg-surface p-4 text-sm text-ink-muted">
+                    No children linked to your account yet. Ask the academy to add your child, or enrol one under My Children.
+                  </p>
+                )}
               </div>
 
               {children?.length > 1 && (
                 <FamilyDashboard children={children} />
               )}
 
-              <SectionHeader title="Children Overview" />
-              {children?.map((child: any) => {
-                // Real per-child attendance: present / sessions held for the child's batches
-                const attendancePct = child.attendanceSummary?.pct ?? 0;
-                const feeStatus = child.feeRecords?.[0]?.status === 'PAID' ? 'Paid' : 'Unpaid';
-                
-                const attendancePercent = child.attendanceSummary?.pct == null ? '—' : Number(attendancePct).toFixed(0);
-                const dob = child.dob || child.dateOfBirth;
-                const age = dob ? Math.max(1, new Date().getFullYear() - new Date(dob).getFullYear()) : 'N/A';
-                const batchName = child.enrollments?.[0]?.batch?.name || 'Unassigned';
-                const level = child.skillReports?.[0]?.level || Math.floor(child.points / 100) + 1;
-                const points = child.points;
-                // Oldest unpaid fee first so parents clear dues in order
-                const dueFees = [...(child.dueFees || [])].sort((a: any, b: any) => a.month.localeCompare(b.month));
-                const pendingRecord = dueFees[0] || null;
-                const pendingFee = dueFees.filter((f: any) => f.status === 'PENDING').reduce((s: number, f: any) => s + (f.amount || 0), 0);
-                const awaitingConfirmation = dueFees.some((f: any) => f.status === 'PENDING_VERIFICATION');
-                
-                let streak = 0;
-                if (child.attendances && child.attendances.length > 0) {
-                  for (let i = 0; i < child.attendances.length; i++) {
-                    if (child.attendances[i].isPresent) streak++;
-                    else break;
-                  }
-                }
-
-                // Compute week status
-                const today = new Date();
-                const currentDay = today.getDay(); // 0 is Sunday, 1 is Monday...
-                // Adjust to make Monday 0
-                const dayOffset = currentDay === 0 ? 6 : currentDay - 1;
-                const startOfWeek = new Date(today);
-                startOfWeek.setDate(today.getDate() - dayOffset);
-                startOfWeek.setHours(0,0,0,0);
-                
-                const weekStatus = ['M','T','W','T','F','S','S'].map((day, i) => {
-                  const dateForDay = new Date(startOfWeek);
-                  dateForDay.setDate(startOfWeek.getDate() + i);
-                  
-                  if (dateForDay > today) return { day, status: 'future' };
-                  
-                  const dateStr = dateForDay.toISOString().split('T')[0];
-                  const record = child.attendances?.find((a: any) => a.session?.date?.startsWith(dateStr));
-                  if (!record) return { day, status: 'none' };
-                  return { day, status: record.isPresent ? 'present' : 'absent' };
-                });
-                
-                return (
-                  <div key={child.id} className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 to-zinc-950 border border-zinc-800/50 mb-6">
-                    {/* Accent gradient at top */}
-                    <div className="h-1 bg-gradient-to-r from-emerald-500 to-cyan-500" />
-                    
-                    {/* Child info with avatar ring */}
-                    <div className="p-5 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <AvatarRing name={child.name} percentage={Number(attendancePct) || 0} size="lg" showLabel={false} />
-                        <div>
-                          <h2 className="text-lg font-semibold text-zinc-100">{child.name}</h2>
-                          <p className="text-sm text-zinc-400">Age {age} · {batchName}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">Level {level}</span>
-                            <span className="text-xs text-zinc-500">{points} pts</span>
-                          </div>
-                        </div>
-                      </div>
-                      {pendingRecord && (
-                        <div className="hidden sm:block">
-                          <CheckoutModal feeRecordId={pendingRecord.id} amount={pendingRecord.amount} month={pendingRecord.month} status={pendingRecord.status} studentName={child.name} academyName={org?.name} upiId={org?.upiId} />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Quick stats row */}
-                    <div className="grid grid-cols-3 border-t border-zinc-800/50">
-                      <div className="p-3 text-center border-r border-zinc-800/50">
-                        <div className="text-lg font-semibold text-zinc-100">{attendancePercent}{attendancePercent === '—' ? '' : '%'}</div>
-                        <div className="text-[10px] text-zinc-500 uppercase">Attendance</div>
-                      </div>
-                      <div className="p-3 text-center border-r border-zinc-800/50">
-                        <div className="text-lg font-semibold text-zinc-100">
-                          {pendingFee > 0 ? (
-                            <span className="text-amber-400">₹{pendingFee}</span>
-                          ) : awaitingConfirmation ? (
-                            <span className="text-sky-400 text-sm">Awaiting confirmation</span>
-                          ) : (
-                            <span className="text-emerald-400">Paid ✓</span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-zinc-500 uppercase">Fees Due</div>
-                      </div>
-                      <div className="p-3 text-center">
-                        <div className="text-lg font-semibold text-zinc-100">{streak}</div>
-                        <div className="text-[10px] text-zinc-500 uppercase">Streak 🔥</div>
-                      </div>
-                    </div>
-
-                    {/* Mobile Fee Payment Banner */}
-                    {pendingRecord && (
-                      <div className="p-3 bg-amber-500/10 border-t border-amber-500/20 sm:hidden flex items-center justify-between gap-3">
-                        <div className="text-xs text-amber-300">
-                          <span className="font-semibold">₹{pendingRecord.amount}</span> {pendingRecord.status === 'PENDING_VERIFICATION' ? 'awaiting confirmation' : 'due'} for {pendingRecord.month}
-                        </div>
-                        <div className="shrink-0">
-                          <CheckoutModal feeRecordId={pendingRecord.id} amount={pendingRecord.amount} month={pendingRecord.month} status={pendingRecord.status} studentName={child.name} academyName={org?.name} upiId={org?.upiId} />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* This Week */}
-                    <div className="p-4 border-t border-zinc-800/50">
-                      <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">This Week</h3>
-                      <div className="flex gap-2">
-                        {weekStatus.map((ws, i) => (
-                          <div key={i} className={`flex-1 aspect-square rounded-lg flex flex-col items-center justify-center text-xs
-                            ${ws.status === 'present' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                              ws.status === 'absent' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
-                              'bg-zinc-800/50 text-zinc-600 border border-zinc-800'}`}>
-                            <span className="font-medium">{ws.day}</span>
-                            <span>{ws.status === 'present' ? '✓' : ws.status === 'absent' ? '✕' : '·'}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+              {announcements?.length > 0 && (
+                <>
+                  <SectionHeader title="Announcements" />
+                  <div className="grid gap-4">
+                    {announcements.map((a: any) => (
+                      <Card key={a.id}>
+                        <CardContent className="p-4">
+                          <p className="font-semibold text-ink">{a.title}</p>
+                          <p className="text-sm text-ink-muted">{a.message}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                );
-              })}
+                </>
+              )}
             </div>
           )}
 

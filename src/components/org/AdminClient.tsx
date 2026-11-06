@@ -106,6 +106,7 @@ const GstInvoicesPanel = dynamic(() => import("@/components/org/GstInvoicesPanel
 const AutopayMandatesPanel = dynamic(() => import("@/components/org/AutopayMandatesPanel").then((m) => m.AutopayMandatesPanel), { loading: sectionLoading });
 const GstSettingsCard = dynamic(() => import("@/components/org/GstSettingsCard").then((m) => m.GstSettingsCard), { loading: sectionLoading });
 const CollectFees = dynamic(() => import("@/components/org/CollectFees").then((m) => m.CollectFees), { loading: sectionLoading });
+const OverduePanel = dynamic(() => import("@/components/org/OverduePanel").then((m) => m.OverduePanel), { loading: sectionLoading });
 
 /** Warm the chunks of the most-used tabs once the browser is idle (no effect on first paint). */
 function prefetchCommonTabs() {
@@ -246,7 +247,7 @@ const HIDDEN_TABS = new Set<string>([
 ]);
 
 /** Demo-data loader is a development tool: Settings only, never in production. */
-const SHOW_SEED = process.env.NODE_ENV !== "production";
+const SHOW_SEED = process.env.NEXT_PUBLIC_VERCEL_ENV ? process.env.NEXT_PUBLIC_VERCEL_ENV !== "production" : process.env.NODE_ENV !== "production";
 
 export function AdminClient({ session, org, students, batches, coaches, feeSummary, recentPaidFees, trials, leads = [], secondary, currentMonth, stats, logoutAction, currentPage = 1, totalStudents = 0, studentFees = {}, pendingVerification = [], insights = null }: AdminClientProps) {
   const academyName = org?.name || session.orgName || "Your Academy";
@@ -540,6 +541,10 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {/* FEES */}
           {activeTab === "fees" && (
             <div className="space-y-8">
+              <div>
+                <SectionHeader title="Overdue" description="Unpaid fees by days past due (IST). Remind a family with one tap." />
+                <OverduePanel />
+              </div>
               <div>
                 <SectionHeader title="Collect fees" description="Unpaid fees across your academy — remind, mark paid, share receipts." />
                 <CollectFees academyName={academyName} upiId={upiId} razorpayConnected={Boolean((org as any)?.razorpayConnected)} />
