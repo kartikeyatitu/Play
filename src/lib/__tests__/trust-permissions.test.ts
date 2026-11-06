@@ -120,10 +120,17 @@ describe("requirePermission / checkPermission", () => {
     expect(await checkPermission("fees.collect")).toEqual({ ok: false, error: "No academy found" });
   });
 
-  it("non-admin app roles (coach) are bounced by requireAuth, not silently allowed", async () => {
+  it("a coach is refused money permissions by default (coach defaults are attendance.mark only)", async () => {
     session = { id: "u_coach", role: "COACH", orgId: ORG_A };
     member("u_coach", ORG_A, "COACH");
-    await expect(checkPermission("fees.collect")).rejects.toThrow(/NEXT_REDIRECT/);
+    expect(await checkPermission("fees.collect")).toMatchObject({ ok: false });
+  });
+
+  it("a coach explicitly granted fees.collect by the owner is allowed, and only that", async () => {
+    session = { id: "u_coach", role: "COACH", orgId: ORG_A };
+    member("u_coach", ORG_A, "COACH", { permissions: JSON.stringify({ "fees.collect": true }) });
+    expect(await checkPermission("fees.collect")).toMatchObject({ ok: true });
+    expect(await checkPermission("payroll.view")).toMatchObject({ ok: false });
   });
 });
 
