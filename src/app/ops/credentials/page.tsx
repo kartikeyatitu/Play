@@ -6,6 +6,8 @@ import { CREDENTIAL_STATUSES, canSetCredentialStatus, credentialLabel } from "@/
 import { reviewProfessionalCredential, reviewProviderCredential } from "./actions";
 import { PROVIDER_CATEGORY_LABELS, isProviderCategory } from "@/lib/wellness";
 import { Card, Flash, Page, Pill, Section, buttonCls, inputCls, istDate } from "@/components/verticals/ui";
+import { prosEnabled } from "@/lib/pros/flag";
+import { ProsQueue } from "./ProsQueue";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Ops · Credentials | Triq", robots: { index: false, follow: false } };
@@ -61,6 +63,8 @@ export default async function OpsCredentialsPage({ searchParams }: { searchParam
       <p className="mt-3 text-sm text-zinc-400">
         Only mark a credential verified after checking the evidence with the issuer. Every change is audited.
       </p>
+
+      {prosEnabled() && <ProsQueue showDone={sp.pros === "all"} />}
 
       <Section title="Professional credentials (Careers)">
         {!FEATURES.careers && <p className="text-sm text-zinc-500">Careers is switched off.</p>}
