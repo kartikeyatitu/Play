@@ -121,7 +121,7 @@ export const FEATURES = {
   /** Drill library and coach session plans (Drill, SessionPlan, SessionPlanItem). */
   drillLibrary: flag("DRILL_LIBRARY", false),
   /** Competition fixtures UI extras on the existing Fixture table + computed standings. No new table. */
-  fixtures: flag("FIXTURES", false),
+  fixtures: flag("FIXTURES", true),
   /** Per-event waitlist with offers that expire (EventWaitlist). */
   eventWaitlist: flag("EVENT_WAITLIST", false),
   /** Outbound WhatsApp/email/SMS delivery log with retries, and notification preferences. */

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { ChevronLeft, Loader2, Plus, Trophy } from "lucide-react";
 import {
@@ -15,6 +16,7 @@ import {
   setCompetitionStatus,
   withdrawEntry,
 } from "@/app/actions/competitions";
+import { FEATURES } from "@/lib/features";
 import type { CompetitionDetail, CompetitionSummary, FixtureView } from "@/lib/competition-view";
 
 /**
@@ -326,6 +328,11 @@ function CompetitionView({ id, batches, onBack }: { id: string; batches: Batch[]
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-3">
+          {FEATURES.fixtures && ["OPEN", "SCHEDULED", "COMPLETED"].includes(c.status) && (
+            <Link href={`/org/fixtures?c=${encodeURIComponent(c.id)}`} className={ghost}>
+              Draws, schedule &amp; standings
+            </Link>
+          )}
           {c.status === "DRAFT" && <button className={primary} disabled={busy} onClick={() => run(() => setCompetitionStatus(c.id, "OPEN"), "Registration opened")}>Open registration</button>}
           {c.status === "OPEN" && (
             <>

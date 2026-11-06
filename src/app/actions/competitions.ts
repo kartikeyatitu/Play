@@ -18,6 +18,7 @@ import {
   validateCompetitionConfig,
   validateResult,
 } from "@/lib/competition";
+import { KO_BASE, isKnockoutPhaseRound } from "@/lib/competition/phase";
 import { buildCompetitionDetail, type CompetitionDetail, type CompetitionSummary } from "@/lib/competition-view";
 
 /**
@@ -352,6 +353,7 @@ export async function scheduleFixture(
       if (f.competition.status !== "SCHEDULED") throw new ActionError("This competition isn't running.");
       if (status && (f.status === "COMPLETED" || f.status === "BYE")) throw new ActionError("A decided fixture can't change status.");
       if (status === "CANCELLED" && f.competition.format === "KNOCKOUT") throw new ActionError("Knockout fixtures can't be cancelled — postpone it instead.");
+      if (status === "CANCELLED" && isKnockoutPhaseRound(f.round)) throw new ActionError("Knockout fixtures can't be cancelled — postpone it instead.");
       if (officialUserId) {
         const m = await tx.orgMembership.findFirst({ where: { userId: officialUserId, orgId, status: "ACTIVE" }, select: { id: true } });
         if (!m) throw new ActionError("The official must be an active member of your academy.");
@@ -398,6 +400,10 @@ export async function recordFixtureResult(
       if (!f) throw new ActionError("Fixture not found.");
       const c = f.competition;
       if (c.status !== "SCHEDULED") throw new ActionError("Results can only be recorded while the competition is running.");
+      // Group-stage draws (src/lib/competition/phase.ts) are scored on the Fixtures page, which knows the phases.
+      if (await tx.fixture.count({ where: { competitionId: c.id, round: { gte: KO_BASE } } })) {
+        throw new ActionError("This competition has a group stage. Record its results on the Fixtures page.");
+      }
       if (f.version !== Number(input?.expectedVersion)) throw new ActionError(STALE);
       if (f.status === "POSTPONED") throw new ActionError("Reschedule this fixture before recording a result.");
 
