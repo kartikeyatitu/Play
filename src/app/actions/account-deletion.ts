@@ -5,6 +5,9 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { rateLimitDb } from "@/lib/rate-limit";
 import { phoneLookupKeys } from "@/lib/phone";
+import { FEATURES } from "@/lib/features";
+import { makeReferenceId } from "@/lib/consent/data-requests";
+import { recordDataRequestEvent } from "@/lib/consent/data-requests-server";
 
 /**
  * Records an account-deletion REQUEST for manual review. This action deletes nothing:
@@ -81,6 +84,26 @@ export async function requestAccountDeletion(input: {
     }
     userId = user.id;
     orgId = user.orgId ?? null;
+  }
+
+  // Data requests on: the request goes into the DataRequest queue (/org/data-requests) with a
+  // reference id, and an AuditLog row records its creation. Still deletes nothing.
+  if (FEATURES.dataRequests) {
+    try {
+      const referenceId = makeReferenceId();
+      const user = await db.user.findUnique({ where: { id: userId! }, select: { phone: true } });
+      await db.dataRequest.create({
+        data: { orgId, userId, phone: user?.phone ?? null, type: "DELETE", reason, referenceId },
+      });
+      await recordDataRequestEvent(userId!, orgId, { event: "CREATED", referenceId, type: "DELETE", method });
+      return { ok: true, referenceId, method };
+    } catch (e) {
+      console.error("requestAccountDeletion: failed to record data request", e);
+      return {
+        ok: false,
+        error: `We could not record your request. Please try again, or email ${PRIVACY_EMAIL}.`,
+      };
+    }
   }
 
   try {
