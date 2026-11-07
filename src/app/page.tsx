@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getActiveHat, getSession } from "@/lib/auth";
+import { HAT_HOME } from "@/lib/roles/hats";
 import { LandingPage } from "@/components/marketing/landing-page";
 import { FREE_PLAN } from "@/lib/pricing";
 
@@ -31,6 +32,9 @@ export default async function Home({
 
   // Logged-in users go straight to their app (unchanged behaviour).
   if (session) {
+    // A second hat the person chose ("Viewing as") and still holds wins; otherwise User.role as before.
+    const activeHat = await getActiveHat(session);
+    if (activeHat) redirect(HAT_HOME[activeHat]);
     if (session.role === "ADMIN") redirect("/org");
     if (session.role === "COACH") redirect("/coach");
     if (session.role === "STAFF") redirect("/staff");

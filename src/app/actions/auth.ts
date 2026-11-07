@@ -8,7 +8,7 @@ import twilio from "twilio";
 import { OAuth2Client } from "google-auth-library";
 import { rateLimitDb } from "@/lib/rate-limit";
 import crypto from "crypto";
-import { setSessionCookie, getSession, revokeAllSessions } from "@/lib/auth";
+import { setSessionCookie, getSession, revokeAllSessions, ACTIVE_ROLE_COOKIE_NAME } from "@/lib/auth";
 import { parsePhone, phoneLookupKeys, toMsg91Mobile } from "@/lib/phone";
 import { buildMsg91OtpRequest, describeMsg91Failure, isMsg91Success } from "@/lib/msg91";
 import { sendWhatsAppTemplate } from "@/lib/whatsapp";
@@ -320,6 +320,7 @@ async function setSession(id: string, role: string) {
 export async function logout() {
   const cookieStore = await cookies();
   cookieStore.delete("sportsos_session");
+  cookieStore.delete(ACTIVE_ROLE_COOKIE_NAME);
   redirect("/login");
 }
 
@@ -329,5 +330,6 @@ export async function logoutEverywhere() {
   if (session?.id) await revokeAllSessions(session.id);
   const cookieStore = await cookies();
   cookieStore.delete("sportsos_session");
+  cookieStore.delete(ACTIVE_ROLE_COOKIE_NAME);
   redirect("/login");
 }

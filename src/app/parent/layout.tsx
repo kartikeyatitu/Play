@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { OrgLocaleProvider } from "@/lib/org-locale-context";
 import type { OrgLocale } from "@/lib/i18n";
+import { ViewingAs } from "@/components/roles/ViewingAs";
 
 /**
  * A parent's "org" is the academy their child is enrolled at. Parents have
@@ -27,5 +28,5 @@ export default async function ParentLayout({ children }: { children: ReactNode }
       console.warn("[parent/layout] failed to load org locale", err);
     }
   }
-  return <OrgLocaleProvider value={locale}>{children}</OrgLocaleProvider>;
+  return <OrgLocaleProvider value={locale}><ViewingAs area="parent" />{children}</OrgLocaleProvider>;
 }

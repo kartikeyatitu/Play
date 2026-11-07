@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { OrgLocaleProvider } from "@/lib/org-locale-context";
 import type { OrgLocale } from "@/lib/i18n";
+import { ViewingAs } from "@/components/roles/ViewingAs";
 
 export default async function CoachLayout({ children }: { children: ReactNode }) {
   const session = await getSession();
@@ -23,5 +24,5 @@ export default async function CoachLayout({ children }: { children: ReactNode })
       console.warn("[coach/layout] failed to load org locale", err);
     }
   }
-  return <OrgLocaleProvider value={locale}>{children}</OrgLocaleProvider>;
+  return <OrgLocaleProvider value={locale}><ViewingAs area="coach" />{children}</OrgLocaleProvider>;
 }

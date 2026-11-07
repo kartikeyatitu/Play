@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
 import { getMyAttendance } from "@/app/actions/team";
 import { StaffHome } from "@/components/team/StaffHome";
+import { ViewingAs } from "@/components/roles/ViewingAs";
 
 export const metadata: Metadata = { title: "Triq | Staff" };
 
@@ -12,5 +13,5 @@ export default async function StaffPage() {
   const session = await requireAuth(["STAFF"]);
   if (!session.orgId) redirect("/login");
   const data = await getMyAttendance();
-  return <StaffHome name={session.name || "there"} data={data} logoutAction={logout} />;
+  return <><ViewingAs area="staff" /><StaffHome name={session.name || "there"} data={data} logoutAction={logout} /></>;
 }

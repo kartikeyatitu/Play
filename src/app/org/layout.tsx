@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { OrgLocaleProvider } from "@/lib/org-locale-context";
 import type { OrgLocale } from "@/lib/i18n";
+import { ViewingAs } from "@/components/roles/ViewingAs";
 
 /**
  * Loads the admin's org locale once per request and provides it to every
@@ -32,5 +33,5 @@ export default async function OrgLayout({ children }: { children: ReactNode }) {
     }
   }
 
-  return <OrgLocaleProvider value={locale}>{children}</OrgLocaleProvider>;
+  return <OrgLocaleProvider value={locale}><ViewingAs area="admin" />{children}</OrgLocaleProvider>;
 }
