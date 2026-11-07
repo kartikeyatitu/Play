@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createEvent } from "@/app/actions/events";
 import { Loader2, Trophy } from "lucide-react";
+import { EventWaitlistOrganiser } from "@/components/events/EventWaitlistOrganiser";
 
 export function CreateMatchModal({ batches }: { batches: { id: string; name: string }[] }) {
   const router = useRouter();
@@ -85,16 +86,17 @@ export function CreateMatchModal({ batches }: { batches: { id: string; name: str
   );
 }
 
-export function RSVPBadge({ rsvps }: { rsvps: { status: string }[] }) {
+export function RSVPBadge({ rsvps }: { rsvps: { status: string; eventId?: string }[] }) {
   const going = rsvps.filter((r) => r.status === "GOING").length;
   const notGoing = rsvps.filter((r) => r.status === "NOT_GOING").length;
   const pending = rsvps.filter((r) => r.status === "PENDING").length;
 
   return (
-    <div className="flex gap-1.5 text-[11px] font-bold">
+    <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
       <span className="text-lime-400 bg-lime-400/10 border border-lime-400/20 px-2 py-1 rounded-lg">{going} going</span>
       {notGoing > 0 && <span className="text-rose-300 bg-rose-500/10 border border-rose-500/20 px-2 py-1 rounded-lg">{notGoing} out</span>}
       {pending > 0 && <span className="text-zinc-400 bg-zinc-800 border border-zinc-700 px-2 py-1 rounded-lg">{pending} pending</span>}
+      {rsvps[0]?.eventId && <EventWaitlistOrganiser eventId={rsvps[0].eventId} />}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
+import { eventWaitlistAfterRsvp, eventWaitlistRsvpGate } from "@/lib/events/waitlist-server";
 
 // COACH added: matches/events are created from the coach dashboard (CreateMatchModal) for the coach's own batches.
 export async function createEvent(batchId: string, title: string, date: Date, location: string) {
@@ -58,15 +59,21 @@ export async function updateRSVP(eventId: string, studentId: string, status: str
   // Event must be for a batch the student is enrolled in (and therefore the same academy)
   const event = await db.event.findFirst({
     where: { id: eventId, batch: { enrollments: { some: { studentId: student.id } } } },
-    select: { id: true },
+    select: { id: true, orgId: true },
   });
   if (!event) return { success: false, error: "Event not found" };
+
+  // Event waitlist (no-op while FEATURES.eventWaitlist is off): a full event is joined via the waitlist.
+  const waitlistGate = await eventWaitlistRsvpGate(event.id, student.id, status);
+  if (waitlistGate.error) return { success: false, error: waitlistGate.error };
 
   await db.rSVP.upsert({
     where: { eventId_studentId: { eventId: event.id, studentId: student.id } },
     update: { status },
     create: { eventId: event.id, studentId: student.id, status, orgId: student.orgId }
   });
+  // A GOING student who cancels frees a place: offer it to the next family on the waitlist.
+  await eventWaitlistAfterRsvp(event, session.id, waitlistGate.wasGoing, status);
   revalidatePath("/parent");
   revalidatePath("/coach");
   return { success: true };

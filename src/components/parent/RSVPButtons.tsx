@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { updateRSVP } from "@/app/actions/events";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { EventWaitlistFamily } from "@/components/events/EventWaitlistFamily";
 
 export function RSVPButtons({ eventId, studentId, currentStatus }: { eventId: string, studentId: string, currentStatus: string }) {
   const [loading, setLoading] = useState(false);
@@ -16,6 +17,7 @@ export function RSVPButtons({ eventId, studentId, currentStatus }: { eventId: st
   if (loading) return <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />;
 
   return (
+    <div className="flex flex-col w-full sm:w-auto">
     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
       <Button 
         size="sm"
@@ -33,6 +35,8 @@ export function RSVPButtons({ eventId, studentId, currentStatus }: { eventId: st
       >
         <XCircle className="w-4 h-4 mr-1" /> Can't Go
       </Button>
+    </div>
+    <EventWaitlistFamily eventId={eventId} studentId={studentId} currentStatus={currentStatus} />
     </div>
   );
 }
