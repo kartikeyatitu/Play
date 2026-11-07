@@ -1,4 +1,4 @@
--- NOT APPLIED. Needs founder approval before running on production.
+-- APPLIED to production (project triq, tfekmfumwsnxcddixlxm) by the founder via the Supabase SQL editor on 2026-11-07. Verified: 25 tables, 3 Receipt columns, RLS on.
 -- TRIQ wave 2 schema (2026-10-29). Spec: docs/specs/wave2-schema.md. Prisma models: prisma/schema.prisma (WAVE 2 block).
 -- Additive only: three nullable columns on "Receipt" and 25 new tables. No existing column or row is changed
 -- (except: if the superseded 2026-10-29_trust_batch.sql was already run, "Receipt"."voidedAt" is converted from
