@@ -113,6 +113,10 @@ export function ParentClient({
                   { href: "/mind/parents", label: "Supporting your athlete" },
                   { href: "/mind", label: "Mind & Performance" },
                   { href: "/pros", label: "Find a professional" },
+                  { href: "/rewards", label: "Rewards & badges" },
+                  { href: "/gallery", label: "Photos" },
+                  { href: "/consent", label: "Privacy & consent" },
+                  { href: "/family", label: "Family & waivers" },
                   { href: "/mind/support", label: "Need help now?" },
                 ].map((l) => (
                   <a key={l.href} href={l.href} className="flex min-h-11 items-center justify-center rounded-xl border border-line bg-surface px-3 text-center text-sm font-semibold text-ink hover:bg-surface-2">

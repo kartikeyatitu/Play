@@ -1060,8 +1060,10 @@ model Receipt {
   issuedAt        DateTime   @default(now())
   createdAt       DateTime   @default(now())
 
-  // Wave 2 trust: voidedAt / voidReason / voidedById are added by prisma/sql/2026-10-29_wave2.sql.
-  // Add the three fields here ONLY AFTER that SQL has run on production, or every receipt query breaks.
+  // Wave 2 trust (prisma/sql/2026-10-29_wave2.sql, applied to production). A receipt is voided, never deleted.
+  voidedAt        DateTime?
+  voidReason      String?
+  voidedById      String?
 
   student         Student?   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   feeRecord       FeeRecord? @relation(fields: [feeRecordId], references: [id], onDelete: SetNull)
@@ -1069,6 +1071,7 @@ model Receipt {
   @@index([orgId])
   @@index([token])
   @@index([receiptNumber])
+  @@index([orgId, voidedAt])
 }
 
 /// Triq SaaS subscription tiers & billing for academies

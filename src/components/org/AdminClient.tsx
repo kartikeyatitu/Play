@@ -1,4 +1,5 @@
 "use client";
+import { OrgToolLinks } from "@/components/org/OrgToolLinks";
 import { AcademySwitcher } from "@/components/team/AcademySwitcher";
 import { ThemePicker } from "@/components/ui/theme-picker";
 import React from "react";
@@ -344,7 +345,12 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {activeTab === "bookings" && FEATURES.bookings && <BookingsScreen />}
 
           {/* MORE (mobile hub — desktop shows the same groups in the sidebar) */}
-          {activeTab === "more" && <MoreScreen groups={moreGroups} onNavigate={go} />}
+          {activeTab === "more" && (
+            <>
+              <MoreScreen groups={moreGroups} onNavigate={go} />
+              <OrgToolLinks />
+            </>
+          )}
 
           {/* PEOPLE */}
           {activeTab === "people" && (
