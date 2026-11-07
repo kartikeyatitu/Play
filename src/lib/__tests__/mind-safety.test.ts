@@ -20,9 +20,9 @@ function walk(dir: string): string[] {
 const SOURCES = MIND_DIRS.flatMap(walk).map((file) => ({ file: path.relative(ROOT, file), text: readFileSync(file, "utf8") }));
 
 describe("mind C1 flag", () => {
-  it("is on only for the exact value \"1\"", () => {
-    expect(isMindC1Enabled("1")).toBe(true);
-    for (const v of [undefined, "", "0", "true", "yes", " 1"]) expect(isMindC1Enabled(v)).toBe(false);
+  it("is on by default and off only when explicitly switched off (decision D-14)", () => {
+    for (const v of [undefined, "", "1", "true", "on"]) expect(isMindC1Enabled(v)).toBe(true);
+    for (const v of ["0", "false"]) expect(isMindC1Enabled(v)).toBe(false);
   });
 
   it("is checked by every /mind page", () => {

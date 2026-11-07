@@ -108,6 +108,19 @@ export function ParentClient({
                 )}
               </div>
 
+              <nav aria-label="More for your family" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  { href: "/mind/parents", label: "Supporting your athlete" },
+                  { href: "/mind", label: "Mind & Performance" },
+                  { href: "/pros", label: "Find a professional" },
+                  { href: "/mind/support", label: "Need help now?" },
+                ].map((l) => (
+                  <a key={l.href} href={l.href} className="flex min-h-11 items-center justify-center rounded-xl border border-line bg-surface px-3 text-center text-sm font-semibold text-ink hover:bg-surface-2">
+                    {l.label}
+                  </a>
+                ))}
+              </nav>
+
               {children?.length > 1 && (
                 <FamilyDashboard children={children} />
               )}

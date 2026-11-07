@@ -122,3 +122,12 @@ Status values: **Accepted** · **Superseded**.
 - **Decision:** Coaches see an athlete's blood group on the emergency SOS screen only. Everywhere else in the coach view, coaches see only allergies and the emergency contact.
 - **Reason:** In an emergency, blood group can matter to first responders, and the SOS screen is used only in that situation. Founder delegated the call ("You can decide it").
 - **Source:** Founder, 2026-11-06.
+
+## D-14. Mind & Performance and TRIQ Connect switched on before professional review
+
+- **Date:** 2026-11-07
+- **Status:** Accepted (founder decision: "Nothing should be off").
+- **Decision:** Mind & Performance C1 (content only) and TRIQ Connect (onboarding, ops verification, directory, booking requests) are on by default in production. Either can be switched off by setting `NEXT_PUBLIC_MIND_C1=0` or `NEXT_PUBLIC_PROS=0` in Vercel.
+- **Known gaps accepted:** the mental-skills content, sport packs, breathing patterns, parent and coach advice and the support contacts have not yet been reviewed by a sports psychologist, a safeguarding reviewer or a clinical advisor. Connect's accepted registration bodies and confidentiality wording have not been reviewed by counsel. Professionals still show as Verified only after a manual ops check.
+- **Unchanged safeguards:** Mind & Performance stores nothing, calls no AI, records no analytics and makes no clinical claims; Connect bookings go only to verified providers and parents book only for their own children.
+- **Follow-up:** reviews remain open items in TRIQ_ROADMAP.md.

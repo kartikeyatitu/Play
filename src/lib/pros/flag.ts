@@ -1,4 +1,6 @@
-// TRIQ Connect professional pages are off unless NEXT_PUBLIC_PROS === "1" (not in features.ts on purpose).
+// TRIQ Connect professional pages. ON by default (founder decision D-14, 2026-11-07).
+// Set NEXT_PUBLIC_PROS="0" to switch them off.
 export function prosEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_PROS === "1";
+  const v = process.env.NEXT_PUBLIC_PROS;
+  return v !== "0" && v !== "false";
 }
