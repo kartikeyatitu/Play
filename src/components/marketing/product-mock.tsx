@@ -1,4 +1,4 @@
-import { Check, IndianRupee, MapPin, MessageCircle, X } from "lucide-react";
+import { CalendarDays, Check, IndianRupee, MapPin, MessageCircle, NotebookPen, X } from "lucide-react";
 
 /**
  * Hero "live product" composition — built in JSX/Tailwind (not a screenshot) so it stays crisp,
@@ -47,7 +47,7 @@ function AttendanceRing({ present, total }: { present: number; total: number }) 
 
 function CoachTodayPhone() {
   return (
-    <div className="relative mx-auto w-[min(100%,300px)] rounded-[2.2rem] border border-line bg-surface p-2 shadow-2xl shadow-black/60">
+    <div className="relative mx-auto w-[min(100%,300px)] rounded-[2.4rem] bg-[#18231d] p-2.5 shadow-[0_40px_70px_-30px_rgba(20,35,25,0.6)]">
       <div className="overflow-hidden rounded-[1.8rem] bg-canvas">
         {/* status bar */}
         <div className="flex items-center justify-between px-5 pb-1 pt-3 text-[10px] text-ink-subtle">
@@ -58,7 +58,7 @@ function CoachTodayPhone() {
         <div className="space-y-3 px-4 pb-5 pt-2">
           <div>
             <p className="text-[11px] text-ink-subtle">Coach app · Today</p>
-            <p className="text-base font-semibold text-ink">Good evening, Coach 👋</p>
+            <p className="text-base font-semibold text-ink">Good evening, Coach</p>
           </div>
 
           <div className="rounded-2xl border border-line bg-surface/80 p-3">
@@ -104,7 +104,7 @@ function CoachTodayPhone() {
 
 function ParentRecapCard() {
   return (
-    <div className="w-full max-w-[280px] rounded-2xl border border-emerald-500/20 bg-surface/95 p-3.5 shadow-xl shadow-black/50 backdrop-blur">
+    <div className="w-full max-w-[250px] rounded-2xl border border-line bg-surface p-3.5 shadow-[0_20px_40px_-18px_rgba(20,35,25,0.45)]">
       <div className="mb-2 flex items-center gap-2">
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
           <MessageCircle className="h-3.5 w-3.5" aria-hidden />
@@ -115,9 +115,9 @@ function ParentRecapCard() {
         </div>
       </div>
       <div className="space-y-1.5 rounded-xl bg-canvas/70 p-2.5 text-[11px] leading-relaxed text-ink-muted">
-        <p>✅ Attended U-12 Cricket</p>
-        <p>📝 Coach: &ldquo;Great footwork in the nets today.&rdquo;</p>
-        <p>📅 Next session: Thu, 5:30 PM</p>
+        <p className="flex gap-1.5"><Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-500" aria-hidden />Attended U-12 Cricket</p>
+        <p className="flex gap-1.5"><NotebookPen className="mt-0.5 h-3 w-3 shrink-0 text-ink-subtle" aria-hidden />Coach: &ldquo;Great footwork in the nets today.&rdquo;</p>
+        <p className="flex gap-1.5"><CalendarDays className="mt-0.5 h-3 w-3 shrink-0 text-ink-subtle" aria-hidden />Next session: Thu, 5:30 PM</p>
       </div>
     </div>
   );
@@ -125,7 +125,7 @@ function ParentRecapCard() {
 
 function FeeWidget() {
   return (
-    <div className="w-full max-w-[260px] rounded-2xl border border-line bg-surface/95 p-3.5 shadow-xl shadow-black/50 backdrop-blur">
+    <div className="w-full max-w-[230px] rounded-2xl border border-line bg-surface p-3.5 shadow-[0_20px_40px_-18px_rgba(20,35,25,0.45)]">
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-medium text-ink-muted">Fees collected · October</p>
         <span className="rounded-full bg-volt/10 px-2 py-0.5 text-[10px] font-semibold text-volt">78%</span>
@@ -150,22 +150,22 @@ function FeeWidget() {
 
 export function ProductMock() {
   return (
-    <figure className="relative isolate mx-auto w-full max-w-[520px]">
+    <figure className="relative isolate mx-auto w-full max-w-[600px]">
       <div className="mk-glow pointer-events-none absolute -inset-10 -z-10" aria-hidden />
       {/* Mobile: stacked. Desktop: floating cards around the phone. */}
-      <div className="relative flex flex-col items-center gap-4 lg:block lg:min-h-[560px]">
+      <div className="relative flex flex-col items-center gap-4 lg:block lg:min-h-[640px]">
         <div className="w-full lg:absolute lg:left-1/2 lg:top-0 lg:w-[300px] lg:-translate-x-1/2">
           <div className="mk-float">
             <CoachTodayPhone />
           </div>
         </div>
-        <div className="flex w-full justify-center lg:absolute lg:-left-6 lg:top-[330px] lg:z-10 lg:block lg:w-[280px]">
-          <div className="mk-float-delayed w-full max-w-[280px]">
+        <div className="flex w-full justify-center lg:absolute lg:-left-6 lg:top-[470px] lg:z-10 lg:block lg:w-[250px]">
+          <div className="mk-float-delayed w-full max-w-[250px]">
             <ParentRecapCard />
           </div>
         </div>
-        <div className="flex w-full justify-center lg:absolute lg:-right-4 lg:top-16 lg:z-10 lg:block lg:w-[260px]">
-          <div className="mk-float w-full max-w-[260px]">
+        <div className="flex w-full justify-center lg:absolute lg:-right-6 lg:top-24 lg:z-10 lg:block lg:w-[230px]">
+          <div className="mk-float w-full max-w-[230px]">
             <FeeWidget />
           </div>
         </div>

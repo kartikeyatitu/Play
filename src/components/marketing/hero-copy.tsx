@@ -86,7 +86,7 @@ export function HeroCopy({
 
       <h1 className="text-balance text-4xl font-extrabold leading-[1.05] tracking-tight text-ink sm:text-5xl lg:text-6xl">
         {t.titleA}{" "}
-        <span className="bg-gradient-to-r from-volt-ink via-volt to-emerald-400 bg-clip-text text-transparent">{t.titleB}</span>
+        <span className="text-[var(--brand)]">{t.titleB}</span>
       </h1>
 
       <p className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-ink-muted sm:text-lg">{t.sub}</p>

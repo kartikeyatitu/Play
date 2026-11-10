@@ -5,11 +5,9 @@ import { MarketingShell, primaryCta, secondaryCta } from "./shell";
 import {
   AcademyOperations,
   AthletesSection,
-  ComingBand,
   FAQS,
   Faq,
   FinalCta,
-  FoundingAcademies,
   MigrationSteps,
   ParentsSection,
   SoundFamiliar,
@@ -72,11 +70,9 @@ export function LandingPage({ searchParams, page = "/" }: { searchParams?: Marke
       <AthletesSection />
       <PhotoStrip />
       <VenuesSection />
-      <ComingBand />
       <TrustSection />
       <MigrationSteps />
       <PricingSection />
-      <FoundingAcademies />
       <DemoSection utm={utm} />
       <Faq />
       <FinalCta />
