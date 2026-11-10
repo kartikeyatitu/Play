@@ -2,6 +2,7 @@
 import { AcademySwitcher } from "@/components/team/AcademySwitcher";
 import { ThemePicker } from "@/components/ui/theme-picker";
 import React from "react";
+import { Search } from "lucide-react";
 import { DashboardShell, SectionHeader, NAV_ICONS, type NavGroup, type NavItem } from "@/components/ui/dashboard-shell";
 import { TodayScreen, type TodayInsights } from "@/components/shell/TodayScreen";
 import { BookingsScreen } from "@/components/shell/BookingsScreen";
@@ -300,6 +301,14 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
       defaultTab="overview"
       headerActions={
         <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("triq:open-search"))}
+            aria-label="Search students, coaches and batches (you can speak)"
+            className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-line text-ink-muted hover:text-ink"
+          >
+            <Search className="h-4 w-4" />
+          </button>
           <div className="hidden md:flex items-center gap-3">
             <a href="/pricing" className="text-xs text-zinc-500 hover:text-zinc-200 transition">Pricing ↗</a>
             <a href={orgSlug ? `/join?academy=${encodeURIComponent(orgSlug)}` : "/join"} target="_blank" rel="noopener noreferrer" className="text-xs text-zinc-500 hover:text-zinc-200 transition">Registration ↗</a>

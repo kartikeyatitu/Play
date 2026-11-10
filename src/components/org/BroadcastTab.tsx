@@ -1,4 +1,5 @@
 "use client";
+import { MicButton, appendPhrase } from "@/components/voice/MicButton";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,10 @@ export function BroadcastTab({ adminId }: { adminId: string }) {
             <Input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Practice Cancelled Today" className="bg-zinc-900 border-zinc-800" />
           </div>
           <div className="space-y-2">
-            <Label className="text-zinc-400">Message</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-zinc-400">Message</Label>
+              <MicButton onText={(p) => setMessage((m) => appendPhrase(m, p))} label="Speak message" />
+            </div>
             <textarea required value={message} onChange={(e) => setMessage(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm min-h-32 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-lime-400 text-white" placeholder="Type your message here..."></textarea>
           </div>
           <Button disabled={loading} type="submit" className="bg-lime-400 text-zinc-950 font-bold hover:bg-lime-500 w-full sm:w-auto">

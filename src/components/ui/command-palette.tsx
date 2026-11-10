@@ -1,5 +1,6 @@
 "use client";
 
+import { MicButton } from "@/components/voice/MicButton";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -35,8 +36,18 @@ export function CommandPalette({ students, coaches, batches, onNavigate }: Comma
       }
       if (e.key === "Escape") setOpen(false);
     };
+    // Phones have no Cmd+K: the header's search button sends this event.
+    const openFromButton = () => {
+      setOpen(true);
+      setQuery("");
+      setSelectedIndex(0);
+    };
     document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    window.addEventListener("triq:open-search", openFromButton);
+    return () => {
+      document.removeEventListener("keydown", handler);
+      window.removeEventListener("triq:open-search", openFromButton);
+    };
   }, []);
 
   // Build search items
@@ -123,7 +134,8 @@ export function CommandPalette({ students, coaches, batches, onNavigate }: Comma
             className="flex-1 bg-transparent text-white py-3 outline-none placeholder:text-zinc-500"
             autoFocus
           />
-          <kbd className="text-xs text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded">ESC</kbd>
+          <MicButton fixedLang="en-IN" onText={(p) => setQuery(p.replace(/[.?!]+$/, ""))} label="Search by voice" className="mr-2" />
+          <kbd className="hidden sm:inline text-xs text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded">ESC</kbd>
         </div>
         <div className="max-h-[300px] overflow-y-auto py-2">
           {filtered.length === 0 && (

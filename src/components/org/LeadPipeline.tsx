@@ -1,5 +1,6 @@
 "use client";
 
+import { MicButton, appendPhrase } from "@/components/voice/MicButton";
 import { useState, useTransition } from "react";
 import { updateLeadStatus, updateLead, convertLeadToStudent } from "@/app/actions/leads";
 import { Button } from "@/components/ui/button";
@@ -304,6 +305,7 @@ export function LeadPipeline({
                               <div className="space-y-1.5">
                                 <div className="flex justify-between items-center">
                                   <Label className="text-xs font-semibold text-zinc-300">Admission Notes & Requirements</Label>
+                                  <MicButton onText={(p) => setNoteDraft((n: string) => appendPhrase(n, p))} label="Speak note" />
                                   <button 
                                     type="button" 
                                     onClick={() => handleSaveNote(lead.id)}

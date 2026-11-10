@@ -1,4 +1,5 @@
 "use client";
+import { MicButton, appendPhrase } from "@/components/voice/MicButton";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,7 @@ export function ChatWindow({
           className="bg-zinc-950 border-zinc-800 text-zinc-200"
           disabled={loading}
         />
+        <MicButton onText={(p) => setContent((c) => appendPhrase(c, p))} label="Speak" />
         <Button type="submit" size="icon" className="bg-cyan-500 hover:bg-cyan-600 text-zinc-950" disabled={loading || !content.trim()}>
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </Button>
