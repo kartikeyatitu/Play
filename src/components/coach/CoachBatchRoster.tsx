@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { EvaluateModal } from "@/components/coach/EvaluateModal";
 import { AthleteSpotlightModal } from "@/components/coach/AthleteSpotlightModal";
 import { AttendanceAvatar } from "@/components/coach/squad/AttendanceAvatar";
 import {
@@ -479,32 +478,21 @@ export function CoachBatchRoster({ batches, coachId, currentMonth }: CoachBatchR
         </ul>
       )}
 
-      {/* 5. Floating "Evaluate batch": opens the existing EvaluateModal for the next unevaluated athlete.
-          After saving, router.refresh() updates the payload and the pill moves on to the next athlete. */}
+      {/* 5. Floating "Evaluate batch": opens the sport rubric (Coach OS Assess) for the next unevaluated athlete. */}
       {nextToEvaluate && (
         <div className="fixed right-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-30">
-          <EvaluateModal
-            key={nextToEvaluate.student.id}
-            student={{ id: nextToEvaluate.student.id, name: nextToEvaluate.student.name }}
-            existing={null}
-            coachId={coachId}
-            currentMonth={currentMonth}
-            sport={nextToEvaluate.batchSport}
-            trigger={
-              <div
-                role="button"
-                aria-label={`Evaluate batch: next is ${nextToEvaluate.student.name}, ${pendingEval.length} left`}
-                title={`Next: ${nextToEvaluate.student.name}`}
-                className="flex items-center gap-2 h-12 pl-5 pr-4 rounded-full bg-[var(--brand)] text-[var(--brand-foreground)] text-sm font-bold shadow-lg shadow-black/50 hover:brightness-110 active:scale-[0.98] transition select-none whitespace-nowrap"
-              >
-                <span>Evaluate batch</span>
-                <span className="min-w-5 h-5 px-1.5 rounded-full bg-black/15 text-xs font-black flex items-center justify-center tabular-nums">
-                  {pendingEval.length}
-                </span>
-                <Star className="w-4 h-4" />
-              </div>
-            }
-          />
+          <a
+            href={`/coach/assess?student=${encodeURIComponent(nextToEvaluate.student.id)}`}
+            aria-label={`Evaluate batch: next is ${nextToEvaluate.student.name}, ${pendingEval.length} left`}
+            title={`Next: ${nextToEvaluate.student.name}`}
+            className="flex items-center gap-2 h-12 pl-5 pr-4 rounded-full bg-[var(--brand)] text-[var(--brand-foreground)] text-sm font-bold shadow-lg shadow-black/50 hover:brightness-110 active:scale-[0.98] transition select-none whitespace-nowrap"
+          >
+            <span>Evaluate batch</span>
+            <span className="min-w-5 h-5 px-1.5 rounded-full bg-black/15 text-xs font-black flex items-center justify-center tabular-nums">
+              {pendingEval.length}
+            </span>
+            <Star className="w-4 h-4" />
+          </a>
         </div>
       )}
     </div>

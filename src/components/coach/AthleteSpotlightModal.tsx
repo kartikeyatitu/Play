@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from "@/components/ui/badge";
 import { AvatarRing } from "@/components/ui/avatar-ring";
 import { MedicalCardModal } from "@/components/coach/MedicalCardModal";
-import { EvaluateModal } from "@/components/coach/EvaluateModal";
 import { AddMediaModal } from "@/components/coach/AddMediaModal";
 import { CoachActions } from "@/components/coach/CoachActions";
 import { IncidentModal } from "@/components/coach/IncidentModal";
@@ -240,13 +239,12 @@ export function AthleteSpotlightModal({
               Coach Actions
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <EvaluateModal
-                student={{ id: athlete.id, name: athlete.name }}
-                existing={athlete.skillReport ?? null}
-                coachId={coachId}
-                currentMonth={currentMonth}
-                sport={athlete.batchSport}
-              />
+              <a
+                href={`/coach/assess?student=${encodeURIComponent(athlete.id)}`}
+                className="h-8 rounded-xl border border-zinc-700 bg-zinc-900 text-xs font-bold text-zinc-200 hover:bg-zinc-800 flex items-center justify-center gap-1"
+              >
+                <Star className="w-3 h-3" /> Assess
+              </a>
               <CoachActions
                 studentId={athlete.id}
                 className="[&>button]:w-full [&>button]:h-8 [&>button]:justify-center"

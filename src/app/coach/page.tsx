@@ -417,10 +417,8 @@ export default async function CoachDashboard({
   // Cast: DB rows carry extra Prisma fields beyond BatchRecord's shape.
   const squadPanel = (
     <div className="space-y-6">
-      <nav aria-label="Coach tools" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+      <nav aria-label="Coach tools" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {[
-          { href: "/coach/day", label: "Today's grid" },
-          { href: "/coach/roster", label: "Roster" },
           { href: "/coach/assess", label: "Assess" },
           { href: "/coach/availability", label: "Availability" },
           { href: "/body", label: "Fitness tests" },

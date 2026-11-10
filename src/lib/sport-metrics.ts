@@ -6,8 +6,8 @@
  * three of these dimensions per sport; additional dimensions live in the
  * SkillReport.metrics JSON column.
  *
- * Adding a new sport: add an entry here. The EvaluateModal and
- * PlayerAnalytics components read this config at runtime — no migration needed.
+ * Adding a new sport: add an entry here. Coach assessments use src/lib/skill-rubrics.ts;
+ * PlayerAnalytics components still read this config at runtime.
  */
 
 export interface SkillDimension {

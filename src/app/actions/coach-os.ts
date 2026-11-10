@@ -56,7 +56,6 @@ export async function saveAssessment(input: AssessmentInput): Promise<ActionResu
     await syncSkillReward(session.orgId as string, student.id, saved, session.id as string);
 
     revalidatePath("/coach");
-    revalidatePath("/coach/roster");
     revalidatePath("/coach/assess");
     return { month };
   }, "coach-os.saveAssessment");

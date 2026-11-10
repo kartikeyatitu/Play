@@ -2,11 +2,10 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-export type CoachOsSection = "day" | "roster" | "assess" | "availability";
+export type CoachOsSection = "assess" | "availability";
 
+// Today and the roster are on the coach home; these two screens open from there.
 const LINKS: { id: CoachOsSection; label: string; href: string }[] = [
-  { id: "day", label: "Today", href: "/coach/day" },
-  { id: "roster", label: "Roster", href: "/coach/roster" },
   { id: "assess", label: "Assess", href: "/coach/assess" },
   { id: "availability", label: "Availability", href: "/coach/availability" },
 ];
