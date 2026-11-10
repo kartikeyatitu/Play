@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { FEATURES } from "@/lib/features";
-import { requireMember } from "@/lib/membership";
+import { getMembership, hasPermission, requireMember } from "@/lib/membership";
 import {
   buildLiveConfig,
   hasOpponent,
@@ -29,6 +29,8 @@ import { canScoreAs, getLiveViewForViewer, loadLiveLog, viewForMatch } from "@/l
 import { isMissingTableError } from "@/lib/schema-pending";
 import { awardForSource } from "@/lib/rewards/server";
 import { matchRewardFor } from "@/lib/rewards/match";
+import { fixtureScoreFromLive, type LiveFixtureScore } from "@/lib/competition/live-result";
+import { applyFixtureResult, FixtureResultError } from "@/lib/competition/result-server";
 
 /**
  * Live scoring actions (docs/specs/live-scoring.md). Every write takes a per-match advisory lock and
@@ -342,7 +344,7 @@ export async function undoLiveEvent(input: { matchId: string; version: number })
  * Ends the match and writes one AthleteMatchStat per academy athlete in it. Timed and measured events
  * also write a PerformanceResult per athlete (best mark, personal-best flag).
  */
-export async function finishLiveMatch(input: { matchId: string; abandon?: boolean }): Promise<Ok<{ view: LiveView }> | Fail> {
+export async function finishLiveMatch(input: { matchId: string; abandon?: boolean }): Promise<Ok<{ view: LiveView; fixtureNote?: string }> | Fail> {
   try {
     const { session } = await scorer();
     // Rewards are worked out inside the transaction but written after it commits, so a rewards
@@ -350,6 +352,7 @@ export async function finishLiveMatch(input: { matchId: string; abandon?: boolea
     const awards: { studentId: string; sport: string; stats: Record<string, unknown>; pbResultId: string | null }[] = [];
     let orgId = "";
     let matchId = "";
+    let fixtureResult: { fixtureId: string; score: ReturnType<typeof fixtureScoreFromLive> } | null = null;
     const view = await db.$transaction(
       async (tx) => {
         await lock(tx, input.matchId);
@@ -414,10 +417,12 @@ export async function finishLiveMatch(input: { matchId: string; abandon?: boolea
         }
         orgId = m.orgId;
         matchId = m.id;
+        if (!input.abandon && m.fixtureId) fixtureResult = { fixtureId: m.fixtureId, score: fixtureScoreFromLive(state, cfg) };
         return persistState(tx, m.id, { status: input.abandon ? "ABANDONED" : "COMPLETED", endedAt });
       },
       { timeout: 20000 },
     );
+    const fixtureNote = fixtureResult ? await fillFixtureFromLive(orgId, matchId, String(session.id), fixtureResult) : null;
     for (const a of awards) {
       const r = matchRewardFor(a.stats, a.sport);
       const base = { orgId, studentId: a.studentId, sourceId: matchId, sport: a.sport, createdById: String(session.id) };
@@ -426,9 +431,53 @@ export async function finishLiveMatch(input: { matchId: string; abandon?: boolea
       if (a.pbResultId) await awardForSource({ ...base, trigger: "PERSONAL_BEST", sourceId: a.pbResultId });
     }
     revalidatePath("/coach");
-    return { success: true, view };
+    if (fixtureResult) revalidatePath("/org/fixtures");
+    return { success: true, view, ...(fixtureNote ? { fixtureNote } : {}) };
   } catch (e) {
     return fail(e, "Couldn't finish the match");
+  }
+}
+
+/**
+ * A live match started from a fixture fills in that fixture's result when it finishes, with the same
+ * checks as the organiser's form (version, knockout advance). It never overwrites a result someone
+ * already recorded, and leaves level knockout matches for the organiser to settle. Returns a note for
+ * the scorer when the fixture was left alone; never throws.
+ */
+async function fillFixtureFromLive(
+  orgId: string,
+  liveMatchId: string,
+  userId: string,
+  r: { fixtureId: string; score: LiveFixtureScore | null },
+): Promise<string | null> {
+  if (!FEATURES.events || !FEATURES.fixtures) return null;
+  try {
+    if (!r.score) return "The match ended without a winner, so the fixture result was left for the organiser.";
+    const f = await db.fixture.findFirst({ where: { id: r.fixtureId, orgId }, select: { competitionId: true, officialUserId: true, version: true, status: true } });
+    if (!f) return null;
+    if (f.status === "COMPLETED") return "This fixture already had a result, so it was not changed.";
+    const membership = await getMembership(userId, orgId);
+    const canManage = !!membership && hasPermission(membership, "competitions.manage");
+    if (!canManage && f.officialUserId !== userId) return "Only the organiser or the match official can record the fixture result. Ask them to enter it.";
+    const done = await applyFixtureResult({
+      orgId,
+      fixtureId: r.fixtureId,
+      competitionId: f.competitionId,
+      homeScore: r.score.homeScore,
+      awayScore: r.score.awayScore,
+      winnerEntryId: null,
+      expectedVersion: f.version,
+      actorId: userId,
+      asOfficial: !canManage,
+      onlyIfOpen: true,
+      source: "LIVE",
+      liveMatchId,
+    });
+    return done.skipped ? "This fixture already had a result, so it was not changed." : null;
+  } catch (e) {
+    if (e instanceof FixtureResultError) return `The fixture result wasn't saved: ${e.message}`;
+    console.error("live-scoring: fixture fill failed", e instanceof Error ? e.message : e);
+    return "The fixture result couldn't be saved. The organiser can enter it.";
   }
 }
 

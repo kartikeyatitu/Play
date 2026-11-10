@@ -145,6 +145,7 @@ export function LiveMatchScreen({ initial, token, backHref }: { initial: LiveVie
     if (r.success) {
       setView(r.view);
       toast.success(abandon ? "Match cancelled" : "Match finished. Results saved.");
+      if (r.fixtureNote) toast.message(r.fixtureNote);
     } else toast.error(r.error);
   };
 

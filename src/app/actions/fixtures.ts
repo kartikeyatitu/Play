@@ -1,12 +1,10 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { FEATURES } from "@/lib/features";
 import { requireAuth } from "@/lib/auth";
 import { checkPermission, getMembership, hasPermission } from "@/lib/membership";
-import { canCorrectKnockoutResult, validateResult } from "@/lib/competition";
 import { buildFixturesBoard, groupTables, pointsOf, type FixtureCompetitionOption, type FixturesBoard } from "@/lib/competition/board";
 import { drawModesFor, planDraw } from "@/lib/competition/draw";
 import { seedKnockoutPhase } from "@/lib/competition/groups";
@@ -18,10 +16,10 @@ import {
   groupOfSlot,
   isDrawMode,
   isKnockoutPhaseRound,
-  nextKnockoutPosition,
   roundLabel,
 } from "@/lib/competition/phase";
 import { scheduleFixtures } from "@/lib/competition/schedule";
+import { applyFixtureResult, FixtureResultError, lockCompetition, STALE_FIXTURE } from "@/lib/competition/result-server";
 import { createLiveMatch } from "@/app/actions/live-scoring";
 
 /**
@@ -33,16 +31,12 @@ import { createLiveMatch } from "@/app/actions/live-scoring";
 
 type Fail = { success: false; error: string; confirm?: boolean; needsSport?: boolean };
 const OFF: Fail = { success: false, error: "Fixtures aren't enabled for this academy yet." };
-const STALE = "This match was updated by someone else. Reload and try again.";
+const STALE = STALE_FIXTURE;
 
-class ActionError extends Error {}
-
-async function lockCompetition(tx: Prisma.TransactionClient, competitionId: string) {
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"competition:" + competitionId}))`;
-}
+class ActionError extends FixtureResultError {}
 
 function fail(e: unknown, fallback: string): Fail {
-  if (e instanceof ActionError) return { success: false, error: e.message };
+  if (e instanceof FixtureResultError) return { success: false, error: e.message };
   if (e && typeof e === "object" && "digest" in e) throw e; // Next.js redirect / notFound
   console.error(`[fixtures] ${fallback}:`, e instanceof Error ? e.message : e);
   return { success: false, error: fallback };
@@ -283,71 +277,16 @@ export async function recordResult(
     if (!f0) return { success: false, error: "Fixture not found." };
     if (!canManage && f0.officialUserId !== session.id) return { success: false, error: "Only the organiser or this match's official can record the result." };
 
-    await db.$transaction(async (tx) => {
-      await lockCompetition(tx, f0.competitionId);
-      const f = await tx.fixture.findFirst({ where: { id: String(fixtureId), orgId }, include: { competition: true } });
-      if (!f) throw new ActionError("Fixture not found.");
-      const c = f.competition;
-      if (c.status !== "SCHEDULED") throw new ActionError("Results can only be recorded while the competition is running.");
-      if (f.version !== Number(input?.expectedVersion)) throw new ActionError(STALE);
-      if (f.status === "POSTPONED") throw new ActionError("Reschedule this fixture before recording a result.");
-
-      const shape = await tx.fixture.findMany({ where: { competitionId: c.id }, select: { round: true, slot: true, homeEntryId: true, awayEntryId: true } });
-      const mode = detectDrawMode(c.format, shape);
-      const knockout = mode === "KNOCKOUT" || (mode === "GROUPS" && isKnockoutPhaseRound(f.round));
-      const v = validateResult(
-        { homeScore: input?.homeScore, awayScore: input?.awayScore, winnerEntryId: input?.winnerEntryId },
-        { format: knockout ? "KNOCKOUT" : "LEAGUE", allowDraws: c.allowDraws, status: f.status, homeEntryId: f.homeEntryId, awayEntryId: f.awayEntryId }
-      );
-      if (!v.ok) throw new ActionError(v.error);
-      const correcting = f.status === "COMPLETED";
-
-      if (mode === "GROUPS" && !knockout && correcting) {
-        const seeded = shape.some((x) => isKnockoutPhaseRound(x.round) && (x.homeEntryId || x.awayEntryId));
-        if (seeded) throw new ActionError("The knockout has been drawn from the group tables, so group results can't change.");
-      }
-
-      if (knockout) {
-        const koRounds = [...new Set(shape.map((x) => x.round))];
-        const next = nextKnockoutPosition(f.round, f.slot, koRounds);
-        if (next) {
-          const nf = await tx.fixture.findFirst({ where: { competitionId: c.id, round: next.round, slot: next.slot } });
-          if (!nf) throw new ActionError("Bracket is incomplete. Contact support.");
-          if (!canCorrectKnockoutResult(nf.status)) throw new ActionError("The next round has already been played with this winner, so this result can't change.");
-          const field = next.side === "home" ? "homeEntryId" : "awayEntryId";
-          if (nf[field] !== v.winnerEntryId) {
-            await tx.fixture.update({ where: { id: nf.id }, data: { [field]: v.winnerEntryId, version: { increment: 1 } } });
-          }
-        }
-      }
-
-      const res = await tx.fixture.updateMany({
-        where: { id: f.id, orgId, version: f.version },
-        data: {
-          homeScore: v.homeScore,
-          awayScore: v.awayScore,
-          winnerEntryId: v.winnerEntryId,
-          status: "COMPLETED",
-          resultById: session.id,
-          resultAt: new Date(),
-          version: { increment: 1 },
-        },
-      });
-      if (res.count === 0) throw new ActionError(STALE);
-      await tx.auditLog.create({
-        data: {
-          userId: session.id,
-          orgId,
-          action: correcting ? "FIXTURE_RESULT_CORRECTED" : "FIXTURE_RESULT_RECORDED",
-          details: JSON.stringify({
-            fixtureId: f.id,
-            competitionId: c.id,
-            before: correcting ? { home: f.homeScore, away: f.awayScore, winner: f.winnerEntryId } : null,
-            after: { home: v.homeScore, away: v.awayScore, winner: v.winnerEntryId },
-            asOfficial: !canManage,
-          }),
-        },
-      });
+    await applyFixtureResult({
+      orgId,
+      fixtureId: String(fixtureId),
+      competitionId: f0.competitionId,
+      homeScore: input?.homeScore,
+      awayScore: input?.awayScore,
+      winnerEntryId: input?.winnerEntryId,
+      expectedVersion: Number(input?.expectedVersion),
+      actorId: session.id,
+      asOfficial: !canManage,
     });
     revalidatePath("/org/fixtures");
     return { success: true };
