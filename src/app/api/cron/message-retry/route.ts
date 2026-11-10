@@ -1,10 +1,12 @@
 // Cron: retries MessageDelivery rows whose nextAttemptAt has passed (exponential backoff, max 5 attempts).
-// No-op while FEATURES.messageDelivery is off. Not scheduled in vercel.json yet (add it when the flag goes on).
+// No-op while FEATURES.messageDelivery is off. Scheduled every 15 minutes in vercel.json.
 //
 // Auth: Bearer <CRON_SECRET>. Fails CLOSED if CRON_SECRET isn't configured.
 
 import { NextRequest, NextResponse } from "next/server";
 import { retryDueDeliveries } from "@/lib/messaging/send";
+// Registers the retry resolvers (each rebuilds its message from the source record).
+import "@/lib/fee-reminder-send";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

@@ -307,10 +307,14 @@ export async function getOverdueAging() {
   try {
     const { loadOverdueReport } = await import("@/lib/fee-overdue-server");
     const { view } = await loadOverdueReport(auth.session.orgId);
-    if (collect.ok) return { success: true as const, canRemind: true, view };
+    if (collect.ok) {
+      const { feeReminderAutoSendReady } = await import("@/lib/fee-reminder-send");
+      return { success: true as const, canRemind: true, autoSend: feeReminderAutoSendReady(), view };
+    }
     return {
       success: true as const,
       canRemind: false,
+      autoSend: false,
       view: { ...view, buckets: view.buckets.map((b) => ({ ...b, families: [] })) },
     };
   } catch (e: any) {

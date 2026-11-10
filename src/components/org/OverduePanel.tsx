@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { MessageCircle, Loader2, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { getOverdueAging } from "@/app/actions/fees";
-import { recordFamilyFeeReminder, startBucketReminders } from "@/app/actions/reminders";
+import { recordFamilyFeeReminder, sendFamilyFeeReminder, startBucketReminders } from "@/app/actions/reminders";
 import { useFormatMoney } from "@/lib/org-locale-context";
 import type { OverdueBucketView, OverdueFamilyView, OverdueView } from "@/lib/fee-overdue-server";
 
@@ -37,6 +37,9 @@ export function OverduePanel() {
   const fmt = useFormatMoney();
   const [view, setView] = useState<OverdueView | null>(null);
   const [canRemind, setCanRemind] = useState(false);
+  // WhatsApp Business API configured: TRIQ sends the reminder itself instead of opening wa.me.
+  const [autoSend, setAutoSend] = useState(false);
+  const [sending, setSending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<string>("d30_plus");
   const [queue, setQueue] = useState<{ bucket: string; families: OverdueFamilyView[]; index: number } | null>(null);
@@ -53,6 +56,7 @@ export function OverduePanel() {
       setError(null);
       setView(r.view);
       setCanRemind(r.canRemind);
+      setAutoSend(!!r.autoSend);
       // Open the oldest bucket that has something in it.
       const firstWithDues = [...r.view.buckets].reverse().find((b) => b.total > 0);
       if (firstWithDues) setActive((cur) => (r.view.buckets.find((b) => b.key === cur)?.total ? cur : firstWithDues.key));
@@ -78,6 +82,20 @@ export function OverduePanel() {
         else toast.error(r.error);
       })
       .catch(() => toast.error("Reminder opened, but it could not be recorded."));
+  };
+
+  const sendNow = async (family: OverdueFamilyView, bucket: string) => {
+    setSending(family.familyId);
+    try {
+      const r = await sendFamilyFeeReminder(family.familyId, bucket);
+      if (!r.success) return void toast.error(r.error);
+      markReminded(family.familyId, r.remindedAt);
+      toast.success(r.queued ? "WhatsApp is busy. TRIQ will keep trying." : `Reminder sent to ${family.familyName || "the parent"}.`);
+    } catch {
+      toast.error("You're offline. Try again in a moment.");
+    } finally {
+      setSending(null);
+    }
   };
 
   const startAll = async (bucket: OverdueBucketView) => {
@@ -149,7 +167,20 @@ export function OverduePanel() {
             </button>
           </div>
           <div className="mt-3 flex gap-2">
-            {current.waLink && (
+            {autoSend && current.waLink && (
+              <button
+                type="button"
+                disabled={sending === current.familyId}
+                onClick={async () => {
+                  await sendNow(current, queue.bucket);
+                  setQueue((q) => (q && q.index + 1 < q.families.length ? { ...q, index: q.index + 1 } : null));
+                }}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-volt px-4 py-2.5 text-sm font-medium text-volt-fg disabled:opacity-60"
+              >
+                {sending === current.familyId ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />} Send reminder
+              </button>
+            )}
+            {!autoSend && current.waLink && (
               <a
                 href={current.waLink}
                 target="_blank"
@@ -213,7 +244,16 @@ export function OverduePanel() {
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
                   <span className={`font-semibold tabular-nums ${TONE[bucket.key]}`}>{fmt(f.total)}</span>
-                  {f.waLink ? (
+                  {f.waLink && autoSend ? (
+                    <button
+                      type="button"
+                      disabled={sending === f.familyId}
+                      onClick={() => sendNow(f, bucket.key)}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-xs text-ink hover:bg-surface-2 disabled:opacity-60"
+                    >
+                      {sending === f.familyId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />} Remind
+                    </button>
+                  ) : f.waLink ? (
                     <a
                       href={f.waLink}
                       target="_blank"

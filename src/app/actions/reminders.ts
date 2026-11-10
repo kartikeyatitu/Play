@@ -386,3 +386,48 @@ export async function startBucketReminders(bucketKey: string) {
     skippedOverLimit: picked.skippedOverLimit.length,
   };
 }
+
+/**
+ * Overdue panel, when the academy has the WhatsApp Business API set up: TRIQ sends the reminder itself
+ * (approved template, delivery logged and retried, never after the family has paid). One per family per
+ * day. Recorded with the same audit action as the wa.me path so "last reminded" stays one history.
+ */
+export async function sendFamilyFeeReminder(familyId: string, bucket?: string) {
+  const auth = await checkPermission("fees.collect");
+  if (!auth.ok) return { success: false as const, error: auth.error };
+  const { session } = auth;
+  if (typeof familyId !== "string" || !familyId || familyId.length > 64) return { success: false as const, error: "Family not found." };
+  const { rateLimitDb } = await import("@/lib/rate-limit");
+  const rl = await rateLimitDb(`fee-remind:${session.orgId}:${session.id}`, 60, 60_000);
+  if (!rl.allowed) return { success: false as const, error: "Too many reminders in a minute. Please wait a moment." };
+
+  const [{ feeReminderAutoSendReady, sendFeeReminderNow }, { FEE_REMINDER_ACTION }] = await Promise.all([
+    import("@/lib/fee-reminder-send"),
+    import("@/lib/fee-reminders"),
+  ]);
+  if (!feeReminderAutoSendReady()) return { success: false as const, error: "WhatsApp sending isn't set up for this academy. Use the WhatsApp link instead." };
+  const day = new Date().toISOString().slice(0, 10);
+  const sent = await sendFeeReminderNow(session.orgId, familyId, day);
+  if (!sent.ok) return { success: false as const, error: sent.error };
+  const r = sent.result;
+  if (r.status === "SKIPPED") return { success: false as const, error: "This parent has switched WhatsApp messages off." };
+  if (r.status === "FAILED") return { success: false as const, error: r.error ? `WhatsApp couldn't send it: ${r.error}` : "WhatsApp couldn't send it." };
+  await db.auditLog.create({
+    data: {
+      userId: session.id,
+      orgId: session.orgId,
+      action: FEE_REMINDER_ACTION,
+      details: JSON.stringify({
+        familyId,
+        feeRecordIds: sent.feeRecordIds,
+        amount: sent.amount,
+        bucket: typeof bucket === "string" ? bucket.slice(0, 20) : null,
+        channel: "WHATSAPP_API",
+        deliveryId: r.deliveryId ?? null,
+        status: r.status,
+        timestamp: new Date().toISOString(),
+      }),
+    },
+  });
+  return { success: true as const, remindedAt: new Date().toISOString(), queued: r.status === "RETRYING" };
+}
