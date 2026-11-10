@@ -81,7 +81,7 @@ export default async function ParentPage() {
       select: { id: true, name: true, sport: true, schedule: true, monthlyFee: true },
     }),
     session.orgId
-      ? db.organization.findUnique({ where: { id: session.orgId }, select: { id: true, name: true, upiId: true, timezone: true } })
+      ? db.organization.findUnique({ where: { id: session.orgId }, select: { id: true, name: true, upiId: true, timezone: true, photos: true, address: true, city: true } })
       : Promise.resolve(null),
   ]);
 
@@ -208,6 +208,9 @@ export default async function ParentPage() {
       fee: homeFeeStatus(child.dueFees, now, tz),
       latestReceiptToken: latestReceipts.find((r) => r?.studentId === child.id)?.token ?? null,
       note: latestProgressNote(child.skillReports),
+      // Academy's own facility photo for the card header, and the venue for directions.
+      cover: org?.photos?.[0] ?? null,
+      venue: [org?.address, org?.city].filter(Boolean).join(", ") || null,
       // Newest note a coach wrote or spoke about this child after a session (Attendance.notes).
       sessionNote: (() => {
         const a = child.attendances.find((x) => x.notes?.trim());

@@ -11,6 +11,7 @@ import { enrollAdditionalChild } from '@/app/actions/enroll-child';
 import { toast } from 'sonner';
 import { ChildTopCard, type ChildTopCardData } from '@/components/parent/ChildTopCard';
 import { FEATURES } from '@/lib/features';
+import { Reveal } from '@/components/motion/Reveal';
 
 // ── Code-splitting ──────────────────────────────────────────────────────────────
 // Only the Home tab is visible on first paint; the other tabs' components load on
@@ -136,8 +137,10 @@ export function ParentClient({
             <div className="space-y-6">
               {/* Top card per child: next session, this week, fees, latest coach note (phone-first) */}
               <div className="grid gap-4 md:grid-cols-2">
-                {(homeCards || []).map((card: ChildTopCardData) => (
-                  <ChildTopCard key={card.id} data={card} today={today} academyName={org?.name} upiId={org?.upiId} />
+                {(homeCards || []).map((card: ChildTopCardData, i: number) => (
+                  <Reveal key={card.id} delay={i * 0.06}>
+                    <ChildTopCard data={card} today={today} academyName={org?.name} upiId={org?.upiId} />
+                  </Reveal>
                 ))}
                 {(!homeCards || homeCards.length === 0) && (
                   <p className="rounded-2xl border border-line bg-surface p-4 text-sm text-ink-muted">

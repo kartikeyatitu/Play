@@ -10,6 +10,8 @@ import { localDateString } from "@/lib/fee-aging";
 import { addDays, mondayOf, parseWeek } from "@/lib/story/weekly";
 import { loadWeeklyStory } from "@/lib/story/weekly-server";
 import { ReadAloudButton } from "@/components/voice/ReadAloudButton";
+import { Reveal } from "@/components/motion/Reveal";
+import { Celebrate } from "@/components/motion/Celebrate";
 
 export const dynamic = "force-dynamic";
 // The title never carries the child's name.
@@ -47,6 +49,7 @@ export default async function WeeklyStoryPage(props: { params: Promise<{ student
   const next = addDays(week, 7);
   const hasNext = next <= mondayOf(today);
   const range = `${fmt(story.weekStart, { day: "numeric", month: "short" })} to ${fmt(story.weekEnd, { day: "numeric", month: "short" })}`;
+  const celebrate = story.personalBests.length > 0 || story.rewards.badges.length > 0 || (story.held > 0 && story.attended === story.held);
   const back = session.role === "PARENT" ? "/parent" : session.role === "COACH" ? "/coach" : "/org";
 
   return (
@@ -76,13 +79,16 @@ export default async function WeeklyStoryPage(props: { params: Promise<{ student
           {story.isCurrentWeek && <p className="text-sm text-ink-subtle">{range}</p>}
         </header>
 
-        <section className="mt-6 rounded-2xl p-5" style={{ background: "color-mix(in srgb, var(--brand) 12%, transparent)" }}>
-          <p className="flex items-start gap-2 text-lg font-semibold leading-snug">
+        <Reveal>
+        <section className="relative mt-6 overflow-hidden rounded-3xl p-5" style={{ background: "color-mix(in srgb, var(--brand) 12%, transparent)" }}>
+          {celebrate && <Celebrate />}
+          <p className="relative flex items-start gap-2 text-lg font-semibold leading-snug">
             <Sparkles className="mt-1 h-5 w-5 shrink-0 brand-text" aria-hidden />
             {story.highlight}
           </p>
-          <ReadAloudButton text={story.summary} label="Listen to this week" className="mt-4" />
+          <ReadAloudButton text={story.summary} label="Listen to this week" className="relative mt-4" />
         </section>
+        </Reveal>
 
         <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-2xl border border-line bg-surface p-3">
@@ -127,11 +133,12 @@ export default async function WeeklyStoryPage(props: { params: Promise<{ student
           {story.days.length === 0 ? (
             <p className="mt-2 rounded-2xl border border-line bg-surface p-4 text-sm text-ink-muted">No sessions {story.isCurrentWeek ? "yet this week" : "this week"}.</p>
           ) : (
-            <ol className="mt-3 space-y-3">
+            <div className="mt-3 space-y-3">
               {story.days.map((d) => {
                 const st = d.attendance ? STATUS[d.attendance] : null;
                 return (
-                  <li key={`${d.date}${d.batchName}`} className="rounded-2xl border border-line bg-surface p-4">
+                  <Reveal key={`${d.date}${d.batchName}`}>
+                  <article className="rounded-2xl border border-line bg-surface p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-semibold">{d.weekday}</p>
@@ -158,10 +165,11 @@ export default async function WeeklyStoryPage(props: { params: Promise<{ student
                         {d.recap.trim()}
                       </p>
                     )}
-                  </li>
+                  </article>
+                  </Reveal>
                 );
               })}
-            </ol>
+            </div>
           )}
         </section>
 

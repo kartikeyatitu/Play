@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import { ensureTeamSchema } from "@/lib/schema-ensure";
 import { db } from "@/lib/db";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { MapPin, Users, Trophy, Calendar } from "lucide-react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
+import { SportIcon } from "@/components/sport/SportIcon";
+import { VenueMap } from "@/components/maps/VenueMap";
+import { Reveal } from "@/components/motion/Reveal";
 
 export default async function AcademyProfilePage({
   params,
@@ -36,167 +36,133 @@ export default async function AcademyProfilePage({
   const coachCount = org._count.memberships;
   const studentCount = org._count.students;
 
+  const place = [org.address, org.city, org.state, org.pincode].filter(Boolean).join(", ");
+  const hero = org.photos?.[0] ?? null;
+  const heroStyle =
+    hero && /^https:\/\/[^\s"'()<>\\]+$/.test(hero)
+      ? { backgroundImage: `url("${hero}")`, backgroundSize: "cover", backgroundPosition: "center" }
+      : { background: "linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 45%, #0b241a))" };
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      {/* Header Banner */}
-      <div className="bg-zinc-900 border-b border-zinc-800 pt-16 pb-12">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-start sm:items-center gap-4">
+    <div className="min-h-screen bg-canvas pb-24 text-ink md:pb-0">
+      {/* Hero: the academy's own photo, full width, with the name over it */}
+      <header className="relative flex min-h-[340px] items-end sm:min-h-[420px]" style={heroStyle}>
+        <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#000000d9] via-[#00000066] to-[#0000001a]" />
+        <div className="relative mx-auto w-full max-w-5xl px-4 pb-8 sm:px-6 lg:px-8">
+          <Reveal>
+            <div className="flex items-end gap-4">
               {org.logo ? (
-                <img src={org.logo} alt={org.name} className="w-16 h-16 rounded-xl object-cover border border-zinc-700 shadow-md" />
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={org.logo} alt="" className="h-16 w-16 shrink-0 rounded-2xl border-2 border-[#ffffffcc] object-cover shadow-lg sm:h-20 sm:w-20" />
               ) : (
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-zinc-950 font-black text-2xl shadow-md">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#fffffff2] text-2xl font-black text-[#13261e] shadow-lg sm:h-20 sm:w-20">
                   {org.name.charAt(0)}
                 </div>
               )}
-              <div>
-                <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-white">{org.name}</h1>
-                <div className="flex flex-wrap gap-4 text-zinc-400 text-sm">
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-emerald-400" />
-                    <span>{org.city}, {org.state}{org.pincode ? ` - ${org.pincode}` : ""}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Users className="w-4 h-4 text-cyan-400" />
-                    <span>{studentCount} Students</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Trophy className="w-4 h-4 text-amber-400" />
-                    <span>{coachCount} Coaches</span>
-                  </div>
-                </div>
+              <div className="min-w-0">
+                <h1 className="text-3xl font-bold leading-tight tracking-tight text-[#ffffff] sm:text-5xl">{org.name}</h1>
+                <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[#ffffffd9]">
+                  <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4" aria-hidden /> {org.city}</span>
+                  {studentCount > 0 && <span className="inline-flex items-center gap-1.5"><Users className="h-4 w-4" aria-hidden /> {studentCount} athletes</span>}
+                  {coachCount > 0 && <span className="inline-flex items-center gap-1.5"><Trophy className="h-4 w-4" aria-hidden /> {coachCount} coaches</span>}
+                </p>
               </div>
             </div>
-            <div className="flex gap-3">
-              <Link href={`/trial?academy=${org.slug}`} className={cn(buttonVariants({ variant: "outline" }), "bg-transparent border-zinc-700 hover:bg-zinc-800")}>
-                Book Free Trial
-              </Link>
-              <Link href={`/join?academy=${org.slug}`} className={cn(buttonVariants({ variant: "default" }), "bg-emerald-500 text-emerald-950 hover:bg-emerald-400 font-semibold")}>
-                Enroll Now
-              </Link>
-            </div>
-          </div>
+            {sports.length > 0 && (
+              <ul className="mt-5 flex flex-wrap gap-2">
+                {sports.map((sport) => (
+                  <li key={sport} className="inline-flex items-center gap-1.5 rounded-full bg-[#ffffff26] px-3 py-1.5 text-sm font-medium text-[#ffffff] backdrop-blur">
+                    <SportIcon sport={sport.toLowerCase().replace(/\s+/g, "_")} className="h-4 w-4" /> {sport}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Reveal>
         </div>
-      </div>
+      </header>
 
-      {/* Photo gallery — only if the academy has uploaded photos */}
-      {org.photos && org.photos.length > 0 && (
-        <div className="border-b border-zinc-800 bg-zinc-950">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
-              {org.photos.map((url, i) => (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  key={url}
-                  src={url}
-                  alt={`${org.name} photo ${i + 1}`}
-                  loading={i === 0 ? "eager" : "lazy"}
-                  className="h-56 sm:h-72 w-auto rounded-2xl border border-zinc-800 object-cover snap-start shrink-0 shadow-md"
-                />
-              ))}
-            </div>
+      {/* More photos, swipeable */}
+      {org.photos && org.photos.length > 1 && (
+        <section aria-label="Photos" className="mx-auto max-w-5xl px-4 pt-6 sm:px-6 lg:px-8">
+          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+            {org.photos.slice(1).map((url, i) => (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                key={url}
+                src={url}
+                alt={`${org.name}, photo ${i + 2}`}
+                loading="lazy"
+                className="h-48 w-72 shrink-0 snap-start rounded-2xl object-cover shadow-md sm:h-60 sm:w-96"
+              />
+            ))}
           </div>
-        </div>
+        </section>
       )}
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid md:grid-cols-3 gap-12">
-        {/* Main Content */}
-        <div className="md:col-span-2 space-y-12">
-          {/* About Section (Mock description) */}
+      <div className="mx-auto grid max-w-5xl gap-10 px-4 py-10 sm:px-6 md:grid-cols-3 lg:px-8">
+        <div className="space-y-10 md:col-span-2">
           <section>
-            <h2 className="text-2xl font-bold mb-6">About the Academy</h2>
-            <p className="text-zinc-400 leading-relaxed">
-              Welcome to {org.name}. We are dedicated to providing top-tier sports training 
-              and development in {org.city}. Our professional coaches focus on holistic 
-              athlete development, combining technical skills with physical conditioning 
-              and mental toughness.
-            </p>
-            {sports.length > 0 && (
-              <div className="mt-6 flex flex-wrap gap-2">
-                {sports.map(sport => (
-                  <Badge key={sport} variant="outline" className="bg-zinc-800 text-emerald-400">
-                    {sport}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Batches / Schedules */}
-          <section>
-            <h2 className="text-2xl font-bold mb-6">Available Programs</h2>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <h2 className="text-2xl font-bold tracking-tight">Programs</h2>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {org.batches.length > 0 ? (
-                org.batches.map(batch => (
-                  <div key={batch.id} className="p-5 rounded-xl border border-zinc-800 bg-zinc-900/50">
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="font-semibold text-lg">{batch.name}</h3>
-                      {batch.sport && (
-                        <Badge variant="outline" className="text-xs border-emerald-500/30 text-emerald-400">
-                          {batch.sport}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="space-y-2 text-sm text-zinc-400">
-                      {batch.schedule && (
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          <span>{batch.schedule}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4" />
-                        <span>Capacity: Open</span>
+                org.batches.map((batch, i) => (
+                  <Reveal key={batch.id} delay={Math.min(i, 6) * 0.05}>
+                    <div className="flex h-full items-start gap-3 rounded-2xl border border-line bg-surface p-4">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl brand-bg">
+                        <SportIcon sport={(batch.sport || "").toLowerCase().replace(/\s+/g, "_")} className="h-5 w-5" />
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="font-semibold leading-snug">{batch.name}</h3>
+                        {batch.sport && <p className="text-sm text-ink-muted">{batch.sport}</p>}
+                        {batch.schedule && (
+                          <p className="mt-1.5 flex items-center gap-1.5 text-sm text-ink-muted">
+                            <Calendar className="h-4 w-4 shrink-0" aria-hidden /> {batch.schedule}
+                          </p>
+                        )}
                       </div>
                     </div>
-                  </div>
+                  </Reveal>
                 ))
               ) : (
-                <p className="text-zinc-500 italic">No programs currently listed.</p>
+                <p className="text-ink-muted">No programs listed yet.</p>
               )}
             </div>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold tracking-tight">About</h2>
+            <p className="mt-4 max-w-prose leading-relaxed text-ink-muted">
+              {org.name} trains young athletes in {org.city}
+              {sports.length ? ` in ${sports.join(", ")}` : ""}. Book a free trial to see a session, meet the coaches and find the right batch.
+            </p>
           </section>
         </div>
 
-        {/* Sidebar Info */}
-        <div className="space-y-8">
-          <div className="p-6 rounded-xl border border-zinc-800 bg-zinc-900">
-            <h3 className="font-semibold mb-4 text-lg">Contact Info</h3>
-            <div className="space-y-4 text-zinc-400 text-sm">
-              {org.phone && (
-                <div>
-                  <strong className="block text-zinc-300 mb-1">Phone</strong>
-                  {org.phone}
-                </div>
-              )}
-              {org.email && (
-                <div>
-                  <strong className="block text-zinc-300 mb-1">Email</strong>
-                  {org.email}
-                </div>
-              )}
-              {org.address && (
-                <div>
-                  <strong className="block text-zinc-300 mb-1">Address</strong>
-                  {org.address}
-                </div>
-              )}
-              {!org.phone && !org.email && !org.address && (
-                <p>Contact details not provided.</p>
-              )}
+        <aside className="space-y-4">
+          {place && <VenueMap place={place} label={org.name} />}
+          {(org.phone || org.email) && (
+            <div className="rounded-2xl border border-line bg-surface p-4 text-sm">
+              <h3 className="font-semibold">Contact</h3>
+              {org.phone && <a href={`tel:${org.phone}`} className="mt-2 block text-ink-muted hover:text-ink">{org.phone}</a>}
+              {org.email && <a href={`mailto:${org.email}`} className="mt-1 block text-ink-muted hover:text-ink">{org.email}</a>}
+            </div>
+          )}
+          <div className="hidden rounded-2xl border border-line bg-surface p-4 md:block">
+            <h3 className="font-semibold">Come and play</h3>
+            <p className="mt-1 text-sm text-ink-muted">Book a free trial, or enrol straight away.</p>
+            <div className="mt-4 grid gap-2">
+              <Link href={`/trial?academy=${org.slug}`} className="inline-flex h-11 items-center justify-center rounded-xl brand-bg font-semibold">Book a free trial</Link>
+              <Link href={`/join?academy=${org.slug}`} className="inline-flex h-11 items-center justify-center rounded-xl border border-line font-semibold hover:bg-surface-2">Enrol</Link>
             </div>
           </div>
-          
-          <div className="p-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
-            <h3 className="font-semibold text-emerald-400 mb-2">Ready to join?</h3>
-            <p className="text-sm text-zinc-400 mb-4">
-              Start your journey with us today. Book a free trial session or enroll directly.
-            </p>
-            <Link href={`/join?academy=${org.slug}`} className={cn(buttonVariants({ variant: "default" }), "w-full bg-emerald-500 text-emerald-950 hover:bg-emerald-400")}>
-              Enroll Now
-            </Link>
-          </div>
+        </aside>
+      </div>
+
+      {/* Phones: actions stay within thumb reach */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden">
+        <div className="mx-auto flex max-w-5xl gap-2">
+          <Link href={`/trial?academy=${org.slug}`} className="inline-flex h-12 flex-1 items-center justify-center rounded-xl brand-bg font-semibold">Book a free trial</Link>
+          <Link href={`/join?academy=${org.slug}`} className="inline-flex h-12 items-center justify-center rounded-xl border border-line px-5 font-semibold">Enrol</Link>
         </div>
       </div>
     </div>

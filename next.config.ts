@@ -47,7 +47,7 @@ const nextConfig: NextConfig = {
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://accounts.google.com" + observabilityConnect,
-      "frame-src https://api.razorpay.com https://checkout.razorpay.com https://accounts.google.com",
+      "frame-src https://api.razorpay.com https://checkout.razorpay.com https://accounts.google.com https://www.google.com",
       "media-src 'self' blob:",
       "worker-src 'self'",
       "form-action 'self' https://api.razorpay.com",

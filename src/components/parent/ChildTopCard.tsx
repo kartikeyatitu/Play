@@ -1,6 +1,7 @@
 "use client";
 
-import { CalendarDays, CheckCircle2, ChevronRight, FileText, Trophy, MessageSquareQuote, Receipt, Sparkles } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronRight, FileText, Navigation, Trophy, MessageSquareQuote, Receipt, Sparkles } from "lucide-react";
+import { directionsUrl } from "@/components/maps/VenueMap";
 import { ReadAloudButton } from "@/components/voice/ReadAloudButton";
 import { CheckoutModal } from "@/components/parent/CheckoutModal";
 import type { HomeFeeStatus, NextSession } from "@/components/parent/home-summary";
@@ -16,6 +17,13 @@ export interface ChildTopCardData {
   latestReceiptToken: string | null;
   note: { month: string; note: string | null; average: number } | null;
   sessionNote?: { date: string; text: string } | null;
+  cover?: string | null;
+  venue?: string | null;
+}
+
+/** CSS url() for an academy photo, only for plain https URLs (no quotes or brackets that could break the style). */
+function coverUrl(u: string | null | undefined): string | null {
+  return u && /^https:\/\/[^\s"'()<>\\]+$/.test(u) ? `url("${u}")` : null;
 }
 
 function dayLabel(ymd: string, today: string): string {
@@ -57,13 +65,28 @@ export function ChildTopCard({
   const feeTone = fee.state === "OVERDUE" ? "text-danger" : fee.state === "DUE" ? "text-warn" : fee.state === "AWAITING" ? "text-ink-muted" : "text-success";
 
   return (
-    <section aria-label={`${data.name} summary`} className="overflow-hidden rounded-2xl border border-line bg-surface">
-      <header className="flex items-baseline justify-between gap-3 px-4 pt-4">
-        <h2 className="truncate text-lg font-semibold text-ink">{data.name}</h2>
-        {data.batchName && <span className="truncate text-xs text-ink-subtle">{data.batchName}</span>}
+    <section aria-label={`${data.name} summary`} className="overflow-hidden rounded-3xl border border-line bg-surface shadow-[0_12px_30px_-18px_rgba(0,0,0,0.35)]">
+      <header
+        className="relative flex h-32 items-end overflow-hidden px-4 pb-3"
+        style={
+          coverUrl(data.cover)
+            ? { backgroundImage: coverUrl(data.cover)!, backgroundSize: "cover", backgroundPosition: "center" }
+            : { background: "linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 55%, #0b241a))" }
+        }
+      >
+        <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#000000c0] via-[#0000004d] to-transparent" />
+        <div className="relative flex min-w-0 items-center gap-3">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#fffffff2] text-base font-bold text-[#13261e] shadow-lg">
+            {data.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+          </span>
+          <div className="min-w-0">
+            <h2 className="truncate text-xl font-bold leading-tight text-[#ffffff]">{data.name}</h2>
+            {data.batchName && <p className="truncate text-xs text-[#ffffffcc]">{data.batchName}</p>}
+          </div>
+        </div>
       </header>
 
-      <dl className="grid grid-cols-2 gap-px bg-line mt-3 border-y border-line">
+      <dl className="grid grid-cols-2 gap-px bg-line border-b border-line">
         <div className="bg-surface p-3">
           <dt className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-ink-subtle">
             <CalendarDays className="h-3.5 w-3.5" aria-hidden /> Next session
@@ -73,6 +96,16 @@ export function ChildTopCard({
               <>
                 {dayLabel(data.nextSession.date, today)}
                 {data.nextSession.time ? `, ${data.nextSession.time}` : ""}
+                {data.venue && (
+                  <a
+                    href={directionsUrl(data.venue)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 flex items-center gap-1 text-xs font-semibold brand-text"
+                  >
+                    <Navigation className="h-3 w-3" aria-hidden /> Directions
+                  </a>
+                )}
               </>
             ) : (
               <span className="text-ink-muted">Not scheduled</span>
@@ -87,6 +120,11 @@ export function ChildTopCard({
             {data.week.total > 0 ? (
               <>
                 {data.week.present}/{data.week.total} <span className="font-normal text-ink-muted">attended</span>
+                <span className="mt-1.5 flex gap-1" aria-hidden>
+                  {Array.from({ length: Math.min(data.week.total, 7) }, (_, i) => (
+                    <span key={i} className={`h-2 w-2 rounded-full ${i < data.week.present ? "brand-bg" : "bg-line"}`} />
+                  ))}
+                </span>
               </>
             ) : (
               <span className="text-ink-muted">No sessions yet</span>
