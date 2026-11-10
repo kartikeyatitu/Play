@@ -49,6 +49,7 @@ const FacilitiesTab = dynamic(() => import("@/components/org/FacilitiesTab").the
 const AnalyticsDashboard = dynamic(() => import("@/components/org/AnalyticsDashboard").then((m) => m.AnalyticsDashboard), { ssr: false, loading: sectionLoading });
 const RevenueForecast = dynamic(() => import("@/components/org/RevenueForecast").then((m) => m.RevenueForecast), { ssr: false, loading: sectionLoading });
 const StudentGrowthTracker = dynamic(() => import("@/components/org/StudentGrowthTracker").then((m) => m.StudentGrowthTracker), { ssr: false, loading: sectionLoading });
+const SiblingDiscountCard = dynamic(() => import("@/components/org/SiblingDiscountCard").then((m) => m.SiblingDiscountCard), { loading: inlineLoading });
 const GenerateFeesButton = dynamic(() => import("@/components/org/GenerateFeesButton").then((m) => m.GenerateFeesButton), { loading: inlineLoading });
 const ExportCSV = dynamic(() => import("@/components/org/ExportCSV").then((m) => m.ExportCSV), { loading: inlineLoading });
 const HolidayManager = dynamic(() => import("@/components/org/HolidayManager").then((m) => m.HolidayManager), { loading: sectionLoading });
@@ -588,6 +589,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
                   })()}
                   actions={<GenerateFeesButton />}
                 />
+                {FEATURES.familyAccounts && <div className="mb-4"><SiblingDiscountCard /></div>}
                 <div className="rounded-xl border border-zinc-800/50 overflow-hidden">
                   <div className="overflow-x-auto w-full custom-scrollbar">
                     <Table className="min-w-[560px]">
