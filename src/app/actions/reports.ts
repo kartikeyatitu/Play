@@ -2,6 +2,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
+import { syncSkillReward } from "@/lib/rewards/skill";
 
 // COACH added: skill reports are submitted from the coach dashboard (EvaluateModal).
 export async function submitSkillReport(studentId: string, coachId: string, month: string, technique: number, fitness: number, discipline: number, notes: string, sport?: string, metrics?: Record<string, number>) {
@@ -24,7 +25,8 @@ export async function submitSkillReport(studentId: string, coachId: string, mont
     if (staff) authorId = staff.id;
   }
 
-  await db.skillReport.upsert({
+  const saved = await db.skillReport.upsert({
+    select: { id: true, month: true, sport: true, technique: true, fitness: true, discipline: true, metrics: true },
     where: {
       studentId_month: { studentId: student.id, month }
     },
@@ -39,6 +41,8 @@ export async function submitSkillReport(studentId: string, coachId: string, mont
       ...(metrics != null && { metrics }),
     }
   });
+
+  await syncSkillReward(orgId, student.id, saved, authorId);
 
   revalidatePath("/coach");
   revalidatePath("/parent");
