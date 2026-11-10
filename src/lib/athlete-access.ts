@@ -8,9 +8,10 @@ export interface AccessSession {
 }
 
 /** Prisma Student `where` for students this signed-in user may view. */
-export function studentAccessFilter(session: AccessSession) {
+export function studentAccessFilter(session: AccessSession, guardianOf?: readonly string[]) {
   const orgId = session.orgId || "__no_org__";
-  if (session.role === "PARENT") return { parentId: session.id, orgId };
+  // Pass the children this parent looks after (getGuardianStudentIds) to include second guardians.
+  if (session.role === "PARENT") return guardianOf ? { id: { in: [...guardianOf] }, orgId } : { parentId: session.id, orgId };
   if (session.role === "COACH") {
     return { orgId, enrollments: { some: { batch: { coachId: session.id, orgId } } } };
   }

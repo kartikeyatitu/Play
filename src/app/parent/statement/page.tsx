@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ArrowLeft } from 'lucide-react';
 import { db } from '@/lib/db';
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { requireAuth } from '@/lib/auth';
 import { formatMoney } from '@/lib/i18n';
 import { localDateString } from '@/lib/fee-aging';
@@ -42,8 +43,9 @@ export default async function FeeStatementPage(props: { searchParams: Promise<Re
   const sp = await props.searchParams;
   const pick = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
 
+  const mine = await myChildrenWhere(session.id);
   const [kids, org] = await Promise.all([
-    db.student.findMany({ where: { parentId: session.id, orgId }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    db.student.findMany({ where: { AND: [mine, { orgId }] }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
     db.organization.findUnique({
       where: { id: orgId },
       select: { name: true, address: true, phone: true, timezone: true, currency: true, locale: true, country: true, phoneCountry: true },
@@ -59,11 +61,11 @@ export default async function FeeStatementPage(props: { searchParams: Promise<Re
   if (child) {
     const [records, receipts] = await Promise.all([
       db.feeRecord.findMany({
-        where: { studentId: child.id, student: { parentId: session.id } },
+        where: { studentId: child.id, student: mine },
         select: { id: true, month: true, amount: true, status: true, paymentMethod: true, paidAt: true },
       }),
       db.receipt.findMany({
-        where: { studentId: child.id, orgId, student: { parentId: session.id } },
+        where: { studentId: child.id, orgId, student: mine },
         select: { receiptNumber: true, token: true, feeRecordId: true, month: true, amount: true, paymentMode: true, issuedAt: true },
       }),
     ]);

@@ -8,6 +8,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { requireAuth } from "@/lib/auth";
 import { rateLimitDb } from "@/lib/rate-limit";
 import { safeHttpUrl } from "@/lib/safe-url";
@@ -212,7 +213,7 @@ export async function requestProsBooking(formData: FormData): Promise<void> {
   if (!reason.ok) back(path, reason.error);
 
   const children =
-    session.role === "PARENT" ? await db.student.findMany({ where: { parentId: session.id }, select: { id: true, name: true } }) : [];
+    session.role === "PARENT" ? await db.student.findMany({ where: await myChildrenWhere(session.id), select: { id: true, name: true } }) : [];
   const subject = resolveBookingSubject(
     session.role,
     formData.get("for"),

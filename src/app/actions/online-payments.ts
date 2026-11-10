@@ -3,6 +3,7 @@
 import { randomUUID } from "crypto";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { getSession, requireAuth } from "@/lib/auth";
 import { rateLimitDb } from "@/lib/rate-limit";
 import { finalizePayment } from "@/lib/payment-service";
@@ -65,7 +66,7 @@ export async function getOnlinePaymentOptions(feeRecordId?: string): Promise<{ r
     }
   } else {
     const student = await db.student.findFirst({
-      where: { parentId: session.id, org: { razorpayKeyId: { not: null } } },
+      where: { AND: [await myChildrenWhere(session.id), { org: { razorpayKeyId: { not: null } } }] },
       select: { orgId: true },
     });
     if (student?.orgId) {
@@ -109,7 +110,7 @@ export async function startOnlineFeePayment(feeRecordId: string): Promise<StartP
       },
     });
     // Must be this parent's own child's fee
-    if (!fee || fee.student.parentId !== session.id) return { success: false, error: "Fee not found." };
+    if (!fee || !(await myChildrenWhere(session.id)).id.in.includes(fee.studentId)) return { success: false, error: "Fee not found." };
     const orgId = fee.student.orgId || fee.orgId;
     if (!orgId) return { success: false, error: "This fee isn't linked to an academy yet." };
 

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getGuardianStudentIds } from "@/lib/family/guardians";
 import { deriveHats, hatForAppRole, type Hat } from "@/lib/roles/hats";
 
 export interface HeldHats {
@@ -27,7 +28,8 @@ export async function loadHeldHats(userId: string): Promise<HeldHats | null> {
           select: { orgId: true, role: true, status: true },
         })
       : Promise.resolve([]),
-    db.student.findFirst({ where: { parentId: userId }, select: { id: true } }),
+    // Primary parent or a linked second guardian both get the parent hat.
+    getGuardianStudentIds(userId).then((ids) => (ids.length ? { id: ids[0] } : null)),
   ]);
   return {
     hats: deriveHats({ userRole: user.role, activeOrgId: user.orgId, memberships, hasChildren: !!child }),

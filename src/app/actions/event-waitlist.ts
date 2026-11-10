@@ -7,6 +7,7 @@
  */
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { requireAuth } from "@/lib/auth";
 import { FEATURES } from "@/lib/features";
 import {
@@ -32,7 +33,7 @@ async function parentScope(eventIdRaw: unknown, studentIdRaw: unknown) {
   const eventId = clean(eventIdRaw);
   const studentId = clean(studentIdRaw);
   if (!eventId || !studentId) return null;
-  const student = await db.student.findFirst({ where: { id: studentId, parentId: session.id }, select: { id: true } });
+  const student = await db.student.findFirst({ where: { AND: [{ id: studentId }, await myChildrenWhere(session.id)] }, select: { id: true } });
   if (!student) return null;
   const event = await db.event.findFirst({
     where: { id: eventId, batch: { enrollments: { some: { studentId: student.id } } } },

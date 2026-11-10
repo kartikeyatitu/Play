@@ -62,3 +62,11 @@ export async function guardiansOfStudent(studentId: string) {
     })
     .filter((g): g is NonNullable<typeof g> => g !== null);
 }
+
+/**
+ * Prisma Student `where` fragment for "children this user looks after": the primary parent's children
+ * plus any linked as a second guardian. Combine with other conditions under AND so `id` never collides.
+ */
+export async function myChildrenWhere(userId: string): Promise<{ id: { in: string[] } }> {
+  return { id: { in: await getGuardianStudentIds(userId) } };
+}

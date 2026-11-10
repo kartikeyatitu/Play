@@ -1,5 +1,6 @@
 "use server";
 import { db } from "@/lib/db";
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { eventWaitlistAfterRsvp, eventWaitlistRsvpGate } from "@/lib/events/waitlist-server";
@@ -48,7 +49,7 @@ export async function updateRSVP(eventId: string, studentId: string, status: str
   const student = await db.student.findFirst({
     where:
       session.role === "PARENT"
-        ? { id: studentId, parentId: session.id }
+        ? { AND: [{ id: studentId }, await myChildrenWhere(session.id)] }
         : session.role === "COACH"
           ? { id: studentId, orgId, enrollments: { some: { batch: { coachId: session.id, orgId } } } }
           : { id: studentId, orgId },

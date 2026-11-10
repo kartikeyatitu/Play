@@ -5,6 +5,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { requireAuth } from "@/lib/auth";
 import { FEATURES } from "@/lib/features";
 import { getMembership, hasPermission } from "@/lib/membership";
@@ -43,7 +44,7 @@ async function athleteContext(studentId: string): Promise<Ctx | null> {
   const today = new Date(`${orgToday(org)}T00:00:00.000Z`);
 
   if (session.role === "PARENT") {
-    const s = await db.student.findFirst({ where: { id: studentId, parentId: session.id, orgId }, select: { id: true } });
+    const s = await db.student.findFirst({ where: { AND: [{ id: studentId, orgId }, await myChildrenWhere(session.id)] }, select: { id: true } });
     return s ? { userId: session.id, orgId, actor: "PARENT", canVerify: false, today } : null;
   }
   const membership = await getMembership(session.id, orgId);

@@ -3,6 +3,7 @@
 // Pure rules (state machine, snapshots, validation) live in src/lib/store.ts.
 // Payment is "pay at the academy" only: nothing in this file simulates an online payment.
 import { db } from "@/lib/db";
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { checkPermission } from "@/lib/membership";
@@ -89,9 +90,9 @@ export async function placeStoreOrder(input: { productId: string; studentId: str
   if (!q.ok) return { success: false, error: q.error };
   const quantity = q.value;
 
-  let studentWhere: { id: string; parentId?: string; orgId?: string };
+  let studentWhere: { id: string; orgId?: string } | { AND: object[] };
   if (session.role === "PARENT") {
-    studentWhere = { id: String(input.studentId), parentId: session.id };
+    studentWhere = { AND: [{ id: String(input.studentId) }, await myChildrenWhere(session.id)] };
   } else {
     const auth = await checkPermission("store.manage");
     if (!auth.ok) return { success: false, error: auth.error };
@@ -301,7 +302,7 @@ export async function listMyStoreOrders() {
   if (!FEATURES.marketplace) return { ...DISABLED, orders: [] };
   const session = await requireAuth(["PARENT"]);
   const orders = await db.order.findMany({
-    where: { student: { parentId: session.id }, detail: { isNot: null } },
+    where: { student: await myChildrenWhere(session.id), detail: { isNot: null } },
     include: { detail: true, product: { select: { id: true, name: true } }, student: { select: { id: true, name: true } } },
     orderBy: { createdAt: "desc" },
     take: 50,

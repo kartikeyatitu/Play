@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { requireAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
   const orgScope = session.orgId || "__no_org__";
   const accessFilter =
     session.role === "PARENT"
-      ? { parentId: session.id }
+      ? await myChildrenWhere(session.id)
       : session.role === "COACH"
         ? { orgId: orgScope, enrollments: { some: { batch: { coachId: session.id as string, orgId: orgScope } } } }
         : { orgId: orgScope };

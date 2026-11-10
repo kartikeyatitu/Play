@@ -87,9 +87,15 @@ vi.mock("@/lib/db", () => {
     student: {
       findFirst: vi.fn(async ({ where }: any) => {
         touch();
+        if (where.AND) {
+          const [one, mine] = where.AND;
+          return STUDENTS.find((s) => s.id === one.id && mine.id.in.includes(s.id)) ?? null;
+        }
         return STUDENTS.find((s) => s.id === where.id && s.parentId === where.parentId) ?? null;
       }),
-      findMany: vi.fn(async ({ where }: any) => STUDENTS.filter((s) => where.id.in.includes(s.id))),
+      findMany: vi.fn(async ({ where }: any) =>
+        STUDENTS.filter((s) => (where.id?.in ? where.id.in.includes(s.id) : true) && (where.parentId ? s.parentId === where.parentId : true)),
+      ),
     },
     event: {
       findFirst: vi.fn(async ({ where }: any) => {

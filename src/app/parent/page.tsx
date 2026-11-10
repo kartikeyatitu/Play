@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { logout } from '@/app/actions/auth';
 import { ParentClient } from '@/components/parent/ParentClient';
 import { istMonthString } from '@/lib/fees';
@@ -35,6 +36,8 @@ export default async function ParentPage() {
   const orgFilter = { orgId };
 
   const currentMonth = istMonthString();
+  // Children this parent looks after: their own plus any they are a second guardian of.
+  const mine = await myChildrenWhere(session.id);
 
   // Round 1 — everything that only depends on the session, in parallel.
   // (Previously ~10 sequential round trips; `parent.id` is always `session.id`.)
@@ -43,7 +46,7 @@ export default async function ParentPage() {
       where: { id: session.id },
     }),
     db.student.findMany({
-      where: { parentId: session.id, ...orgFilter },
+      where: { AND: [mine, orgFilter] },
       include: {
         enrollments: { include: { batch: true } },
         feeRecords: { where: { month: currentMonth } },

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { getGuardianStudentIds } from "@/lib/family/guardians";
 import { requireAuth } from "@/lib/auth";
 import { FEATURES } from "@/lib/features";
 import { studentAccessFilter } from "@/lib/athlete-access";
@@ -42,7 +43,7 @@ export default async function MonthlyProgressReportPage({
 
   // Only what the report shows: no medical data, DOB, blood group or fees.
   const student = await db.student.findFirst({
-    where: { id, ...studentAccessFilter(session) },
+    where: { AND: [{ id }, studentAccessFilter(session, session.role === "PARENT" ? await getGuardianStudentIds(session.id) : undefined)] },
     select: {
       id: true,
       name: true,

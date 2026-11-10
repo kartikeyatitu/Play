@@ -5,6 +5,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { requireAuth } from "@/lib/auth";
 import { FEATURES } from "@/lib/features";
 import { checkPermission } from "@/lib/membership";
@@ -189,7 +190,7 @@ export async function listOpportunitiesForParent() {
   const orgId = session.orgId as string;
   try {
     const children = await db.student.findMany({
-      where: { parentId: session.id, orgId },
+      where: { AND: [await myChildrenWhere(session.id), { orgId }] },
       select: { id: true, name: true, dob: true, enrollments: { select: { batchId: true } } },
     });
     if (!children.length) return { success: true as const, opportunities: [] };
@@ -202,7 +203,8 @@ export async function listOpportunitiesForParent() {
         take: 30,
       }),
       db.opportunityApplication.findMany({
-        where: { orgId, parentId: session.id, studentId: { in: children.map((c) => c.id) } },
+        // Either guardian sees applications made for their children, whoever applied.
+        where: { orgId, studentId: { in: children.map((c) => c.id) } },
         include: { events: { orderBy: { createdAt: "asc" }, select: { toStatus: true, createdAt: true } } },
       }),
     ]);
@@ -242,7 +244,7 @@ export async function applyToOpportunity(opportunityId: string, studentId: strin
   try {
     const [opp, child] = await Promise.all([
       db.opportunity.findFirst({ where: { id: opportunityId, orgId } }),
-      db.student.findFirst({ where: { id: studentId, parentId: session.id, orgId }, select: { id: true, dob: true, enrollments: { select: { batchId: true } } } }),
+      db.student.findFirst({ where: { AND: [{ id: studentId, orgId }, await myChildrenWhere(session.id)] }, select: { id: true, dob: true, enrollments: { select: { batchId: true } } } }),
     ]);
     if (!opp || !child) return { success: false, error: "Not found" };
     const elig = checkEligibility(opp, { dob: child.dob, batchIds: child.enrollments.map((e) => e.batchId) }, await orgDay(orgId));

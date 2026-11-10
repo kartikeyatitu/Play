@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { db } from "@/lib/db";
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { requireAuth } from "@/lib/auth";
 import { FEATURES } from "@/lib/features";
 import { getChildRewards } from "@/app/actions/rewards";
@@ -18,7 +19,7 @@ export default async function ParentRewardsPage(props: { searchParams: Promise<{
   const sp = await props.searchParams;
   const pick = Array.isArray(sp.child) ? sp.child[0] : sp.child;
   const kids = await db.student.findMany({
-    where: { parentId: session.id, orgId: { not: null } },
+    where: { AND: [await myChildrenWhere(session.id), { orgId: { not: null } }] },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });

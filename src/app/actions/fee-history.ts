@@ -1,5 +1,6 @@
 "use server"
 import { db } from "@/lib/db"
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { requireAuth } from "@/lib/auth";
 import { checkPermission } from "@/lib/membership";
 
@@ -14,7 +15,7 @@ export async function getFeeHistory(studentId: string) {
   // Tenant scope via the student: parents only see their own children; admins only their academy
   const studentScope =
     session.role === "PARENT"
-      ? { parentId: session.id as string }
+      ? await myChildrenWhere(session.id as string)
       : { orgId: session.orgId || "__no_org__" };
   return db.feeRecord.findMany({
     where: { studentId, student: studentScope },

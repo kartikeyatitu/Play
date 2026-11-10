@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { getSession } from "@/lib/auth";
 import { prosEnabled } from "@/lib/pros/flag";
 import { loadListing } from "@/lib/pros/data";
@@ -28,7 +29,7 @@ export default async function ProProfilePage({ params, searchParams }: { params:
   const isSelf = session?.id === pro.userId;
   const children =
     session?.role === "PARENT"
-      ? await db.student.findMany({ where: { parentId: session.id }, select: { id: true, name: true }, orderBy: { name: "asc" } })
+      ? await db.student.findMany({ where: await myChildrenWhere(session.id), select: { id: true, name: true }, orderBy: { name: "asc" } })
       : [];
   const experience = await db.professionalExperience.findMany({
     where: { userId: pro.userId },

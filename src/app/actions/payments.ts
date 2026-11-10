@@ -1,6 +1,7 @@
 "use server";
 import { concessionAdjustedFee } from "@/lib/concession-fees";
 import { db } from "@/lib/db";
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { checkPermission } from "@/lib/membership";
@@ -71,10 +72,10 @@ export async function reportFeePaid(feeRecordId: string) {
   try {
     const fee = await db.feeRecord.findUnique({
       where: { id: feeRecordId },
-      include: { student: { select: { parentId: true, orgId: true } } },
+      include: { student: { select: { id: true, parentId: true, orgId: true } } },
     });
     // Must be the parent's own child
-    if (!fee || fee.student.parentId !== session.id) {
+    if (!fee || !(await myChildrenWhere(session.id)).id.in.includes(fee.student.id)) {
       return { success: false, error: "Fee record not found." };
     }
     if (fee.status === "PAID") return { success: true, status: "PAID" };

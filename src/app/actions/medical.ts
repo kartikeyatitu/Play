@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { myChildrenWhere } from "@/lib/family/guardians";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { checkPermission } from "@/lib/membership";
@@ -11,9 +12,9 @@ import { COACH_SAFE_MEDICAL_FIELDS } from "@/lib/athlete/medical-visibility";
 // Tenant/role scope for a student:
 // ADMIN → any student in their academy; COACH → students in their own batches;
 // PARENT → only their own children.
-function studentAccessWhere(session: { id: string; role: string; orgId: string | null }, studentId: string) {
+async function studentAccessWhere(session: { id: string; role: string; orgId: string | null }, studentId: string) {
   const orgId = session.orgId || "__no_org__";
-  if (session.role === "PARENT") return { id: studentId, parentId: session.id };
+  if (session.role === "PARENT") return { AND: [{ id: studentId }, await myChildrenWhere(session.id)] };
   if (session.role === "COACH") {
     return { id: studentId, orgId, enrollments: { some: { batch: { coachId: session.id, orgId } } } };
   }
@@ -42,7 +43,7 @@ export async function updateMedicalInfo(studentId: string, data: MedicalInfoInpu
   }
   try {
     const student = await db.student.findFirst({
-      where: studentAccessWhere(session, studentId),
+      where: await studentAccessWhere(session, studentId),
       select: { id: true, orgId: true, medicalInfo: true, bloodGroup: true },
     });
     if (!student) return { success: false, error: "Student not found" };

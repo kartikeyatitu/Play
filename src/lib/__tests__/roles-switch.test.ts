@@ -27,7 +27,9 @@ vi.mock("@/lib/db", () => ({
     },
     student: {
       findFirst: vi.fn(async ({ where }: any) => students.find((s) => matches(s, where)) ?? null),
+      findMany: vi.fn(async ({ where }: any) => students.filter((s) => matches(s, where))),
     },
+    guardianLink: { findMany: vi.fn(async () => []) },
     auditLog: {
       create: vi.fn(async ({ data }: any) => {
         auditLogs.push(data);
@@ -245,6 +247,7 @@ describe("single-role users see no change", () => {
     expect(await redirectOf(requireAuth(["ADMIN"]))).toBe("/coach");
     expect(db.orgMembership.findMany).not.toHaveBeenCalled();
     expect(db.student.findFirst).not.toHaveBeenCalled();
+    expect(db.student.findMany).not.toHaveBeenCalled();
   });
 
   it("parent-only user: same redirect as before", async () => {
