@@ -1,3 +1,4 @@
+import { signPayToken } from "@/lib/pay-token";
 import { db } from "@/lib/db";
 import { buildAgingReport, type AgingFeeInput, type AgingReport } from "@/lib/fee-aging";
 import { buildFamilyReminderText, familyWaLink, lastRemindedByFamily, FEE_REMINDER_ACTION } from "@/lib/fee-reminders";
@@ -99,6 +100,7 @@ export async function loadOverdueReport(orgId: string, now = new Date()): Promis
           academyName: org?.name || "the academy",
           upiId: org?.upiId,
           parentAppUrl,
+          payUrl: parentAppUrl ? `${parentAppUrl.replace(/\/parent$/, "")}/pay/${signPayToken(orgId, f.familyId)}` : null,
         });
         return {
           familyId: f.familyId,

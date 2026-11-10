@@ -21,11 +21,13 @@ export interface FamilyReminderInput {
   upiId?: string | null;
   /** Absolute URL of the parent app (e.g. https://…/parent) */
   parentAppUrl?: string | null;
+  /** https page that opens the UPI app with the amount filled in (WhatsApp can't tap upi:// links). */
+  payUrl?: string | null;
   /** Formats an amount in the academy's currency */
   formatAmount?: (n: number) => string;
 }
 
-function monthLabel(m: string): string {
+export function monthLabel(m: string): string {
   const [y, mo] = (m || "").split("-").map(Number);
   if (!y || !mo) return m;
   return new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
@@ -47,7 +49,9 @@ export function buildFamilyReminderText(input: FamilyReminderInput): string {
         `\nTotal: ${fmt(total)}`;
 
   let pay: string;
-  if (input.upiId && isValidUpiId(input.upiId)) {
+  if (input.payUrl && input.upiId && isValidUpiId(input.upiId)) {
+    pay = `Pay in one tap: ${input.payUrl}\n(or pay to ${input.upiId})`;
+  } else if (input.upiId && isValidUpiId(input.upiId)) {
     const link = buildUpiLink({ upiId: input.upiId, payeeName: academy, amount: total, note: "Academy fees" });
     pay = `Pay via UPI: ${link}\n(or pay to ${input.upiId})`;
   } else if (input.parentAppUrl) {

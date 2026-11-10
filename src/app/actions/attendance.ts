@@ -2,6 +2,8 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { notifyArrivals } from "@/lib/arrival";
 import { requireMember } from "@/lib/membership";
 import { canMarkBatchAttendance } from "@/lib/team";
 import { istToday } from "@/lib/fees";
@@ -117,12 +119,19 @@ export async function markAttendance(
   }
 
   const isPresent = statusIsPresent(status);
+  const before = isPresent
+    ? await db.attendance.findUnique({ where: { sessionId_studentId: { sessionId: dbSession.id, studentId } }, select: { isPresent: true } })
+    : null;
   await db.attendance.upsert({
     where: { sessionId_studentId: { sessionId: dbSession.id, studentId } },
     update: { isPresent, status },
     create: { sessionId: dbSession.id, studentId, isPresent, status },
   });
   await syncRewards(auth.orgId, dbSession.id, [studentId], isPresent, auth.userId);
+  if (isPresent && !before?.isPresent) {
+    const sessionId = dbSession.id;
+    after(() => notifyArrivals(auth.orgId, sessionId, [studentId]));
+  }
 
   revalidatePath("/coach");
   return { success: true };
@@ -153,6 +162,11 @@ export async function markBatchAttendance(
   }
 
   const isPresent = statusIsPresent(status);
+  const alreadyIn = isPresent
+    ? new Set(
+        (await db.attendance.findMany({ where: { sessionId: dbSession.id, studentId: { in: ids }, isPresent: true }, select: { studentId: true } })).map((a) => a.studentId)
+      )
+    : new Set<string>();
   await db.$transaction(
     ids.map((studentId) =>
       db.attendance.upsert({
@@ -163,6 +177,11 @@ export async function markBatchAttendance(
     )
   );
   await syncRewards(auth.orgId, dbSession.id, ids, isPresent, auth.userId);
+  const arrived = isPresent ? ids.filter((id) => !alreadyIn.has(id)) : [];
+  if (arrived.length) {
+    const sessionId = dbSession.id;
+    after(() => notifyArrivals(auth.orgId, sessionId, arrived));
+  }
 
   revalidatePath("/coach");
   return { success: true };
