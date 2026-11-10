@@ -3,6 +3,7 @@ import { AcademySwitcher } from "@/components/team/AcademySwitcher";
 import { ThemePicker } from "@/components/ui/theme-picker";
 import React from "react";
 import { Search } from "lucide-react";
+import { RainDayCard } from "@/components/breaks/RainDayCard";
 import { DashboardShell, SectionHeader, NAV_ICONS, type NavGroup, type NavItem } from "@/components/ui/dashboard-shell";
 import { TodayScreen, type TodayInsights } from "@/components/shell/TodayScreen";
 import { BookingsScreen } from "@/components/shell/BookingsScreen";
@@ -356,7 +357,12 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
               pendingDues={stats.pendingDues}
               onNavigate={go}
               sport={org?.sport}
-              top={<OnboardingWizard session={session} hasBatches={batches.length > 0} hasCoaches={coaches.length > 0} hasStudents={students.length > 0} coaches={coaches} batches={batches} />}
+              top={
+                <>
+                  <OnboardingWizard session={session} hasBatches={batches.length > 0} hasCoaches={coaches.length > 0} hasStudents={students.length > 0} coaches={coaches} batches={batches} />
+                  {batches.length > 0 && <RainDayCard />}
+                </>
+              }
             />
           )}
 

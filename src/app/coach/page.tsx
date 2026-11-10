@@ -14,6 +14,8 @@ import { CoachMePanel } from "@/components/coach/CoachMePanel";
 import { InviteParentsCard } from "@/components/coach/InviteParentsCard";
 import { requireAuth } from "@/lib/auth";
 import { istToday, istMonthString, istWeekday, scheduleRunsOn } from "@/lib/fees";
+import { loadBreaks } from "@/lib/breaks-server";
+import { onBreak } from "@/lib/breaks";
 import { attendanceStatusOf, parseMedicalInfo, cleanPhone, scheduleTime, scheduleStartMinutes, firstName } from "@/lib/coach";
 import { Calendar, ChevronRight, Trophy, MapPin } from "lucide-react";
 import { NeedsYou } from "@/components/coach/NeedsYou";
@@ -172,6 +174,8 @@ export default async function CoachDashboard({
   }
 
   // ---------- Today ----------
+  // Children on a break (exams, holidays) are left off today's roster, unless already marked.
+  const breaks = await loadBreaks(orgId, currentMonth);
   const sessionByBatch = new Map(existingTodaySessions.map((s) => [s.batchId, s]));
   const todaySessions: TodaySession[] = batches
     .filter((b) => sessionByBatch.has(b.id) || scheduleRunsOn(b.schedule, weekday) !== false)
@@ -187,7 +191,7 @@ export default async function CoachDashboard({
         status: (s?.status as TodaySession["status"]) || "PENDING",
         cancelReason: s?.cancelReason || null,
         recap: s?.recap || null,
-        students: b.enrollments.map((e) => {
+        students: b.enrollments.filter((e) => !onBreak(breaks.get(e.student.id), currentMonth) || attByStudent.has(e.student.id)).map((e) => {
           const med = parseMedicalInfo(e.student.medicalInfo);
           return {
             id: e.student.id,

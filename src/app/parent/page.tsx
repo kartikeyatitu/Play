@@ -8,6 +8,8 @@ import { istMonthString } from '@/lib/fees';
 import { requireAuth } from '@/lib/auth';
 import { FEATURES } from '@/lib/features';
 import { rewardTotalsFor } from '@/lib/rewards/server';
+import { loadBreaks, loadOpenMakeups } from '@/lib/breaks-server';
+import { breakLine } from '@/lib/breaks';
 import { coachesOfOrg } from '@/lib/membership';
 import {
   homeFeeStatus,
@@ -88,6 +90,12 @@ export default async function ParentPage() {
   if (!parent) {
     redirect('/');
   }
+
+  // Breaks (exams, holidays) and make-up sessions the academy owes, shown on each child's card.
+  const [breaksMap, makeupsOpen] = await Promise.all([
+    loadBreaks(orgId, istMonthString()),
+    loadOpenMakeups(orgId, childrenRaw.map((c) => c.id)),
+  ]);
 
   // Rewards on: the child's points and level come from the rewards ledger (one points system), and
   // there is no academy-wide ranking of children; Rewards has opt-in batch leaderboards instead.
@@ -208,6 +216,11 @@ export default async function ParentPage() {
       fee: homeFeeStatus(child.dueFees, now, tz),
       latestReceiptToken: latestReceipts.find((r) => r?.studentId === child.id)?.token ?? null,
       note: latestProgressNote(child.skillReports),
+      breakLine: (() => {
+        const b = breaksMap.get(child.id);
+        return b ? breakLine(b) : null;
+      })(),
+      makeupsOwed: makeupsOpen.filter((m) => m.studentId === child.id).length,
       // Academy's own facility photo for the card header, and the venue for directions.
       cover: org?.photos?.[0] ?? null,
       venue: [org?.address, org?.city].filter(Boolean).join(", ") || null,

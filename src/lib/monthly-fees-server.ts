@@ -3,6 +3,8 @@ import { resolveStudentFee } from "@/lib/fees";
 import { billedAmount, concessionsByStudent } from "@/lib/concessions";
 import { FEATURES } from "@/lib/features";
 import { siblingDiscounts } from "@/lib/family/sibling-discount";
+import { loadBreaks } from "@/lib/breaks-server";
+import { onBreak } from "@/lib/breaks";
 import { groupFamilies, parseSiblingSettings, SIBLING_DISCOUNT_ACTION, SIBLING_SETTINGS_ACTION, type SiblingSettings } from "@/lib/family/sibling-settings";
 
 export type FeeLine = { studentId: string; amount: number; siblingDiscount: number };
@@ -31,9 +33,12 @@ export async function planMonthlyFees(orgId: string, month: string, defaultMonth
   const concessions = FEATURES.inclusive
     ? concessionsByStudent(await db.feeConcession.findMany({ where: { orgId, revokedAt: null } }))
     : null;
+  // Children on a break (exams, holidays, injury) aren't billed for those months.
+  const breaks = await loadBreaks(orgId, month);
   const afterConcessions = students.map((st) => {
     const base = resolveStudentFee(st, defaultMonthlyFee);
-    return { studentId: st.id, parentId: st.parentId, fee: concessions ? billedAmount(base, concessions.get(st.id), month) : base };
+    const fee = onBreak(breaks.get(st.id), month) ? 0 : concessions ? billedAmount(base, concessions.get(st.id), month) : base;
+    return { studentId: st.id, parentId: st.parentId, fee };
   });
 
   const { settings, setById } = await loadSiblingSettings(orgId);

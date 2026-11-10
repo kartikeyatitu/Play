@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, CheckCircle2, ChevronRight, FileText, Navigation, Trophy, MessageSquareQuote, Receipt, Sparkles } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronRight, CloudRain, FileText, Navigation, PauseCircle, Trophy, MessageSquareQuote, Receipt, Sparkles } from "lucide-react";
 import { directionsUrl } from "@/components/maps/VenueMap";
 import { ReadAloudButton } from "@/components/voice/ReadAloudButton";
 import { CheckoutModal } from "@/components/parent/CheckoutModal";
@@ -19,6 +19,8 @@ export interface ChildTopCardData {
   sessionNote?: { date: string; text: string } | null;
   cover?: string | null;
   venue?: string | null;
+  breakLine?: string | null;
+  makeupsOwed?: number;
 }
 
 /** CSS url() for an academy photo, only for plain https URLs (no quotes or brackets that could break the style). */
@@ -85,6 +87,21 @@ export function ChildTopCard({
           </div>
         </div>
       </header>
+
+      {(data.breakLine || (data.makeupsOwed ?? 0) > 0) && (
+        <div className="flex flex-wrap gap-2 border-b border-line px-4 py-2.5">
+          {data.breakLine && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+              <PauseCircle className="h-3.5 w-3.5" aria-hidden /> {data.breakLine}
+            </span>
+          )}
+          {(data.makeupsOwed ?? 0) > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/15 px-3 py-1 text-xs font-semibold text-sky-700 dark:text-sky-300">
+              <CloudRain className="h-3.5 w-3.5" aria-hidden /> {data.makeupsOwed} make-up session{data.makeupsOwed === 1 ? "" : "s"} owed
+            </span>
+          )}
+        </div>
+      )}
 
       <dl className="grid grid-cols-2 gap-px bg-line border-b border-line">
         <div className="bg-surface p-3">

@@ -1,5 +1,7 @@
 "use client";
 
+import { BreakPanel } from "@/components/breaks/BreakPanel";
+
 import React, { useState } from "react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { AthleticButton } from "@/components/ui/AthleticButton";
@@ -218,6 +220,8 @@ export function StudentDetailDrawer({
                 </span>
               </div>
             </div>
+
+            <BreakPanel studentId={student.id} firstName={(student.name || "").split(" ")[0]} />
 
             <div className="flex gap-3 pt-4">
               <AthleticButton variant="secondary" className="flex-1" onClick={() => setIsEditing(true)}>
