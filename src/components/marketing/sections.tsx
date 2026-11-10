@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SportIcon } from "@/components/sport/SportIcon";
 import {
   ArrowRight,
   BadgeIndianRupee,
@@ -96,27 +97,28 @@ function Card({
 /* Sports marquee */
 /* ------------------------------------------------------------------ */
 
-const SPORTS = [
-  "🏏 Cricket",
-  "⚽ Football",
-  "🏸 Badminton",
-  "🎾 Tennis",
-  "🏊 Swimming",
-  "🏀 Basketball",
-  "🏓 Table tennis",
-  "⛸️ Skating",
-  "🥋 Martial arts",
-  "🏃 Athletics",
-  "🏑 Hockey",
-  "♟️ Chess",
+const SPORTS: { key: string; name: string }[] = [
+  { key: "cricket", name: "Cricket" },
+  { key: "football", name: "Football" },
+  { key: "badminton", name: "Badminton" },
+  { key: "tennis", name: "Tennis" },
+  { key: "swimming", name: "Swimming" },
+  { key: "basketball", name: "Basketball" },
+  { key: "table_tennis", name: "Table tennis" },
+  { key: "skating", name: "Skating" },
+  { key: "karate", name: "Martial arts" },
+  { key: "athletics", name: "Athletics" },
+  { key: "hockey", name: "Hockey" },
+  { key: "chess", name: "Chess" },
 ];
 
-export function Marquee({ items, label }: { items: string[]; label: string }) {
+export function Marquee({ items, label }: { items: { key: string; name: string }[]; label: string }) {
   const row = (dup: boolean) => (
     <ul className={cn("flex shrink-0 items-center gap-3 pr-3", dup && "mk-marquee-dup")} aria-hidden={dup || undefined}>
       {items.map((s) => (
-        <li key={s} className="whitespace-nowrap rounded-full border border-line bg-surface/60 px-4 py-2 text-sm text-ink-muted">
-          {s}
+        <li key={s.key} className="flex items-center gap-2 whitespace-nowrap rounded-full border border-line bg-surface/60 px-4 py-2 text-sm text-ink-muted">
+          <SportIcon sport={s.key} className="h-4 w-4 text-volt-ink" />
+          {s.name}
         </li>
       ))}
     </ul>
@@ -249,7 +251,7 @@ export function AcademyOperations() {
             icon={Repeat}
             title="UPI AutoPay"
             body="Parents approve a UPI mandate once and monthly fees are collected automatically on your own Razorpay account. Every charge is logged."
-            status="soon"
+            status={flagStatus(FEATURES.upiAutopay)}
           />
           <Card
             icon={Sparkles}
@@ -332,7 +334,7 @@ export function AthletesSection() {
         <SectionHeading
           eyebrow="For athletes"
           title="Development beyond attendance."
-          description="Athlete profiles, progress reports and opportunities are built, but still behind feature flags. Each one shows its real status."
+          description="A sporting profile, a monthly progress report and trials to apply for, all shared with the family."
         />
         <div className="grid gap-4 md:grid-cols-3">
           <Card
@@ -428,8 +430,8 @@ export function ComingBand() {
     },
     {
       icon: HeartPulse,
-      title: "Wellness",
-      body: "Physio, nutrition and recovery providers, appointments and protected health records.",
+      title: "TRIQ Connect",
+      body: "Verified physios, nutritionists and sports psychologists that parents can book.",
       status: flagStatus(FEATURES.wellness),
     },
     {
