@@ -20,7 +20,14 @@ export function MoreScreen({
         <section key={group.label}>
           <p className="mb-2 px-1 text-[13px] font-medium text-ink-subtle">{group.label}</p>
           <div className="rounded-xl border border-line bg-surface divide-y divide-line overflow-hidden">
-            {group.items.map((item) => (
+            {group.items.map((item) =>
+              item.href ? (
+                <a key={item.id} href={item.href} className="w-full min-h-[52px] flex items-center gap-3 px-4 text-left hover:bg-surface-2 transition-colors">
+                  <span className="text-ink-subtle shrink-0">{item.icon}</span>
+                  <span className="flex-1 text-sm font-medium text-ink">{item.label}</span>
+                  <ChevronRight className="w-4 h-4 text-zinc-600" aria-hidden />
+                </a>
+              ) : (
               <button
                 key={item.id}
                 type="button"
@@ -31,7 +38,8 @@ export function MoreScreen({
                 <span className="flex-1 text-sm font-medium text-ink">{item.label}</span>
                 <ChevronRight className="w-4 h-4 text-zinc-600" aria-hidden />
               </button>
-            ))}
+              ),
+            )}
           </div>
         </section>
       ))}

@@ -8,7 +8,22 @@ export function GamificationWidget({ student, leaderboard }: { student: any, lea
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-      {/* LEADERBOARD */}
+      {student.rewardLevel != null ? (
+        <Card className="bg-zinc-950 border-amber-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3 text-amber-500 font-bold uppercase tracking-widest text-xs">
+              <Trophy className="w-4 h-4" /> Rewards
+            </div>
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-3xl font-black text-amber-400">{student.points} <span className="text-sm font-medium text-zinc-500">points</span></p>
+                <p className="text-zinc-400 text-sm">Level {student.rewardLevel}</p>
+              </div>
+              <a href={`/rewards?child=${encodeURIComponent(student.id)}`} className="text-sm font-medium text-amber-300 hover:underline">Badges &amp; rewards →</a>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
       <Card className="bg-zinc-950 border-amber-500/20">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-3 text-amber-500 font-bold uppercase tracking-widest text-xs">
@@ -29,6 +44,7 @@ export function GamificationWidget({ student, leaderboard }: { student: any, lea
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* DIET PLAN */}
       <Card className="bg-zinc-950 border-emerald-500/20">

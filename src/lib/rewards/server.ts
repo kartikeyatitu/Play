@@ -20,7 +20,7 @@ import {
   type EarnTrigger,
 } from "./rules";
 import { earnKey, expiringSoon, expiryRowsDue, EXPIRY_WARNING_DAYS, pointsExpiryFor, type PointsRow } from "./ledger";
-import { xpReasonCode } from "./levels";
+import { xpLevel, xpReasonCode } from "./levels";
 import { badgeStats, badgesToAward, GLOBAL_BADGES, tagsNote } from "./badges";
 import { DEFAULT_SETTINGS, parseSettings, SETTINGS_ACTION, type RewardsSettings } from "./settings";
 
@@ -416,4 +416,21 @@ export async function deleteRewardsDataForStudent(orgId: string, studentId: stri
     db.pointsLedger.deleteMany({ where: { orgId, studentId } }),
     db.xpLedger.deleteMany({ where: { orgId, studentId } }),
   ]);
+}
+
+/** Points balance, XP and level per student, for screens that show a child's rewards at a glance. */
+export async function rewardTotalsFor(orgId: string, studentIds: string[]): Promise<Map<string, { points: number; xp: number; level: number }>> {
+  const out = new Map<string, { points: number; xp: number; level: number }>();
+  if (!FEATURES.rewards || studentIds.length === 0) return out;
+  const [pts, xp] = await Promise.all([
+    db.pointsLedger.groupBy({ by: ["studentId"], where: { orgId, studentId: { in: studentIds } }, _sum: { delta: true } }),
+    db.xpLedger.groupBy({ by: ["studentId"], where: { orgId, studentId: { in: studentIds } }, _sum: { delta: true } }),
+  ]);
+  const p = new Map(pts.map((r) => [r.studentId, r._sum.delta ?? 0]));
+  const x = new Map(xp.map((r) => [r.studentId, r._sum.delta ?? 0]));
+  for (const id of studentIds) {
+    const totalXp = Math.max(0, x.get(id) ?? 0);
+    out.set(id, { points: Math.max(0, p.get(id) ?? 0), xp: totalXp, level: xpLevel(totalXp).level });
+  }
+  return out;
 }

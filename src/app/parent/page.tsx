@@ -6,6 +6,8 @@ import { ParentClient } from '@/components/parent/ParentClient';
 import { istMonthString } from '@/lib/fees';
 
 import { requireAuth } from '@/lib/auth';
+import { FEATURES } from '@/lib/features';
+import { rewardTotalsFor } from '@/lib/rewards/server';
 import { coachesOfOrg } from '@/lib/membership';
 import {
   homeFeeStatus,
@@ -85,6 +87,17 @@ export default async function ParentPage() {
 
   if (!parent) {
     redirect('/');
+  }
+
+  // Rewards on: the child's points and level come from the rewards ledger (one points system), and
+  // there is no academy-wide ranking of children; Rewards has opt-in batch leaderboards instead.
+  if (FEATURES.rewards) {
+    const totals = await rewardTotalsFor(orgId, childrenRaw.map((c) => c.id)).catch(() => new Map());
+    for (const c of childrenRaw as Array<(typeof childrenRaw)[number] & { rewardLevel?: number }>) {
+      const t = totals.get(c.id);
+      c.points = t?.points ?? 0;
+      c.rewardLevel = t?.level ?? 1;
+    }
   }
 
   // Round 2 — queries that depend on round-1 results, again in parallel.
@@ -208,7 +221,7 @@ export default async function ParentPage() {
       children={JSON.parse(JSON.stringify(children))}
       products={JSON.parse(JSON.stringify(products))}
       // Other families' children are never named to a parent (rank and points only).
-      leaderboard={privateLeaderboard(leaderboard, childrenRaw.map((c) => c.id))}
+      leaderboard={FEATURES.rewards ? [] : privateLeaderboard(leaderboard, childrenRaw.map((c) => c.id))}
       homeCards={JSON.parse(JSON.stringify(homeCards))}
       today={week.today}
       chatMessages={JSON.parse(JSON.stringify(chatMessages))}

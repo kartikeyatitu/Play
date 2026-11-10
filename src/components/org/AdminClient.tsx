@@ -1,5 +1,4 @@
 "use client";
-import { OrgToolLinks } from "@/components/org/OrgToolLinks";
 import { AcademySwitcher } from "@/components/team/AcademySwitcher";
 import { ThemePicker } from "@/components/ui/theme-picker";
 import React from "react";
@@ -211,13 +210,18 @@ const moreGroups: NavGroup[] = [
       ...(FEATURES.businessReport ? [{ id: "report", label: "Business report", icon: NAV_ICONS.analytics }] : []),
       ...(FEATURES.enterprise ? [{ id: "enterprise", label: "Enterprise", icon: NAV_ICONS.building }] : []),
       ...(FEATURES.experimental ? [{ id: "ai", label: "AI Insights", icon: NAV_ICONS.trophy }] : []),
+      { id: "tool-body", label: "Fitness & training", icon: NAV_ICONS.gym, href: "/body" },
     ],
   },
   {
     label: "Grow",
     items: [
       ...(FEATURES.experimental ? [{ id: "marketing", label: "Marketing", icon: NAV_ICONS.send }] : []),
-      { id: "gallery", label: "Gallery", icon: NAV_ICONS.heart },
+      // One photo place: consented Photos replaces the old URL gallery tab (its rows are kept).
+      FEATURES.media
+        ? { id: "tool-media", label: "Photos", icon: NAV_ICONS.heart, href: "/org/media" }
+        : { id: "gallery", label: "Gallery", icon: NAV_ICONS.heart },
+      ...(FEATURES.rewards ? [{ id: "tool-rewards", label: "Rewards", icon: NAV_ICONS.star, href: "/org/rewards" }] : []),
       ...(FEATURES.marketplace ? [{ id: "store", label: "Kit Store", icon: NAV_ICONS.shop }] : []),
       ...(FEATURES.sponsorship || FEATURES.inclusive ? [{ id: "brand", label: "Brand Studio", icon: NAV_ICONS.star }] : []),
       ...(FEATURES.events ? [{ id: "events", label: "Events", icon: NAV_ICONS.ticket }] : []),
@@ -229,6 +233,10 @@ const moreGroups: NavGroup[] = [
     items: [
       { id: "operations", label: "Operations", icon: NAV_ICONS.building },
       ...(FEATURES.education ? [{ id: "institution", label: "Institution", icon: NAV_ICONS.students }] : []),
+      ...(FEATURES.waivers ? [{ id: "tool-waivers", label: "Waivers & families", icon: NAV_ICONS.people, href: "/org/waivers" }] : []),
+      ...(FEATURES.dataRequests ? [{ id: "tool-data", label: "Data requests", icon: NAV_ICONS.bell, href: "/org/data-requests" }] : []),
+      ...(FEATURES.triqBilling ? [{ id: "tool-billing", label: "TRIQ billing", icon: NAV_ICONS.wallet, href: "/org/billing" }] : []),
+      { id: "tool-notifications", label: "Notification settings", icon: NAV_ICONS.bell, href: "/settings/notifications" },
       { id: "settings", label: "Settings", icon: NAV_ICONS.settings },
     ],
   },
@@ -246,6 +254,7 @@ const HIDDEN_TABS = new Set<string>([
   ...(FEATURES.marketplace ? [] : ["store"]),
   ...(FEATURES.sponsorship || FEATURES.inclusive ? [] : ["brand"]),
   ...(FEATURES.enterprise ? [] : ["enterprise"]),
+  ...(FEATURES.media ? ["gallery"] : []),
 ]);
 
 /** Demo-data loader is a development tool: Settings only, never in production. */
@@ -349,7 +358,6 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {activeTab === "more" && (
             <>
               <MoreScreen groups={moreGroups} onNavigate={go} />
-              <OrgToolLinks />
             </>
           )}
 

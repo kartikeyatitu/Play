@@ -15,6 +15,8 @@ export interface NavItem {
   id: string;
   label: string;
   icon: ReactNode;
+  /** Tools on their own page: the item links there instead of switching tab. */
+  href?: string;
 }
 
 export interface NavGroup {
@@ -81,6 +83,17 @@ export function DashboardShell({ title, subtitle, navItems, defaultTab, children
 
   const NavButton = ({ item, small = false }: { item: NavItem; small?: boolean }) => {
     const isActive = activeTab === item.id;
+    if (item.href) {
+      return (
+        <a
+          href={item.href}
+          className={`w-full flex items-center gap-2.5 rounded-lg px-3 text-left transition-colors text-ink-muted hover:text-ink hover:bg-surface-2/60 ${small ? "min-h-[36px] text-[13px]" : "min-h-[40px] text-sm"}`}
+        >
+          <span className="shrink-0 text-ink-subtle">{item.icon}</span>
+          <span className="truncate">{item.label}</span>
+        </a>
+      );
+    }
     return (
       <button
         type="button"
