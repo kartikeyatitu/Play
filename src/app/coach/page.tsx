@@ -103,7 +103,7 @@ export default async function CoachDashboard({
           status: true,
           cancelReason: true,
           recap: true,
-          attendances: { select: { studentId: true, isPresent: true, status: true } },
+          attendances: { select: { studentId: true, isPresent: true, status: true, notes: true } },
         },
       }),
       db.event.findMany({
@@ -193,6 +193,7 @@ export default async function CoachDashboard({
             id: e.student.id,
             name: e.student.name,
             status: attendanceStatusOf(attByStudent.get(e.student.id)),
+            note: attByStudent.get(e.student.id)?.notes ?? null,
             medical: med.severity === "alert" ? med.summary : null,
             medicalNote: med.severity === "info" ? med.summary : null,
             injury: injuryByStudent.get(e.student.id) || null,

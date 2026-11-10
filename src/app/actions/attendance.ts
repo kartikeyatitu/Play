@@ -167,3 +167,29 @@ export async function markBatchAttendance(
   revalidatePath("/coach");
   return { success: true };
 }
+
+
+/**
+ * Today's note about one child (typed or spoken), saved on their attendance row so the parent sees it
+ * on the child's page and in the weekly story. Attendance has to be marked first.
+ */
+export async function saveSessionNote(batchId: string, studentId: string, noteInput: string): Promise<Result> {
+  const auth = await authoriseBatch(batchId);
+  if ("error" in auth) return { success: false, error: auth.error as string };
+  const note = String(noteInput ?? "").replace(/\s+\n/g, "\n").trim().slice(0, 500);
+
+  const session = await db.session.findUnique({
+    where: { batchId_date: { batchId, date: istToday() } },
+    select: { id: true, status: true },
+  });
+  if (!session) return { success: false, error: "Mark attendance first, then add a note." };
+  if (session.status === "CANCELLED") return { success: false, error: "This session was cancelled." };
+  const row = await db.attendance.findFirst({
+    where: { sessionId: session.id, studentId, student: { orgId: auth.orgId } },
+    select: { id: true },
+  });
+  if (!row) return { success: false, error: "Mark this child's attendance first, then add a note." };
+  await db.attendance.update({ where: { id: row.id }, data: { notes: note || null } });
+  revalidatePath("/coach");
+  return { success: true };
+}

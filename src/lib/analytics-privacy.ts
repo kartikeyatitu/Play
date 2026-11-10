@@ -4,7 +4,7 @@
  */
 export const PRIVATE_ANALYTICS_PREFIXES = [
   "/parent", "/parents", "/student", "/athlete", "/coach", "/org", "/staff", "/ops", "/live", "/r",
-  "/join", "/delete-account", "/onboarding", "/rewards", "/gallery", "/family", "/consent", "/mind", "/body", "/pros/dashboard",
+  "/join", "/delete-account", "/onboarding", "/rewards", "/gallery", "/family", "/consent", "/mind", "/body", "/pros/dashboard", "/story",
 ] as const;
 
 /** True when a pathname is, or is under, one of the private prefixes. */

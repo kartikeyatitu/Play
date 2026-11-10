@@ -1,6 +1,7 @@
 "use client";
 
-import { CalendarDays, CheckCircle2, FileText, Trophy, MessageSquareQuote, Receipt } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronRight, FileText, Trophy, MessageSquareQuote, Receipt, Sparkles } from "lucide-react";
+import { ReadAloudButton } from "@/components/voice/ReadAloudButton";
 import { CheckoutModal } from "@/components/parent/CheckoutModal";
 import type { HomeFeeStatus, NextSession } from "@/components/parent/home-summary";
 import { useFormatMoney } from "@/lib/org-locale-context";
@@ -14,6 +15,7 @@ export interface ChildTopCardData {
   fee: HomeFeeStatus;
   latestReceiptToken: string | null;
   note: { month: string; note: string | null; average: number } | null;
+  sessionNote?: { date: string; text: string } | null;
 }
 
 function dayLabel(ymd: string, today: string): string {
@@ -129,10 +131,18 @@ export function ChildTopCard({
       </div>
 
       <div className="border-t border-line px-4 py-3">
-        <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-ink-subtle">
-          <MessageSquareQuote className="h-3.5 w-3.5" aria-hidden /> Coach&apos;s latest note
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-ink-subtle">
+            <MessageSquareQuote className="h-3.5 w-3.5" aria-hidden /> Coach&apos;s latest note
+          </div>
+          {data.sessionNote && <ReadAloudButton text={data.sessionNote.text} className="min-h-8 px-2.5 text-xs" />}
         </div>
-        {data.note ? (
+        {data.sessionNote ? (
+          <p className="mt-1 text-sm text-ink">
+            {data.sessionNote.text}
+            <span className="mt-0.5 block text-xs text-ink-subtle">{dayLabel(data.sessionNote.date, today)}</span>
+          </p>
+        ) : data.note ? (
           <p className="mt-1 text-sm text-ink">
             {data.note.note ?? <span className="text-ink-muted">Progress report for {monthLabel(data.note.month)} is in.</span>}
             <span className="mt-0.5 block text-xs text-ink-subtle">
@@ -140,9 +150,19 @@ export function ChildTopCard({
             </span>
           </p>
         ) : (
-          <p className="mt-1 text-sm text-ink-muted">No progress report yet.</p>
+          <p className="mt-1 text-sm text-ink-muted">No notes from the coach yet.</p>
         )}
       </div>
+
+      <a
+        href={`/story/${encodeURIComponent(data.id)}`}
+        className="flex min-h-12 items-center justify-between gap-2 border-t border-line px-4 text-sm font-semibold text-ink hover:bg-surface-2"
+      >
+        <span className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 brand-text" aria-hidden /> {data.name.split(" ")[0]}&apos;s week
+        </span>
+        <ChevronRight className="h-4 w-4 text-ink-subtle" aria-hidden />
+      </a>
 
       <div className="grid grid-cols-2 border-t border-line">
         <a

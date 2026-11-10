@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { retryDueDeliveries } from "@/lib/messaging/send";
 // Registers the retry resolvers (each rebuilds its message from the source record).
 import "@/lib/fee-reminder-send";
+import "@/lib/story/send";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

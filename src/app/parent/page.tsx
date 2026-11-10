@@ -208,6 +208,11 @@ export default async function ParentPage() {
       fee: homeFeeStatus(child.dueFees, now, tz),
       latestReceiptToken: latestReceipts.find((r) => r?.studentId === child.id)?.token ?? null,
       note: latestProgressNote(child.skillReports),
+      // Newest note a coach wrote or spoke about this child after a session (Attendance.notes).
+      sessionNote: (() => {
+        const a = child.attendances.find((x) => x.notes?.trim());
+        return a ? { date: a.session.date.toISOString().slice(0, 10), text: a.notes!.trim() } : null;
+      })(),
     };
   });
 

@@ -21,6 +21,7 @@ import {
   ChevronRight,
   ClipboardCheck,
   PenLine,
+  NotebookPen,
 } from "lucide-react";
 import { AttendanceTile, AttendanceToggle } from "@/components/coach/AttendanceToggle";
 import { ShareRecapButton } from "@/components/coach/ShareRecapButton";
@@ -32,6 +33,7 @@ import {
   recordTrialOutcome,
 } from "@/app/actions/coach-session";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VoiceNoteButton } from "@/components/voice/VoiceNoteButton";
 import { statusIsPresent, shortMedicalLabel, firstName, type AttendanceStatus } from "@/lib/coach";
 import { absentMessage } from "@/lib/coach-today";
 
@@ -39,6 +41,8 @@ export interface TodayStudent {
   id: string;
   name: string;
   status: AttendanceStatus | null;
+  /** Today's note for the parents (Attendance.notes). */
+  note?: string | null;
   /** Real alert only (allergy / asthma / epilepsy / active condition). */
   medical: string | null;
   /** Info-level medical note, e.g. "Recovered fracture (cleared)". Never counted as "to watch". */
@@ -141,6 +145,7 @@ export function SessionAttendanceCard({
   const [rosterOpen, setRosterOpen] = useState(false);
   const [watchOpen, setWatchOpen] = useState(false);
   const [view, setView] = useState<"grid" | "list">("grid");
+  const noted = session.students.filter((s) => !!s.note?.trim()).length;
 
   const cancelled = session.status === "CANCELLED";
   const hero = isNextUp && !cancelled;
@@ -375,7 +380,10 @@ export function SessionAttendanceCard({
               )}
               {s.feeDue && <IndianRupee className="w-3 h-3 text-zinc-500 shrink-0" aria-label="Fee due" />}
             </div>
-            <AttendanceToggle batchId={session.batchId} studentId={s.id} initialStatus={s.status} />
+            <div className="flex shrink-0 items-center gap-1.5">
+              <VoiceNoteButton batchId={session.batchId} studentId={s.id} studentName={s.name} initialNote={s.note} canNote={!cancelled} />
+              <AttendanceToggle batchId={session.batchId} studentId={s.id} initialStatus={s.status} />
+            </div>
           </li>
         );
       })}
@@ -420,6 +428,18 @@ export function SessionAttendanceCard({
         {!session.recap && (
           <button type="button" onClick={() => setRecapOpen(true)} className={primaryBtn}>
             <MessageSquareText className="w-5 h-5" /> Add recap
+          </button>
+        )}
+        {!rosterOpen && (
+          <button
+            type="button"
+            onClick={() => {
+              setView("list");
+              setRosterOpen(true);
+            }}
+            className="w-full h-11 rounded-xl border border-zinc-800 text-sm font-semibold text-zinc-200 hover:bg-zinc-800/60 flex items-center justify-center gap-2"
+          >
+            <NotebookPen className="w-4 h-4" /> Notes for parents{noted > 0 ? ` (${noted})` : ""}
           </button>
         )}
         {rosterOpen && roster}
