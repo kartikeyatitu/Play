@@ -90,12 +90,12 @@ export async function recordAward(a: {
 }): Promise<AwardResult> {
   if (!FEATURES.rewards) return { ok: true, status: "DISABLED", xp: 0, points: 0, capped: false };
   const now = a.now ?? new Date();
-  const key = earnKey(a.trigger, a.sourceId, a.studentId);
-  const [px, pp] = await Promise.all([
-    db.xpLedger.findUnique({ where: { idempotencyKey: key }, select: { id: true } }),
-    db.pointsLedger.findUnique({ where: { idempotencyKey: key }, select: { id: true } }),
-  ]);
-  if (px || pp) return { ok: true, status: "DUPLICATE", xp: 0, points: 0, capped: false };
+  const baseKey = earnKey(a.trigger, a.sourceId, a.studentId);
+  // A source can be earned again only after it was fully reversed (e.g. attendance corrected
+  // present → absent → present). Each re-earn gets its own key, so the ledger stays append-only.
+  const standing = await netForKey(baseKey);
+  if (standing.rows > 0 && (standing.xp > 0 || standing.points > 0)) return { ok: true, status: "DUPLICATE", xp: 0, points: 0, capped: false };
+  const key = standing.rows > 0 ? `${baseKey}#a${standing.rows}` : baseKey;
 
   const { start, end } = monthWindow(now, await orgTimezone(a.orgId));
   const sourceType = TRIGGER_SOURCE_TYPE[a.trigger];
@@ -197,6 +197,68 @@ export async function awardForSource(input: {
     console.error("rewards: awardForSource failed", input.trigger, e instanceof Error ? e.message : e);
     return { ok: false, error: "Could not record the award" };
   }
+}
+
+// ── Reversals ───────────────────────────────────────────────────────────────
+
+/** Rows for one source award: the original key plus its re-earn (#a) and reversal (#r) rows. */
+function keyFilter(baseKey: string) {
+  return { OR: [{ idempotencyKey: baseKey }, { idempotencyKey: { startsWith: `${baseKey}#` } }] };
+}
+
+/** XP and points still standing for one source award (awards minus reversals), and how many rows exist. */
+export async function netForKey(baseKey: string): Promise<{ xp: number; points: number; rows: number }> {
+  const [x, p] = await Promise.all([
+    db.xpLedger.aggregate({ _sum: { delta: true }, _count: { _all: true }, where: keyFilter(baseKey) }),
+    db.pointsLedger.aggregate({ _sum: { delta: true }, _count: { _all: true }, where: keyFilter(baseKey) }),
+  ]);
+  return { xp: x._sum.delta ?? 0, points: p._sum.delta ?? 0, rows: x._count._all + p._count._all };
+}
+
+/**
+ * Undo an automatic award (attendance corrected to absent, a match reopened). Writes reversing rows;
+ * never deletes. Safe to call when nothing was awarded. Never throws: rewards must not break the
+ * action they hang off.
+ */
+export async function reverseAwardForSource(input: {
+  orgId: string;
+  studentId: string;
+  trigger: Exclude<EarnTrigger, "COACH_BONUS">;
+  sourceId: string;
+  createdById?: string | null;
+}): Promise<AwardResult> {
+  if (!FEATURES.rewards) return { ok: true, status: "DISABLED", xp: 0, points: 0, capped: false };
+  try {
+    const baseKey = earnKey(input.trigger, input.sourceId, input.studentId);
+    const net = await netForKey(baseKey);
+    if (net.xp <= 0 && net.points <= 0) return { ok: true, status: "NOTHING", xp: 0, points: 0, capped: false };
+    const key = `${baseKey}#r${net.rows}`;
+    // Never push a child's balance below zero: if the points were already spent, take back only what is left.
+    const bal = await db.pointsLedger.aggregate({ _sum: { delta: true }, where: { orgId: input.orgId, studentId: input.studentId } });
+    const pointsBack = Math.max(0, Math.min(net.points, bal._sum.delta ?? 0));
+    const sourceType = TRIGGER_SOURCE_TYPE[input.trigger];
+    const common = { orgId: input.orgId, studentId: input.studentId, sourceType, sourceRef: input.sourceId, reasonCode: "REVERSAL", note: null, createdById: input.createdById ?? null, idempotencyKey: key };
+    await db.$transaction([
+      ...(net.xp > 0 ? [db.xpLedger.create({ data: { ...common, delta: -net.xp } })] : []),
+      ...(pointsBack > 0 ? [db.pointsLedger.create({ data: { ...common, delta: -pointsBack, expiresAt: null } })] : []),
+    ]);
+    return { ok: true, status: "AWARDED", xp: -Math.max(0, net.xp), points: -pointsBack, capped: pointsBack < Math.max(0, net.points) };
+  } catch (e) {
+    if (isUniqueViolation(e)) return { ok: true, status: "DUPLICATE", xp: 0, points: 0, capped: false };
+    console.error("rewards: reverseAwardForSource failed", input.trigger, e instanceof Error ? e.message : e);
+    return { ok: false, error: "Could not reverse the award" };
+  }
+}
+
+/**
+ * Attendance hook: PRESENT or LATE earns the session award once; any other status (absent, excused,
+ * injured) reverses it if it had been earned. A missed session never costs anything beyond that.
+ */
+export async function syncAttendanceReward(input: { orgId: string; sessionId: string; studentId: string; present: boolean; sport?: string | null; createdById?: string | null }): Promise<void> {
+  if (!FEATURES.rewards) return;
+  const args = { orgId: input.orgId, studentId: input.studentId, trigger: "SESSION_ATTENDED" as const, sourceId: input.sessionId, createdById: input.createdById ?? null };
+  const r = input.present ? await awardForSource({ ...args, sport: input.sport ?? null }) : await reverseAwardForSource(args);
+  if (!r.ok) console.error("rewards: attendance sync failed", r.error);
 }
 
 // ── Badges ──────────────────────────────────────────────────────────────────

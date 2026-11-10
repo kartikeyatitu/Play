@@ -27,6 +27,8 @@ import type { GoalsConfig } from "@/lib/scoring/goals";
 import { isPersonalBest } from "@/lib/scoring/performance";
 import { canScoreAs, getLiveViewForViewer, loadLiveLog, viewForMatch } from "@/lib/live-match-data";
 import { isMissingTableError } from "@/lib/schema-pending";
+import { awardForSource } from "@/lib/rewards/server";
+import { matchRewardFor } from "@/lib/rewards/match";
 
 /**
  * Live scoring actions (docs/specs/live-scoring.md). Every write takes a per-match advisory lock and
@@ -343,6 +345,11 @@ export async function undoLiveEvent(input: { matchId: string; version: number })
 export async function finishLiveMatch(input: { matchId: string; abandon?: boolean }): Promise<Ok<{ view: LiveView }> | Fail> {
   try {
     const { session } = await scorer();
+    // Rewards are worked out inside the transaction but written after it commits, so a rewards
+    // problem can never stop a match from finishing.
+    const awards: { studentId: string; sport: string; stats: Record<string, unknown>; pbResultId: string | null }[] = [];
+    let orgId = "";
+    let matchId = "";
     const view = await db.$transaction(
       async (tx) => {
         await lock(tx, input.matchId);
@@ -362,6 +369,8 @@ export async function finishLiveMatch(input: { matchId: string; abandon?: boolea
             const side = p.side === "away" ? "away" : p.side === "field" ? "field" : "home";
             const stats = playerStatLine(def.family, state, events, cfg, p.displayName, side);
             if (!stats) continue;
+            const award = { studentId: p.studentId, sport: m.sport, stats: stats as Record<string, unknown>, pbResultId: null as string | null };
+            awards.push(award);
             await tx.athleteMatchStat.upsert({
               where: { matchId_studentId: { matchId: m.id, studentId: p.studentId } },
               create: { orgId: m.orgId, matchId: m.id, studentId: p.studentId, sport: m.sport, stats: stats as Prisma.InputJsonValue, playedAt },
@@ -372,6 +381,7 @@ export async function finishLiveMatch(input: { matchId: string; abandon?: boolea
               const r = state.ranked.find((x) => x.athlete === p.displayName);
               if (!r) continue;
               let pb = false;
+              let beatPrevious = false; // a first-ever result is a baseline, not a reward
               if (r.best != null) {
                 const prev = await tx.performanceResult.findFirst({
                   where: { studentId: p.studentId, sport: m.sport, eventName: pc.eventName, measure: pc.measure, status: "OK", value: { not: null } },
@@ -379,9 +389,11 @@ export async function finishLiveMatch(input: { matchId: string; abandon?: boolea
                   select: { value: true },
                 });
                 pb = isPersonalBest(r.best, prev?.value ?? null, pc.measure);
+                beatPrevious = pb && prev?.value != null;
               }
               await tx.performanceResult.deleteMany({ where: { matchId: m.id, studentId: p.studentId } });
-              await tx.performanceResult.create({
+              const created = await tx.performanceResult.create({
+                select: { id: true },
                 data: {
                   orgId: m.orgId,
                   matchId: m.id,
@@ -396,13 +408,23 @@ export async function finishLiveMatch(input: { matchId: string; abandon?: boolea
                   recordedAt: playedAt,
                 },
               });
+              if (beatPrevious) award.pbResultId = created.id;
             }
           }
         }
+        orgId = m.orgId;
+        matchId = m.id;
         return persistState(tx, m.id, { status: input.abandon ? "ABANDONED" : "COMPLETED", endedAt });
       },
       { timeout: 20000 },
     );
+    for (const a of awards) {
+      const r = matchRewardFor(a.stats, a.sport);
+      const base = { orgId, studentId: a.studentId, sourceId: matchId, sport: a.sport, createdById: String(session.id) };
+      await awardForSource({ ...base, trigger: "MATCH_PLAYED", tags: r.tags });
+      if (r.won) await awardForSource({ ...base, trigger: "MATCH_WON" });
+      if (a.pbResultId) await awardForSource({ ...base, trigger: "PERSONAL_BEST", sourceId: a.pbResultId });
+    }
     revalidatePath("/coach");
     return { success: true, view };
   } catch (e) {

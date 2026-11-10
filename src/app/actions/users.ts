@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { deleteRewardsDataForStudent } from "@/lib/rewards/server";
 import { revalidatePath } from "next/cache";
 import { coachesOfOrg, requirePermission } from "@/lib/membership";
 import { FEATURES } from "@/lib/features";
@@ -209,6 +210,9 @@ export async function deleteStudent(studentId: string) {
     where: { id: studentId, orgId: session.orgId },
   });
   if (!student) throw new Error("Student not found");
+
+  // Rewards rows have no foreign key to Student, so remove them explicitly.
+  await deleteRewardsDataForStudent(session.orgId, studentId);
 
   await db.$transaction(async (tx) => {
     // Delete cascading references safely

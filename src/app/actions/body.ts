@@ -12,6 +12,7 @@ import { FEATURES } from "@/lib/features";
 import { getBodyViewer, studentAccess, isTeam, canPlan, canUsePlan, plannableBatches, canManageAllPlans } from "@/lib/body/access";
 import { getFitnessTest, parseFitnessValue, wouldBePersonalBest } from "@/lib/body/tests";
 import { DRILL_AGE_GROUPS, DRILL_FOCUS, sportKey } from "@/lib/body/drills";
+import { awardForSource, reverseAwardForSource } from "@/lib/rewards/server";
 import { addDays, buildPlanNotes, clampText, cleanPlanItems, parseDay, pickLastWeekPlan } from "@/lib/body/plans";
 
 const NOT_ENABLED = "Not enabled yet for your academy.";
@@ -70,6 +71,10 @@ export async function recordFitnessResult(formData: FormData) {
     select: { id: true },
   });
   await audit(v.userId, v.orgId, "BODY_FITNESS_RECORD", { resultId: row.id, studentId, testKey: test.key });
+  // A first-ever result is a baseline; beating an earlier one earns the personal-best reward.
+  if (pb && previous.length > 0) {
+    await awardForSource({ orgId: v.orgId, studentId, trigger: "PERSONAL_BEST", sourceId: row.id, createdById: v.userId });
+  }
   revalidatePath(path);
   back(path, { saved: "1", ...(pb ? { pb: test.key } : {}) });
 }
@@ -88,6 +93,8 @@ export async function deleteFitnessResult(formData: FormData) {
   // Coaches may remove only what they recorded; managers with students.manage may remove any.
   if (v.membership?.role === "COACH" && row.recordedById !== v.userId) back(path, { error: "You can only remove results you recorded." });
   await db.fitnessResult.delete({ where: { id: row.id } });
+  // A result entered by mistake shouldn't keep its reward.
+  await reverseAwardForSource({ orgId: v.orgId, studentId, trigger: "PERSONAL_BEST", sourceId: row.id, createdById: v.userId });
   await audit(v.userId, v.orgId, "BODY_FITNESS_DELETE", { resultId: row.id, studentId });
   revalidatePath(path);
   back(path, { saved: "1" });

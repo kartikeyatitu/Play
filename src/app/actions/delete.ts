@@ -125,6 +125,18 @@ export async function deleteAllData() {
     ["programTeam",                 () => ifTableExists(() => db.programTeam.deleteMany({ where: { orgId: oId } }))],
     ["sportsProgram",               () => ifTableExists(() => db.sportsProgram.deleteMany({ where: { orgId: oId } }))],
     ["institutionProfile",          () => ifTableExists(() => db.institutionProfile.deleteMany({ where: { orgId: oId } }))],
+    // Rewards (wave 2): ledgers, badges earned, redemptions and opt-ins go with the students.
+    ...(FEATURES.rewards
+      ? ([
+          ["studentBadge",     () => ifTableExists(() => db.studentBadge.deleteMany({ where: { orgId: oId } }))],
+          ["leaderboardOptIn", () => ifTableExists(() => db.leaderboardOptIn.deleteMany({ where: { orgId: oId } }))],
+          ["redemption",       () => ifTableExists(() => db.redemption.deleteMany({ where: { orgId: oId } }))],
+          ["pointsLedger",     () => ifTableExists(() => db.pointsLedger.deleteMany({ where: { orgId: oId } }))],
+          ["xpLedger",         () => ifTableExists(() => db.xpLedger.deleteMany({ where: { orgId: oId } }))],
+          ["rewardItem",       () => ifTableExists(() => db.rewardItem.deleteMany({ where: { orgId: oId } }))],
+          ["badgeDefinition",  () => ifTableExists(() => db.badgeDefinition.deleteMany({ where: { orgId: oId } }))],
+        ] as Array<[string, () => Promise<{ count: number }>]>)
+      : []),
     ["student",         () => db.student.deleteMany({ where: { orgId: oId } })],
     // Flag-gated tables: only touched when their feature is on (the tables may not exist in production yet).
     ...(FEATURES.branches

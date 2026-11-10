@@ -6,6 +6,18 @@ import { requireMember } from "@/lib/membership";
 import { canMarkBatchAttendance } from "@/lib/team";
 import { istToday } from "@/lib/fees";
 import { ATTENDANCE_STATUSES, statusIsPresent, type AttendanceStatus } from "@/lib/coach";
+import { syncAttendanceReward } from "@/lib/rewards/server";
+
+/** Rewards hang off attendance but must never break it. */
+async function syncRewards(orgId: string, sessionId: string, studentIds: string[], present: boolean, by: string) {
+  for (const studentId of studentIds) {
+    try {
+      await syncAttendanceReward({ orgId, sessionId, studentId, present, createdById: by });
+    } catch (e) {
+      console.error("attendance: rewards sync failed", e instanceof Error ? e.message : e);
+    }
+  }
+}
 
 type Result = { success: true } | { success: false; error: string };
 
@@ -38,7 +50,7 @@ async function authoriseBatch(batchId: string) {
         : "You don't have permission to mark attendance.",
     } as const;
   }
-  return { batch, orgId: authSession.orgId } as const;
+  return { batch, orgId: authSession.orgId, userId: authSession.id } as const;
 }
 
 /** Today's session for a batch — race-safe thanks to @@unique([batchId, date]). */
@@ -110,6 +122,7 @@ export async function markAttendance(
     update: { isPresent, status },
     create: { sessionId: dbSession.id, studentId, isPresent, status },
   });
+  await syncRewards(auth.orgId, dbSession.id, [studentId], isPresent, auth.userId);
 
   revalidatePath("/coach");
   return { success: true };
@@ -149,6 +162,7 @@ export async function markBatchAttendance(
       })
     )
   );
+  await syncRewards(auth.orgId, dbSession.id, ids, isPresent, auth.userId);
 
   revalidatePath("/coach");
   return { success: true };

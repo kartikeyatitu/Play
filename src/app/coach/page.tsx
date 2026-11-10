@@ -24,6 +24,8 @@ import { loadAtRiskStudents } from "@/lib/risk-data";
 import { FEATURES } from "@/lib/features";
 import { listLiveMatches } from "@/lib/live-match-data";
 import { LiveMatchesPanel } from "@/components/live/LiveMatchesPanel";
+import { CoachAwardSheet } from "@/components/rewards/CoachAwardSheet";
+import { RedemptionsList } from "@/components/rewards/RedemptionsList";
 import { withMedicalView } from "@/lib/athlete/medical-visibility";
 
 const TAB_IDS: CoachTab[] = ["today", "squad", "plan", "inbox", "me"];
@@ -437,6 +439,18 @@ export default async function CoachDashboard({
         </div>
       )}
       <CoachBatchRoster batches={squadBatches as unknown as import("@/components/coach/CoachBatchRoster").BatchRecord[]} coachId={coach.id} currentMonth={currentMonth} />
+      {FEATURES.rewards && (
+        <section id="rewards" className="scroll-mt-20 space-y-3" aria-labelledby="coach-rewards-title">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 id="coach-rewards-title" className="text-lg font-bold tracking-tight text-ink">Rewards</h2>
+              <p className="text-xs text-ink-muted">Attendance, matches, personal bests and better assessments earn points on their own. Add a bonus for effort you saw.</p>
+            </div>
+            <CoachAwardSheet />
+          </div>
+          <RedemptionsList />
+        </section>
+      )}
     </div>
   );
 
