@@ -1,0 +1,94 @@
+/* TRIQ landing page ("floodlit ground"). Scoped to .tq so app styles are untouched. */
+/* Fonts are bundled (@fontsource-variable, imported by landing-page.tsx): no request to Google at build or view time. */
+.tq {
+  --tq-display: "Big Shoulders Display Variable";
+  --tq-body: "Hanken Grotesk Variable";
+  --tq-deva: "Noto Sans Devanagari Variable";
+  --tq-chalk: #f5f7f3;
+  --tq-paper: #ffffff;
+  --tq-turf: #0d5c3d;
+  --tq-turf-2: #0a4a31;
+  --tq-pitch: #0b241a;
+  --tq-pitch-2: #12352a;
+  --tq-amber: #ffb81c;
+  --tq-ink: #13261e;
+  --tq-muted: #4a5d54;
+  --tq-line: #d9e1da;
+  background: var(--tq-chalk);
+  color: var(--tq-ink);
+  font-family: var(--tq-body), var(--tq-deva), system-ui, sans-serif;
+}
+.tq :lang(hi) { font-family: var(--tq-deva), var(--tq-body), sans-serif; }
+.tq .tq-display { font-family: var(--tq-display), var(--tq-deva), sans-serif; letter-spacing: -0.005em; }
+.tq :lang(hi) .tq-display, .tq .tq-display:lang(hi) { font-family: var(--tq-deva), sans-serif; letter-spacing: 0; }
+.tq .tq-num { font-family: var(--tq-display), sans-serif; font-variant-numeric: tabular-nums; }
+
+.tq .tq-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 48px; padding: 0 1.4rem; border-radius: 999px;
+  font-weight: 600; font-size: .95rem; transition: background-color .15s ease, color .15s ease;
+}
+.tq .tq-btn-primary { background: var(--tq-turf); color: #fff; }
+.tq .tq-btn-primary:hover { background: var(--tq-turf-2); }
+.tq .tq-btn-ghost { border: 1.5px solid var(--tq-ink); color: var(--tq-ink); }
+.tq .tq-btn-ghost:hover { background: var(--tq-ink); color: var(--tq-chalk); }
+.tq .tq-btn-light { background: var(--tq-amber); color: var(--tq-pitch); }
+.tq .tq-btn-light:hover { background: #ffc94d; }
+.tq a:focus-visible, .tq button:focus-visible, .tq summary:focus-visible, .tq input:focus-visible, .tq select:focus-visible {
+  outline: 3px solid var(--tq-amber); outline-offset: 3px;
+}
+
+/* Scoreboard: night panel, bulb-amber numerals, one count-up on load. */
+.tq .tq-board {
+  background: var(--tq-pitch);
+  color: #e8efe9;
+  border-radius: 18px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 30px 60px -30px rgba(11,36,26,.55);
+  background-image:
+    radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 6px 6px;
+}
+.tq .tq-board-row { border-top: 1px solid rgba(255,255,255,.08); }
+.tq .tq-amber { color: var(--tq-amber); text-shadow: 0 0 18px rgba(255,184,28,.35); }
+
+/* The session timeline: a painted line like a pitch marking. */
+.tq .tq-rail { background: repeating-linear-gradient(to right, var(--tq-turf) 0 14px, transparent 14px 22px); height: 3px; }
+@media (max-width: 767px) {
+  .tq .tq-rail-v { background: repeating-linear-gradient(to bottom, var(--tq-turf) 0 14px, transparent 14px 22px); width: 3px; }
+}
+
+/* Shared marketing blocks (pricing, demo) wear the landing look when inside .tq. */
+.tq { --brand: var(--tq-turf); }
+.tq .mk-heading { text-align: left; margin-left: 0; }
+.tq .mk-eyebrow { display: none; }
+.tq .mk-h2 {
+  font-family: var(--tq-display), sans-serif; font-weight: 800; text-transform: uppercase;
+  font-size: clamp(3rem, 6vw, 3.75rem); line-height: .92; letter-spacing: -0.005em; color: var(--tq-ink);
+}
+.tq [class*="--brand"] { box-shadow: none; }
+.tq .text-volt-fg { color: #fff; }
+.tq .text-volt { color: var(--tq-turf); }
+
+.tq details > summary { list-style: none; cursor: pointer; }
+/* Shared marketing blocks (pricing, demo) wear the landing look when inside .tq. */
+.tq { --brand: var(--tq-turf); }
+.tq .mk-heading { text-align: left; margin-left: 0; }
+.tq .mk-eyebrow { display: none; }
+.tq .mk-h2 {
+  font-family: var(--tq-display), sans-serif; font-weight: 800; text-transform: uppercase;
+  font-size: clamp(3rem, 6vw, 3.75rem); line-height: .92; letter-spacing: -0.005em; color: var(--tq-ink);
+}
+.tq [class*="--brand"] { box-shadow: none; }
+.tq .text-volt-fg { color: #fff; }
+.tq .text-volt { color: var(--tq-turf); }
+
+.tq details > summary::-webkit-details-marker { display: none; }
+.tq details[open] .tq-plus { transform: rotate(45deg); }
+.tq .tq-plus { transition: transform .15s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tq * { transition: none !important; animation: none !important; }
+}
+
+/* Devanagari needs room above and below the line; the condensed Latin scale is too large for it. */
+.tq h1:lang(hi) { font-size: clamp(2.5rem, 4.6vw, 4.4rem); line-height: 1.18; text-transform: none; }

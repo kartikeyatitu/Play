@@ -160,9 +160,9 @@ export function SectionHeading({
   align?: "center" | "left";
 }) {
   return (
-    <div className={cn("mb-12 max-w-2xl", align === "center" ? "mx-auto text-center" : "")}>
-      {eyebrow && <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-volt">{eyebrow}</p>}
-      <h2 className="text-balance text-3xl font-bold tracking-tight text-ink sm:text-4xl">{title}</h2>
+    <div className={cn("mk-heading mb-12 max-w-2xl", align === "center" ? "mx-auto text-center" : "")}>
+      {eyebrow && <p className="mk-eyebrow mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-volt">{eyebrow}</p>}
+      <h2 className="mk-h2 text-balance text-3xl font-bold tracking-tight text-ink sm:text-4xl">{title}</h2>
       {description && <p className="mt-4 text-pretty text-base text-ink-muted sm:text-lg">{description}</p>}
     </div>
   );
