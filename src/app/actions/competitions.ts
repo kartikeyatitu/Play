@@ -3,22 +3,14 @@
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { FEATURES } from "@/lib/features";
-import { requireAuth } from "@/lib/auth";
-import { checkPermission, getMembership, hasPermission } from "@/lib/membership";
+import { checkPermission } from "@/lib/membership";
 import {
-  canCorrectKnockoutResult,
   canTransition,
   checkEligibility,
-  generateFixtures as buildFixtures,
   allFixturesDecided,
-  isFixtureStatus,
-  nextFixturePosition,
-  parseFixtureTime,
   registrationOpen,
   validateCompetitionConfig,
-  validateResult,
 } from "@/lib/competition";
-import { KO_BASE, isKnockoutPhaseRound } from "@/lib/competition/phase";
 import { buildCompetitionDetail, type CompetitionDetail, type CompetitionSummary } from "@/lib/competition-view";
 
 /**
@@ -294,171 +286,4 @@ export async function withdrawEntry(entryId: string): Promise<{ success: true } 
   }
 }
 
-// ───────────────────────────── fixtures ─────────────────────────────
-
-export async function generateFixtures(competitionId: string): Promise<{ success: true; created: number } | Fail> {
-  const auth = await manager();
-  if (!auth.ok) return { success: false, error: auth.error };
-  const { session } = auth;
-  const orgId = session.orgId;
-  try {
-    const created = await db.$transaction(async (tx) => {
-      await lockCompetition(tx, String(competitionId));
-      const c = await tx.competition.findFirst({ where: { id: String(competitionId), orgId } });
-      if (!c) throw new ActionError("Competition not found.");
-      const t = canTransition(c.status, "SCHEDULED", { hasFixtures: false, allDecided: false, viaGeneration: true });
-      if (!t.ok) throw new ActionError(c.status === "DRAFT" ? "Open registration first, then generate fixtures." : t.error);
-      if (await tx.fixture.count({ where: { competitionId: c.id } })) throw new ActionError("Fixtures already exist.");
-      const entries = await tx.competitionEntry.findMany({ where: { competitionId: c.id, status: "REGISTERED" }, select: { id: true, seed: true, createdAt: true } });
-      if (entries.length < 2) throw new ActionError("At least 2 entries are needed.");
-
-      const fixtures = buildFixtures(c.format === "KNOCKOUT" ? "KNOCKOUT" : "LEAGUE", entries, { legs: c.legs === 2 ? 2 : 1 });
-      await tx.fixture.createMany({
-        data: fixtures.map((f) => ({ ...f, orgId, competitionId: c.id, venue: c.venue })),
-      });
-      await tx.competition.update({ where: { id: c.id }, data: { status: "SCHEDULED" } });
-      await tx.auditLog.create({
-        data: { userId: session.id, orgId, action: "COMPETITION_FIXTURES_GENERATED", details: JSON.stringify({ competitionId: c.id, entries: entries.length, fixtures: fixtures.length }) },
-      });
-      return fixtures.length;
-    });
-    return { success: true, created };
-  } catch (e) {
-    return fail(e, "Couldn't generate fixtures.");
-  }
-}
-
-export async function scheduleFixture(
-  fixtureId: string,
-  input: { scheduledAt?: string | null; venue?: string | null; officialUserId?: string | null; status?: string; expectedVersion: number }
-): Promise<{ success: true } | Fail> {
-  const auth = await manager();
-  if (!auth.ok) return { success: false, error: auth.error };
-  const { session } = auth;
-  const orgId = session.orgId;
-  const when = parseFixtureTime(input?.scheduledAt);
-  if (when === "bad") return { success: false, error: "Pick a valid date and time." };
-  const venue = String(input?.venue ?? "").trim().slice(0, 120) || null;
-  const officialUserId = String(input?.officialUserId ?? "").trim() || null;
-  const status = input?.status ? String(input.status) : null;
-  if (status && (!isFixtureStatus(status) || !["SCHEDULED", "POSTPONED", "CANCELLED"].includes(status))) return { success: false, error: "Unknown fixture status." };
-
-  try {
-    const f0 = await db.fixture.findFirst({ where: { id: String(fixtureId), orgId }, select: { competitionId: true } });
-    if (!f0) return { success: false, error: "Fixture not found." };
-    await db.$transaction(async (tx) => {
-      await lockCompetition(tx, f0.competitionId);
-      const f = await tx.fixture.findFirst({ where: { id: String(fixtureId), orgId }, include: { competition: { select: { status: true, format: true } } } });
-      if (!f) throw new ActionError("Fixture not found.");
-      if (f.competition.status !== "SCHEDULED") throw new ActionError("This competition isn't running.");
-      if (status && (f.status === "COMPLETED" || f.status === "BYE")) throw new ActionError("A decided fixture can't change status.");
-      if (status === "CANCELLED" && f.competition.format === "KNOCKOUT") throw new ActionError("Knockout fixtures can't be cancelled — postpone it instead.");
-      if (status === "CANCELLED" && isKnockoutPhaseRound(f.round)) throw new ActionError("Knockout fixtures can't be cancelled — postpone it instead.");
-      if (officialUserId) {
-        const m = await tx.orgMembership.findFirst({ where: { userId: officialUserId, orgId, status: "ACTIVE" }, select: { id: true } });
-        if (!m) throw new ActionError("The official must be an active member of your academy.");
-      }
-      const res = await tx.fixture.updateMany({
-        where: { id: f.id, orgId, version: Number(input?.expectedVersion) },
-        data: { scheduledAt: when, venue, officialUserId, ...(status ? { status } : {}), version: { increment: 1 } },
-      });
-      if (res.count === 0) throw new ActionError(STALE);
-      await tx.auditLog.create({
-        data: { userId: session.id, orgId, action: "FIXTURE_SCHEDULED", details: JSON.stringify({ fixtureId: f.id, scheduledAt: when, venue, officialUserId, status: status ?? f.status }) },
-      });
-    });
-    return { success: true };
-  } catch (e) {
-    return fail(e, "Couldn't update the fixture.");
-  }
-}
-
-/**
- * Records or corrects a result. Allowed for holders of competitions.manage, or the official assigned
- * to the fixture. Knockout winners advance into the next round in the same transaction.
- */
-export async function recordFixtureResult(
-  fixtureId: string,
-  input: { homeScore: unknown; awayScore: unknown; winnerEntryId?: string | null; expectedVersion: number }
-): Promise<{ success: true } | Fail> {
-  if (!FEATURES.events) return OFF;
-  const session = await requireAuth(["ADMIN", "COACH", "STAFF"]);
-  if (!session.orgId) return { success: false, error: "No academy found" };
-  const orgId = session.orgId;
-  const membership = await getMembership(session.id, orgId);
-  if (!membership) return { success: false, error: "You are not an active member of this academy" };
-  const canManage = hasPermission(membership, "competitions.manage");
-
-  try {
-    const f0 = await db.fixture.findFirst({ where: { id: String(fixtureId), orgId }, select: { competitionId: true, officialUserId: true } });
-    if (!f0) return { success: false, error: "Fixture not found." };
-    if (!canManage && f0.officialUserId !== session.id) return { success: false, error: "Only the organiser or this match's official can record the result." };
-
-    await db.$transaction(async (tx) => {
-      await lockCompetition(tx, f0.competitionId);
-      const f = await tx.fixture.findFirst({ where: { id: String(fixtureId), orgId }, include: { competition: true } });
-      if (!f) throw new ActionError("Fixture not found.");
-      const c = f.competition;
-      if (c.status !== "SCHEDULED") throw new ActionError("Results can only be recorded while the competition is running.");
-      // Group-stage draws (src/lib/competition/phase.ts) are scored on the Fixtures page, which knows the phases.
-      if (await tx.fixture.count({ where: { competitionId: c.id, round: { gte: KO_BASE } } })) {
-        throw new ActionError("This competition has a group stage. Record its results on the Fixtures page.");
-      }
-      if (f.version !== Number(input?.expectedVersion)) throw new ActionError(STALE);
-      if (f.status === "POSTPONED") throw new ActionError("Reschedule this fixture before recording a result.");
-
-      const v = validateResult(
-        { homeScore: input?.homeScore, awayScore: input?.awayScore, winnerEntryId: input?.winnerEntryId },
-        { format: c.format === "KNOCKOUT" ? "KNOCKOUT" : "LEAGUE", allowDraws: c.allowDraws, status: f.status, homeEntryId: f.homeEntryId, awayEntryId: f.awayEntryId }
-      );
-      if (!v.ok) throw new ActionError(v.error);
-      const correcting = f.status === "COMPLETED";
-
-      // Knockout: the winner moves on. A correction is blocked once the next fixture has been played.
-      if (c.format === "KNOCKOUT") {
-        const totalRounds = (await tx.fixture.aggregate({ where: { competitionId: c.id }, _max: { round: true } }))._max.round ?? f.round;
-        const next = nextFixturePosition(f.round, f.slot, totalRounds);
-        if (next) {
-          const nf = await tx.fixture.findFirst({ where: { competitionId: c.id, round: next.round, slot: next.slot } });
-          if (!nf) throw new ActionError("Bracket is incomplete. Contact support.");
-          if (!canCorrectKnockoutResult(nf.status)) throw new ActionError("The next round has already been played with this winner, so this result can't change.");
-          const field = next.side === "home" ? "homeEntryId" : "awayEntryId";
-          if (nf[field] !== v.winnerEntryId) {
-            await tx.fixture.update({ where: { id: nf.id }, data: { [field]: v.winnerEntryId, version: { increment: 1 } } });
-          }
-        }
-      }
-
-      const res = await tx.fixture.updateMany({
-        where: { id: f.id, orgId, version: f.version },
-        data: {
-          homeScore: v.homeScore,
-          awayScore: v.awayScore,
-          winnerEntryId: v.winnerEntryId,
-          status: "COMPLETED",
-          resultById: session.id,
-          resultAt: new Date(),
-          version: { increment: 1 },
-        },
-      });
-      if (res.count === 0) throw new ActionError(STALE);
-      await tx.auditLog.create({
-        data: {
-          userId: session.id,
-          orgId,
-          action: correcting ? "FIXTURE_RESULT_CORRECTED" : "FIXTURE_RESULT_RECORDED",
-          details: JSON.stringify({
-            fixtureId: f.id,
-            competitionId: c.id,
-            before: correcting ? { home: f.homeScore, away: f.awayScore, winner: f.winnerEntryId } : null,
-            after: { home: v.homeScore, away: v.awayScore, winner: v.winnerEntryId },
-            asOfficial: !canManage,
-          }),
-        },
-      });
-    });
-    return { success: true };
-  } catch (e) {
-    return fail(e, "Couldn't save the result.");
-  }
-}
+// Draws, scheduling and results live in src/app/actions/fixtures.ts (one place for fixtures).

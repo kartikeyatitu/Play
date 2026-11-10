@@ -6,18 +6,14 @@ import { toast } from "sonner";
 import { ChevronLeft, Loader2, Plus, Trophy } from "lucide-react";
 import {
   createCompetition,
-  generateFixtures,
   getCompetition,
   listCompetitions,
-  recordFixtureResult,
   registerEntry,
-  scheduleFixture,
   searchCompetitionStudents,
   setCompetitionStatus,
   withdrawEntry,
 } from "@/app/actions/competitions";
-import { FEATURES } from "@/lib/features";
-import type { CompetitionDetail, CompetitionSummary, FixtureView } from "@/lib/competition-view";
+import type { CompetitionDetail, CompetitionSummary } from "@/lib/competition-view";
 
 /**
  * TRIQ Play organiser screen (flag `events`). Replaces the old in-memory TournamentBracket: everything
@@ -304,7 +300,6 @@ function CompetitionView({ id, batches, onBack }: { id: string; batches: Batch[]
   const regOpen = c.status === "DRAFT" || c.status === "OPEN";
   const registered = c.entries.filter((e) => e.status === "REGISTERED");
   const names = new Map(c.entries.map((e) => [e.id, e.name]));
-  const rounds = [...new Set(c.fixtures.map((f) => f.round))].sort((a, b) => a - b);
 
   return (
     <div className="space-y-4">
@@ -328,17 +323,14 @@ function CompetitionView({ id, batches, onBack }: { id: string; batches: Batch[]
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-3">
-          {FEATURES.fixtures && ["OPEN", "SCHEDULED", "COMPLETED"].includes(c.status) && (
-            <Link href={`/org/fixtures?c=${encodeURIComponent(c.id)}`} className={ghost}>
-              Draws, schedule &amp; standings
+          {["OPEN", "SCHEDULED", "COMPLETED"].includes(c.status) && (
+            <Link href={`/org/fixtures?c=${encodeURIComponent(c.id)}`} className={c.status === "OPEN" ? primary : ghost}>
+              {c.status === "OPEN" ? "Make the draw" : "Fixtures, results & standings"}
             </Link>
           )}
           {c.status === "DRAFT" && <button className={primary} disabled={busy} onClick={() => run(() => setCompetitionStatus(c.id, "OPEN"), "Registration opened")}>Open registration</button>}
           {c.status === "OPEN" && (
             <>
-              <button className={primary} disabled={busy || registered.length < 2} onClick={() => run(() => generateFixtures(c.id), "Fixtures generated")}>
-                Generate fixtures
-              </button>
               <button className={ghost} disabled={busy} onClick={() => run(() => setCompetitionStatus(c.id, "DRAFT"), "Back to draft")}>Back to draft</button>
             </>
           )}
@@ -388,70 +380,8 @@ function CompetitionView({ id, batches, onBack }: { id: string; batches: Batch[]
         )}
       </div>
 
-      {c.format === "LEAGUE" && c.fixtures.length > 0 && (
-        <div className={card}>
-          <h4 className="text-sm font-semibold text-white mb-2">Standings</h4>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs text-zinc-400">
-                <tr className="text-left">
-                  <th className="py-1 pr-2">#</th>
-                  <th className="py-1 pr-2">Entry</th>
-                  <th className="py-1 px-1 text-right">P</th>
-                  <th className="py-1 px-1 text-right">W</th>
-                  <th className="py-1 px-1 text-right">D</th>
-                  <th className="py-1 px-1 text-right">L</th>
-                  <th className="py-1 px-1 text-right">+/-</th>
-                  <th className="py-1 pl-1 text-right">Pts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {c.standings.map((r) => (
-                  <tr key={r.entryId} className="border-t border-zinc-800 text-zinc-100">
-                    <td className="py-1.5 pr-2 text-zinc-400">{r.position}</td>
-                    <td className="py-1.5 pr-2">{r.name}</td>
-                    <td className="py-1.5 px-1 text-right">{r.played}</td>
-                    <td className="py-1.5 px-1 text-right">{r.won}</td>
-                    <td className="py-1.5 px-1 text-right">{r.drawn}</td>
-                    <td className="py-1.5 px-1 text-right">{r.lost}</td>
-                    <td className="py-1.5 px-1 text-right">{r.diff > 0 ? `+${r.diff}` : r.diff}</td>
-                    <td className="py-1.5 pl-1 text-right font-semibold">{r.points}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-[11px] text-zinc-500 mt-2">Ties: points, head-to-head, score difference, scores for, wins, name.</p>
-        </div>
-      )}
-
-      {rounds.length > 0 && (
-        <div className={card}>
-          <h4 className="text-sm font-semibold text-white mb-2">Fixtures</h4>
-          <div className="space-y-4">
-            {rounds.map((r) => (
-              <div key={r}>
-                <p className="text-xs uppercase tracking-wide text-zinc-500 mb-1">{roundName(c, r)}</p>
-                <ul className="space-y-2">
-                  {c.fixtures
-                    .filter((f) => f.round === r)
-                    .map((f) => (
-                      <FixtureRow key={`${f.id}:${f.version}`} c={c} f={f} onDone={load} />
-                    ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
-}
-
-function roundName(c: CompetitionDetail, r: number) {
-  if (c.format !== "KNOCKOUT") return `Round ${r}`;
-  const left = c.totalRounds - r;
-  return left === 0 ? "Final" : left === 1 ? "Semi-finals" : left === 2 ? "Quarter-finals" : `Round ${r}`;
 }
 
 function AddEntry({ c, batches, onDone }: { c: CompetitionDetail; batches: Batch[]; onDone: () => Promise<void> }) {
@@ -528,122 +458,3 @@ function AddEntry({ c, batches, onDone }: { c: CompetitionDetail; batches: Batch
   );
 }
 
-function FixtureRow({ c, f, onDone }: { c: CompetitionDetail; f: FixtureView; onDone: () => Promise<void> }) {
-  const [home, setHome] = useState(f.homeScore?.toString() ?? "");
-  const [away, setAway] = useState(f.awayScore?.toString() ?? "");
-  const [winner, setWinner] = useState(f.winnerEntryId ?? "");
-  const [editing, setEditing] = useState(false);
-  const [when, setWhen] = useState(toIstInput(f.scheduledAt));
-  const [venue, setVenue] = useState(f.venue ?? "");
-  const [official, setOfficial] = useState(f.officialUserId ?? "");
-  const [status, setStatus] = useState(f.status === "POSTPONED" || f.status === "CANCELLED" ? f.status : "SCHEDULED");
-  const [busy, setBusy] = useState(false);
-
-  const running = c.status === "SCHEDULED";
-  const ready = !!f.homeEntryId && !!f.awayEntryId && f.status !== "BYE" && f.status !== "CANCELLED";
-  const tie = c.format === "KNOCKOUT" && home !== "" && home === away;
-
-  const saveResult = async () => {
-    setBusy(true);
-    const r = await recordFixtureResult(f.id, { homeScore: home, awayScore: away, winnerEntryId: tie ? winner : null, expectedVersion: f.version });
-    setBusy(false);
-    if (r.success) toast.success("Result saved");
-    else toast.error(r.error);
-    await onDone();
-  };
-  const saveSchedule = async () => {
-    setBusy(true);
-    const r = await scheduleFixture(f.id, {
-      scheduledAt: when || null,
-      venue,
-      officialUserId: official || null,
-      status: f.status === "COMPLETED" ? undefined : status,
-      expectedVersion: f.version,
-    });
-    setBusy(false);
-    if (r.success) {
-      toast.success("Fixture updated");
-      setEditing(false);
-    } else toast.error(r.error);
-    await onDone();
-  };
-
-  if (f.status === "BYE") {
-    return <li className="text-xs text-zinc-500 px-2">{f.homeName ?? f.awayName} — bye</li>;
-  }
-  const officialName = c.officials.find((o) => o.userId === f.officialUserId)?.name;
-
-  return (
-    <li className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className={`flex-1 min-w-[90px] text-right ${f.winnerEntryId && f.winnerEntryId === f.homeEntryId ? "text-lime-200 font-semibold" : "text-zinc-100"}`}>{f.homeName ?? "TBD"}</span>
-        {ready && running ? (
-          <>
-            <input aria-label="Home score" className={`${field} w-14 text-center`} inputMode="numeric" value={home} onChange={(e) => setHome(e.target.value)} />
-            <span className="text-zinc-500">–</span>
-            <input aria-label="Away score" className={`${field} w-14 text-center`} inputMode="numeric" value={away} onChange={(e) => setAway(e.target.value)} />
-          </>
-        ) : (
-          <span className="text-zinc-300 w-20 text-center">{f.status === "COMPLETED" ? `${f.homeScore} – ${f.awayScore}` : "vs"}</span>
-        )}
-        <span className={`flex-1 min-w-[90px] ${f.winnerEntryId && f.winnerEntryId === f.awayEntryId ? "text-lime-200 font-semibold" : "text-zinc-100"}`}>{f.awayName ?? "TBD"}</span>
-      </div>
-      {tie && ready && running && (
-        <div className="mt-2 flex items-center gap-2 text-xs text-zinc-300">
-          Went through:
-          <select className={`${field} max-w-[200px]`} value={winner} onChange={(e) => setWinner(e.target.value)}>
-            <option value="">Pick winner</option>
-            <option value={f.homeEntryId!}>{f.homeName}</option>
-            <option value={f.awayEntryId!}>{f.awayName}</option>
-          </select>
-        </div>
-      )}
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
-        <span>
-          {fmtIst(f.scheduledAt)}
-          {f.venue ? ` · ${f.venue}` : ""}
-          {officialName ? ` · Official: ${officialName}` : ""}
-          {f.status === "POSTPONED" ? " · Postponed" : f.status === "CANCELLED" ? " · Cancelled" : ""}
-        </span>
-        {running && (
-          <span className="flex gap-2">
-            <button className={ghost} onClick={() => setEditing((v) => !v)}>
-              Schedule
-            </button>
-            {ready && f.status !== "POSTPONED" && (
-              <button className={primary} disabled={busy || home === "" || away === ""} onClick={saveResult}>
-                {f.status === "COMPLETED" ? "Correct" : "Save result"}
-              </button>
-            )}
-          </span>
-        )}
-      </div>
-      {editing && (
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-4 gap-2">
-          <input className={field} type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} aria-label="Date and time (IST)" />
-          <input className={field} placeholder="Venue / court" value={venue} onChange={(e) => setVenue(e.target.value)} maxLength={120} />
-          <select className={field} value={official} onChange={(e) => setOfficial(e.target.value)} aria-label="Official">
-            <option value="">No official</option>
-            {c.officials.map((o) => (
-              <option key={o.userId} value={o.userId}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-          <div className="flex gap-2">
-            {f.status !== "COMPLETED" && (
-              <select className={field} value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
-                <option value="SCHEDULED">Scheduled</option>
-                <option value="POSTPONED">Postponed</option>
-                {c.format === "LEAGUE" && <option value="CANCELLED">Cancelled</option>}
-              </select>
-            )}
-            <button className={primary} disabled={busy} onClick={saveSchedule}>
-              Save
-            </button>
-          </div>
-        </div>
-      )}
-    </li>
-  );
-}

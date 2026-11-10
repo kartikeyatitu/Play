@@ -224,7 +224,7 @@ const moreGroups: NavGroup[] = [
       ...(FEATURES.rewards ? [{ id: "tool-rewards", label: "Rewards", icon: NAV_ICONS.star, href: "/org/rewards" }] : []),
       ...(FEATURES.marketplace ? [{ id: "store", label: "Kit Store", icon: NAV_ICONS.shop }] : []),
       ...(FEATURES.sponsorship || FEATURES.inclusive ? [{ id: "brand", label: "Brand Studio", icon: NAV_ICONS.star }] : []),
-      ...(FEATURES.events ? [{ id: "events", label: "Events", icon: NAV_ICONS.ticket }] : []),
+      ...(FEATURES.events ? [{ id: "events", label: "Competitions", icon: NAV_ICONS.ticket }] : []),
       ...(FEATURES.opportunities ? [{ id: "opportunities", label: "Opportunities", icon: NAV_ICONS.trophy }] : []),
     ],
   },
