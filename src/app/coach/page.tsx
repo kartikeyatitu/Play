@@ -15,7 +15,7 @@ import { InviteParentsCard } from "@/components/coach/InviteParentsCard";
 import { requireAuth } from "@/lib/auth";
 import { istToday, istMonthString, istWeekday, scheduleRunsOn } from "@/lib/fees";
 import { attendanceStatusOf, parseMedicalInfo, cleanPhone, scheduleTime, scheduleStartMinutes, firstName } from "@/lib/coach";
-import { Calendar, Trophy, MapPin } from "lucide-react";
+import { Calendar, ChevronRight, Trophy, MapPin } from "lucide-react";
 import { NeedsYou } from "@/components/coach/NeedsYou";
 import { CoachAtRisk } from "@/components/coach/CoachAtRisk";
 import { AttendanceSync } from "@/components/coach/AttendanceSync";
@@ -417,20 +417,6 @@ export default async function CoachDashboard({
   // Cast: DB rows carry extra Prisma fields beyond BatchRecord's shape.
   const squadPanel = (
     <div className="space-y-6">
-      <nav aria-label="Coach tools" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        {[
-          { href: "/coach/assess", label: "Assess" },
-          { href: "/coach/availability", label: "Availability" },
-          { href: "/body", label: "Fitness tests" },
-          { href: "/body/drills", label: "Drills & plans" },
-          { href: "/mind/coaches", label: "Mind & Performance" },
-          { href: "/pros", label: "Professionals" },
-        ].map((l) => (
-          <a key={l.href} href={l.href} className="inline-flex h-11 items-center justify-center rounded-xl border border-line bg-surface text-sm font-semibold text-ink hover:bg-surface-2">
-            {l.label}
-          </a>
-        ))}
-      </nav>
       {atRisk && atRisk.high + atRisk.medium + atRisk.low > 0 && (
         <div id="at-risk" className="scroll-mt-20">
           <CoachAtRisk data={atRisk} />
@@ -520,7 +506,43 @@ export default async function CoachDashboard({
     />
   );
 
+  // Coach tools that live on their own pages: one list, same pattern as More in the parent and owner apps.
+  const coachTools = [
+    { label: "Your coaching", items: [
+      { href: "/coach/assess", label: "Assess an athlete" },
+      { href: "/coach/availability", label: "My availability" },
+    ] },
+    { label: "Training", items: [
+      { href: "/body", label: "Fitness tests" },
+      { href: "/body/drills", label: "Drills & session plans" },
+      { href: "/mind/coaches", label: "Mind & Performance" },
+    ] },
+    { label: "Beyond the coach", items: [
+      { href: "/pros", label: "Find a professional" },
+      { href: "/settings/notifications", label: "Notification settings" },
+    ] },
+  ];
+  const toolsList = (
+    <div className="space-y-5">
+      {coachTools.map((g) => (
+        <section key={g.label}>
+          <p className="mb-2 px-1 text-[13px] font-medium text-ink-subtle">{g.label}</p>
+          <div className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
+            {g.items.map((l) => (
+              <a key={l.href} href={l.href} className="flex min-h-[52px] items-center justify-between gap-3 px-4 text-sm font-medium text-ink hover:bg-surface-2">
+                {l.label}
+                <ChevronRight className="h-4 w-4 text-ink-subtle" aria-hidden />
+              </a>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+
   const mePanel = (
+    <div className="space-y-8">
+    {toolsList}
     <CoachMePanel
       coach={{ id: coach.id, name: coach.name, phone: coach.phone, verified: coach.verified, verificationData: coach.verificationData }}
       isAdmin={isAdmin}
@@ -530,6 +552,7 @@ export default async function CoachDashboard({
       weekday={weekday}
       fees={{ students: coachStudentsWithFees, upiId: org?.upiId ?? null, currentMonth }}
     />
+    </div>
   );
 
   return (

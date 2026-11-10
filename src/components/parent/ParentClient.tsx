@@ -2,7 +2,8 @@
 import { Suspense, useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { PaymentReturnHandler } from '@/components/parent/PaymentReturnHandler';
-import { DashboardShell, SectionHeader, NAV_ICONS } from '@/components/ui/dashboard-shell';
+import { DashboardShell, SectionHeader, NAV_ICONS, type NavGroup, type NavItem } from '@/components/ui/dashboard-shell';
+import { MoreScreen } from '@/components/shell/MoreScreen';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogOut } from 'lucide-react';
 import { FamilyDashboard } from '@/components/parent/FamilyDashboard';
@@ -67,18 +68,55 @@ export function ParentClient({
     });
   };
 
-  const navItems = [
+  // Same pattern as the coach and owner apps: five tabs at the bottom, everything else under More.
+  const navItems: NavItem[] = [
     { id: 'home', label: 'Home', icon: NAV_ICONS.home },
-    { id: 'children', label: 'My Children', icon: NAV_ICONS.students },
+    { id: 'children', label: 'Progress', icon: NAV_ICONS.students },
+    { id: 'fees', label: 'Fees', icon: NAV_ICONS.wallet },
     { id: 'chat', label: 'Messages', icon: NAV_ICONS.communication },
-    ...(FEATURES.marketplace ? [{ id: 'shop', label: 'Pro Shop', icon: NAV_ICONS.shop }] : []),
-    { id: 'coaches', label: 'Coaches', icon: NAV_ICONS.people },
-    { id: 'more', label: 'More', icon: NAV_ICONS.star },
+    { id: 'more', label: 'More', icon: NAV_ICONS.more },
+  ];
+  const moreGroups: NavGroup[] = [
+    {
+      label: 'Your child',
+      items: [
+        ...(FEATURES.rewards ? [{ id: 'l-rewards', label: 'Rewards & badges', icon: NAV_ICONS.trophy, href: '/rewards' }] : []),
+        ...(FEATURES.media ? [{ id: 'l-photos', label: 'Photos', icon: NAV_ICONS.heart, href: '/gallery' }] : []),
+        { id: 'l-mind', label: 'Mind & Performance', icon: NAV_ICONS.star, href: '/mind' },
+        ...(FEATURES.opportunities ? [{ id: 'opportunities', label: 'Trials & scholarships', icon: NAV_ICONS.ticket }] : []),
+        { id: 'coaches', label: 'Coaches', icon: NAV_ICONS.people },
+      ],
+    },
+    {
+      label: 'Help for parents',
+      items: [
+        { id: 'l-support', label: 'Supporting your athlete', icon: NAV_ICONS.heart, href: '/mind/parents' },
+        { id: 'l-pros', label: 'Find a professional', icon: NAV_ICONS.people, href: '/pros' },
+        { id: 'l-help', label: 'Need help now?', icon: NAV_ICONS.bell, href: '/mind/support' },
+      ],
+    },
+    {
+      label: 'Family',
+      items: [
+        { id: 'enrol', label: 'Enrol another child', icon: NAV_ICONS.students },
+        { id: 'l-family', label: 'Family & waivers', icon: NAV_ICONS.people, href: '/family' },
+        { id: 'l-consent', label: 'Privacy & consent', icon: NAV_ICONS.settings, href: '/consent' },
+        { id: 'l-notify', label: 'Notification settings', icon: NAV_ICONS.bell, href: '/settings/notifications' },
+      ],
+    },
+    {
+      label: 'Academy',
+      items: [
+        ...(FEATURES.marketplace ? [{ id: 'shop', label: 'Kit store', icon: NAV_ICONS.shop }] : []),
+        { id: 'feedback', label: 'Feedback & referrals', icon: NAV_ICONS.send },
+      ],
+    },
   ];
 
   return (
     <DashboardShell
       navItems={navItems}
+      moreGroups={moreGroups}
       defaultTab="home"
       title="Parent Portal"
       subtitle={parent?.name}
@@ -89,7 +127,7 @@ export function ParentClient({
         </button>
       }
     >
-      {(activeTab) => (
+      {(activeTab, setActiveTab) => (
         <>
           <Suspense fallback={null}>
             <PaymentReturnHandler />
@@ -108,22 +146,6 @@ export function ParentClient({
                 )}
               </div>
 
-              <nav aria-label="More for your family" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {[
-                  { href: "/mind/parents", label: "Supporting your athlete" },
-                  { href: "/mind", label: "Mind & Performance" },
-                  { href: "/pros", label: "Find a professional" },
-                  { href: "/rewards", label: "Rewards & badges" },
-                  { href: "/gallery", label: "Photos" },
-                  { href: "/consent", label: "Privacy & consent" },
-                  { href: "/family", label: "Family & waivers" },
-                  { href: "/mind/support", label: "Need help now?" },
-                ].map((l) => (
-                  <a key={l.href} href={l.href} className="flex min-h-11 items-center justify-center rounded-xl border border-line bg-surface px-3 text-center text-sm font-semibold text-ink hover:bg-surface-2">
-                    {l.label}
-                  </a>
-                ))}
-              </nav>
 
               {children?.length > 1 && (
                 <FamilyDashboard children={children} />
@@ -149,7 +171,7 @@ export function ParentClient({
 
           {activeTab === 'children' && (
             <div className="space-y-6">
-              <SectionHeader title="My Children Details" />
+              <SectionHeader title="Progress" />
               {children?.map((child: any) => (
                 <Card key={child.id} className="mb-6">
                   <CardHeader>
@@ -174,9 +196,6 @@ export function ParentClient({
                     <div className="flex justify-center">
                       <AttendanceCalendar attendances={child.attendances || []} />
                     </div>
-                    
-                    <FeeHistory studentId={child.id} />
-                    {FEATURES.upiAutopay && <AutopayCard studentId={child.id} />}
                     
                     <ProgressTimeline reports={child.skillReports as any} />
                     
@@ -205,7 +224,32 @@ export function ParentClient({
                 </Card>
               ))}
 
-              <Card className="border-zinc-800 bg-zinc-900/50 mt-8">
+            </div>
+          )}
+
+          {activeTab === 'fees' && (
+            <div className="space-y-6">
+              <SectionHeader title="Fees" />
+              <a href="/parent/statement" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-4 text-sm font-semibold text-ink hover:bg-surface-2">
+                Download fee statement
+              </a>
+              {children?.map((child: any) => (
+                <Card key={child.id}>
+                  <CardHeader>
+                    <CardTitle>{child.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <FeeHistory studentId={child.id} />
+                    {FEATURES.upiAutopay && <AutopayCard studentId={child.id} />}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'enrol' && (
+            <div className="space-y-6">
+              <Card className="border-zinc-800 bg-zinc-900/50">
                 <CardHeader>
                   <CardTitle>Enroll Another Child</CardTitle>
                 </CardHeader>
@@ -295,10 +339,18 @@ export function ParentClient({
             </div>
           )}
 
-          {activeTab === 'more' && (
+          {activeTab === 'more' && <MoreScreen groups={moreGroups} onNavigate={setActiveTab} />}
+
+          {activeTab === 'opportunities' && FEATURES.opportunities && (
             <div className="space-y-6">
-              <SectionHeader title="More Actions" />
-              {FEATURES.opportunities && <OpportunitiesCard academyName={org?.name} />}
+              <SectionHeader title="Trials & scholarships" />
+              <OpportunitiesCard academyName={org?.name} />
+            </div>
+          )}
+
+          {activeTab === 'feedback' && (
+            <div className="space-y-6">
+              <SectionHeader title="Feedback & referrals" />
               {FEATURES.growthTools && <ReferralWidget userId={parent.id} />}
               <FeedbackWidget parentId={parent.id} existingFeedback={existingFeedback} />
             </div>
