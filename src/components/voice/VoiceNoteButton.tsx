@@ -129,7 +129,13 @@ export function VoiceNoteButton({
               {dictation.listening ? <MicOff className="h-8 w-8" /> : <Mic className="h-8 w-8" />}
             </button>
             <p className="min-h-5 text-center text-sm text-ink-muted" aria-live="polite">
-              {dictation.listening ? dictation.interim || "Listening… speak now" : "Tap the mic and speak, or type below"}
+              {dictation.state === "starting"
+                ? "Starting microphone…"
+                : dictation.state === "listening"
+                  ? dictation.interim || "Listening… speak now"
+                  : text.trim()
+                    ? "Tap the mic to add more, or edit below"
+                    : "Tap the mic and speak, or type below"}
             </p>
             {dictation.error && <p className="text-center text-sm text-danger">{dictation.error}</p>}
           </div>
@@ -154,12 +160,12 @@ export function VoiceNoteButton({
           className="brand-bg w-full h-12 rounded-xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-          {text.trim() ? "Save note" : "Remove note"}
+          {!text.trim() && saved.trim() ? "Remove note" : "Save note"}
         </button>
         <p className="text-xs leading-relaxed text-ink-subtle">
           {dictation.supported
-            ? "Your phone turns speech into text. TRIQ keeps only the text you save, never the recording."
-            : "Speaking isn't available in this browser. Type the note instead, or open TRIQ in Chrome."}
+            ? "Your phone turns speech into text. TRIQ keeps only the text you save, never the recording. If the mic here doesn't work, tap the box and use the mic key on your keyboard."
+            : "Speaking isn't available in this browser. Tap the box and use the mic key on your keyboard, or open TRIQ in Chrome."}
         </p>
       </div>
     </BottomSheet>

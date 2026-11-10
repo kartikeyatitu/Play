@@ -16,6 +16,7 @@ type Recognition = {
   onend: (() => void) | null;
   start(): void;
   stop(): void;
+  abort?(): void;
 };
 
 function recognitionCtor(): (new () => Recognition) | null {
@@ -33,58 +34,115 @@ const ERRORS: Record<string, string> = {
 };
 
 /**
- * Dictation. `onText` gets each finished phrase; `interim` shows the phrase being spoken.
- * Stops on its own after a pause; tap again to carry on.
+ * Dictation, one phrase per tap (continuous mode is unreliable in Chrome on Android: it can end at once
+ * without an error). `onText` gets each finished phrase; `interim` shows the phrase being spoken.
+ * `state` is idle → starting → listening → idle, so the button always shows that something happened.
  */
 export function useDictation(lang: VoiceLang, onText: (text: string) => void) {
   const [supported, setSupported] = useState(false);
-  const [listening, setListening] = useState(false);
+  const [state, setState] = useState<"idle" | "starting" | "listening">("idle");
   const [interim, setInterim] = useState("");
   const [error, setError] = useState<string | null>(null);
   const rec = useRef<Recognition | null>(null);
+  const heard = useRef(false);
+  const failed = useRef(false);
+  const startTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onTextRef = useRef(onText);
   onTextRef.current = onText;
 
   useEffect(() => setSupported(!!recognitionCtor()), []);
 
   const stop = useCallback(() => {
-    rec.current?.stop();
+    try {
+      rec.current?.stop();
+    } catch {
+      /* already stopped */
+    }
   }, []);
 
   const start = useCallback(() => {
     const Ctor = recognitionCtor();
     if (!Ctor) return;
-    rec.current?.stop();
-    const r = new Ctor();
+    try {
+      rec.current?.abort?.();
+    } catch {
+      /* ignore */
+    }
+    const r = new Ctor() as Recognition & { onstart?: (() => void) | null; onaudiostart?: (() => void) | null; abort?: () => void };
     r.lang = lang;
-    r.continuous = true;
+    r.continuous = false;
     r.interimResults = true;
+    heard.current = false;
+    failed.current = false;
+    r.onstart = () => setState("listening");
+    r.onaudiostart = () => setState("listening");
     r.onresult = (e) => {
       let live = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const res = e.results[i];
-        if (res.isFinal) onTextRef.current(res[0].transcript.trim());
-        else live += res[0].transcript;
+        const t = res[0]?.transcript ?? "";
+        if (res.isFinal) {
+          if (t.trim()) {
+            heard.current = true;
+            onTextRef.current(t.trim());
+          }
+        } else live += t;
       }
       setInterim(live);
     };
-    r.onerror = (e) => setError(ERRORS[e.error] ?? "Couldn't hear that. Try again or type the note.");
+    r.onerror = (e) => {
+      failed.current = true;
+      if (e.error !== "aborted") setError(ERRORS[e.error] ?? "Couldn't hear that. Try again or type the note.");
+    };
     r.onend = () => {
-      setListening(false);
+      setState("idle");
       setInterim("");
+      if (!heard.current && !failed.current) setError("Didn't catch that. Tap the mic and speak right away.");
     };
     setError(null);
+    setState("starting");
+    try {
+      navigator.vibrate?.(25);
+    } catch {
+      /* not supported */
+    }
     rec.current = r;
+    // Some phones never answer (no Google speech service, blocked mic). Don't leave the coach waiting.
+    if (startTimer.current) clearTimeout(startTimer.current);
+    startTimer.current = setTimeout(() => {
+      if (rec.current === r && !heard.current) {
+        setState((st) => {
+          if (st !== "starting") return st;
+          failed.current = true;
+          try {
+            r.abort?.();
+          } catch {
+            /* ignore */
+          }
+          setError("The microphone didn't start on this phone. Tap the box and use the mic key on your keyboard instead.");
+          return "idle";
+        });
+      }
+    }, 5000);
     try {
       r.start();
-      setListening(true);
     } catch {
-      setError("Couldn't start the microphone. Try again.");
+      setState("idle");
+      setError("Couldn't start the microphone. Close other apps using it and try again.");
     }
   }, [lang]);
 
-  useEffect(() => () => rec.current?.stop(), []);
-  return { supported, listening, interim, error, start, stop };
+  useEffect(
+    () => () => {
+      try {
+        rec.current?.abort?.();
+      } catch {
+        /* ignore */
+      }
+    },
+    [],
+  );
+  return { supported, state, listening: state !== "idle", interim, error, start, stop };
 }
 
 /** Hindi when the text has Devanagari, otherwise Indian English. */
