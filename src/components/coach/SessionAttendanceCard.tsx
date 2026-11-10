@@ -22,6 +22,7 @@ import {
   ClipboardCheck,
   PenLine,
   NotebookPen,
+  Mic,
 } from "lucide-react";
 import { AttendanceTile, AttendanceToggle } from "@/components/coach/AttendanceToggle";
 import { ShareRecapButton } from "@/components/coach/ShareRecapButton";
@@ -394,6 +395,19 @@ export function SessionAttendanceCard({
     <div className="space-y-2">
       {viewSwitch}
       {view === "grid" ? grid : list}
+      {view === "grid" ? (
+        <button
+          type="button"
+          onClick={() => setView("list")}
+          className="w-full h-11 rounded-2xl border border-zinc-700/70 text-zinc-200 hover:bg-zinc-800/60 font-semibold text-sm flex items-center justify-center gap-2"
+        >
+          <Mic className="w-4 h-4" /> Add notes for parents (speak or type)
+        </button>
+      ) : (
+        <p className="flex items-center gap-1.5 px-1 text-xs text-zinc-500">
+          <NotebookPen className="w-3.5 h-3.5 shrink-0" /> Tap the notebook next to a child to speak or type a note for their parents.
+        </p>
+      )}
     </div>
   );
 
