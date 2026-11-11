@@ -445,6 +445,17 @@ export default async function CoachDashboard({
 
   const planPanel = (
     <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { href: "/body/drills", label: "Drills & session plans", sub: "Plan today's session" },
+          { href: "/body", label: "Fitness tests", sub: "Record a test or a PB" },
+        ].map((l) => (
+          <a key={l.href} href={l.href} className="flex min-h-[72px] flex-col justify-center rounded-xl border border-line bg-surface px-4 py-3 hover:bg-surface-2">
+            <span className="text-sm font-semibold text-ink">{l.label}</span>
+            <span className="text-xs text-ink-subtle">{l.sub}</span>
+          </a>
+        ))}
+      </div>
       {FEATURES.liveScoring && <LiveMatchesPanel rows={liveMatches} squad={liveSquad} />}
       <div className="flex items-center justify-between gap-3">
         <div>
@@ -512,19 +523,15 @@ export default async function CoachDashboard({
   );
 
   // Coach tools that live on their own pages: one list, same pattern as More in the parent and owner apps.
+  // Assessing lives on each child in Squad (and "Evaluate batch"); drills and fitness tests live in Plan.
   const coachTools = [
-    { label: "Your coaching", items: [
-      { href: "/coach/assess", label: "Assess an athlete" },
+    { label: "You", items: [
       { href: "/coach/availability", label: "My availability" },
-    ] },
-    { label: "Training", items: [
-      { href: "/body", label: "Fitness tests" },
-      { href: "/body/drills", label: "Drills & session plans" },
-      { href: "/mind/coaches", label: "Mind & Performance" },
-    ] },
-    { label: "Beyond the coach", items: [
-      { href: "/pros", label: "Find a professional" },
       { href: "/settings/notifications", label: "Notification settings" },
+    ] },
+    { label: "Learn and get help", items: [
+      { href: "/mind/coaches", label: "Mind & Performance" },
+      { href: "/pros", label: "Find a professional" },
     ] },
   ];
   const toolsList = (

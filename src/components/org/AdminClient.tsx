@@ -4,12 +4,14 @@ import { ThemePicker } from "@/components/ui/theme-picker";
 import React from "react";
 import { Search } from "lucide-react";
 import { RainDayCard } from "@/components/breaks/RainDayCard";
+import { SubTabs } from "@/components/ui/SubTabs";
 import { DashboardShell, SectionHeader, NAV_ICONS, type NavGroup, type NavItem } from "@/components/ui/dashboard-shell";
 import { TodayScreen, type TodayInsights } from "@/components/shell/TodayScreen";
 import { BookingsScreen } from "@/components/shell/BookingsScreen";
 import { MoreScreen } from "@/components/shell/MoreScreen";
 import { FEATURES } from "@/lib/features";
 import type { FeeMonthStatus } from "@/lib/fees";
+import { scheduleRunsOn, istWeekday } from "@/lib/fees";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -47,7 +49,6 @@ const StoreManager = dynamic(() => import("@/components/org/StoreManager").then(
 const InboxTab = dynamic(() => import("@/components/org/InboxTab").then((m) => m.InboxTab), { loading: sectionLoading });
 const FacilitiesTab = dynamic(() => import("@/components/org/FacilitiesTab").then((m) => m.FacilitiesTab), { loading: sectionLoading });
 // recharts-based: client only (ResponsiveContainer measures the DOM anyway)
-const AnalyticsDashboard = dynamic(() => import("@/components/org/AnalyticsDashboard").then((m) => m.AnalyticsDashboard), { ssr: false, loading: sectionLoading });
 const RevenueForecast = dynamic(() => import("@/components/org/RevenueForecast").then((m) => m.RevenueForecast), { ssr: false, loading: sectionLoading });
 const StudentGrowthTracker = dynamic(() => import("@/components/org/StudentGrowthTracker").then((m) => m.StudentGrowthTracker), { ssr: false, loading: sectionLoading });
 const SiblingDiscountCard = dynamic(() => import("@/components/org/SiblingDiscountCard").then((m) => m.SiblingDiscountCard), { loading: inlineLoading });
@@ -58,7 +59,6 @@ const WaitlistManager = dynamic(() => import("@/components/org/WaitlistManager")
 const BatchTransfer = dynamic(() => import("@/components/org/BatchTransfer").then((m) => m.BatchTransfer), { loading: sectionLoading });
 const CouponManager = dynamic(() => import("@/components/org/CouponManager").then((m) => m.CouponManager), { loading: sectionLoading });
 const GenerateSessionsButton = dynamic(() => import("@/components/org/GenerateSessionsButton").then((m) => m.GenerateSessionsButton), { loading: inlineLoading });
-const RevenueProjection = dynamic(() => import("@/components/org/RevenueProjection").then((m) => m.RevenueProjection), { loading: sectionLoading });
 const CapacityAlerts = dynamic(() => import("@/components/org/CapacityAlerts").then((m) => m.CapacityAlerts), { loading: sectionLoading });
 const CoachPerformance = dynamic(() => import("@/components/org/CoachPerformance").then((m) => m.CoachPerformance), { loading: sectionLoading });
 const ChurnPredictor = dynamic(() => import("@/components/org/ChurnPredictor").then((m) => m.ChurnPredictor), { loading: sectionLoading });
@@ -74,12 +74,10 @@ const CertificateGenerator = dynamic(() => import("@/components/org/CertificateG
 const AttendanceInsights = dynamic(() => import("@/components/org/AttendanceInsights").then((m) => m.AttendanceInsights), { loading: sectionLoading });
 const BatchHealthReport = dynamic(() => import("@/components/org/BatchHealthReport").then((m) => m.BatchHealthReport), { loading: sectionLoading });
 const ParentEngagement = dynamic(() => import("@/components/org/ParentEngagement").then((m) => m.ParentEngagement), { loading: sectionLoading });
-const WhatsAppReminder = dynamic(() => import("@/components/org/WhatsAppReminder").then((m) => m.WhatsAppReminder), { loading: inlineLoading });
 const AutoReminders = dynamic(() => import("@/components/org/AutoReminders").then((m) => m.AutoReminders), { loading: sectionLoading });
 const BirthdayTracker = dynamic(() => import("@/components/org/BirthdayTracker").then((m) => m.BirthdayTracker), { loading: sectionLoading });
 const CalendarExport = dynamic(() => import("@/components/org/CalendarExport").then((m) => m.CalendarExport), { loading: sectionLoading });
 const ImportExcelButton = dynamic(() => import("@/components/org/ImportExcelButton").then((m) => m.ImportExcelButton), { loading: inlineLoading });
-const ExcelImport = dynamic(() => import("@/components/org/ExcelImport").then((m) => m.ExcelImport), { loading: sectionLoading });
 const WhatsAppRosterImport = dynamic(() => import("@/components/org/WhatsAppRosterImport").then((m) => m.WhatsAppRosterImport), { loading: inlineLoading });
 const CoachInsights = dynamic(() => import("@/components/org/CoachInsights").then((m) => m.CoachInsights), { loading: sectionLoading });
 const WeeklyDigest = dynamic(() => import("@/components/org/WeeklyDigest").then((m) => m.WeeklyDigest), { loading: sectionLoading });
@@ -93,7 +91,6 @@ const ReferralProgram = dynamic(() => import("@/components/org/ReferralProgram")
 const TestimonialCollector = dynamic(() => import("@/components/org/TestimonialCollector").then((m) => m.TestimonialCollector), { loading: sectionLoading });
 const ContentCalendar = dynamic(() => import("@/components/org/ContentCalendar").then((m) => m.ContentCalendar), { loading: sectionLoading });
 const InstagramGenerator = dynamic(() => import("@/components/org/InstagramGenerator").then((m) => m.InstagramGenerator), { loading: sectionLoading });
-const PayNowButton = dynamic(() => import("@/components/org/PayNowButton").then((m) => m.PayNowButton), { loading: inlineLoading });
 const WhatsAppTemplates = dynamic(() => import("@/components/org/WhatsAppTemplates").then((m) => m.WhatsAppTemplates), { loading: sectionLoading });
 const BulkWhatsApp = dynamic(() => import("@/components/org/BulkWhatsApp").then((m) => m.BulkWhatsApp), { loading: sectionLoading });
 const AcademySettings = dynamic(() => import("@/components/org/AcademySettings").then((m) => m.AcademySettings), { loading: sectionLoading });
@@ -108,7 +105,7 @@ const FacilityAllocation = dynamic(() => import("@/components/org/FacilityAlloca
 const GstInvoicesPanel = dynamic(() => import("@/components/org/GstInvoicesPanel").then((m) => m.GstInvoicesPanel), { loading: sectionLoading });
 const AutopayMandatesPanel = dynamic(() => import("@/components/org/AutopayMandatesPanel").then((m) => m.AutopayMandatesPanel), { loading: sectionLoading });
 const GstSettingsCard = dynamic(() => import("@/components/org/GstSettingsCard").then((m) => m.GstSettingsCard), { loading: sectionLoading });
-const CollectFees = dynamic(() => import("@/components/org/CollectFees").then((m) => m.CollectFees), { loading: sectionLoading });
+const RecentlyPaid = dynamic(() => import("@/components/org/CollectFees").then((m) => m.RecentlyPaid));
 const OverduePanel = dynamic(() => import("@/components/org/OverduePanel").then((m) => m.OverduePanel), { loading: sectionLoading });
 
 /** Warm the chunks of the most-used tabs once the browser is idle (no effect on first paint). */
@@ -119,8 +116,6 @@ function prefetchCommonTabs() {
   void import("@/components/org/CoachVerification");
   void import("@/components/org/BirthdayTracker");
   void import("@/components/org/PendingPayments");
-  void import("@/components/org/PayNowButton");
-  void import("@/components/org/WhatsAppReminder");
   void import("@/components/org/GenerateFeesButton");
   void import("@/components/org/BatchFeeEditor");
 }
@@ -198,18 +193,17 @@ const primaryNav: NavItem[] = [
   { id: "more", label: "More", icon: NAV_ICONS.more },
 ];
 
+// Related screens share one menu entry and switch with SubTabs: People = Students | Leads,
+// Team = Team | Payroll, Batches = Batches | Calendar, Settings links to waivers, data requests,
+// billing and notifications.
 const moreGroups: NavGroup[] = [
   {
     label: "Run",
     items: [
-      { id: "team", label: "Team", icon: NAV_ICONS.people },
-      { id: "payroll", label: "Payroll", icon: NAV_ICONS.wallet },
-      { id: "batches", label: "Batches", icon: NAV_ICONS.batches },
-      ...(FEATURES.opsCalendar ? [{ id: "calendar", label: "Calendar", icon: NAV_ICONS.today }] : []),
-      { id: "leads", label: "Leads", icon: NAV_ICONS.people },
+      { id: "team", label: "Team & payroll", icon: NAV_ICONS.people },
+      { id: "batches", label: "Batches & calendar", icon: NAV_ICONS.batches },
       { id: "communication", label: "Messages", icon: NAV_ICONS.communication },
       { id: "analytics", label: "Analytics", icon: NAV_ICONS.analytics },
-      ...(FEATURES.businessReport ? [{ id: "report", label: "Business report", icon: NAV_ICONS.analytics }] : []),
       ...(FEATURES.enterprise ? [{ id: "enterprise", label: "Enterprise", icon: NAV_ICONS.building }] : []),
       ...(FEATURES.experimental ? [{ id: "ai", label: "AI Insights", icon: NAV_ICONS.trophy }] : []),
       { id: "tool-body", label: "Fitness & training", icon: NAV_ICONS.gym, href: "/body" },
@@ -224,25 +218,44 @@ const moreGroups: NavGroup[] = [
         ? { id: "tool-media", label: "Photos", icon: NAV_ICONS.heart, href: "/org/media" }
         : { id: "gallery", label: "Gallery", icon: NAV_ICONS.heart },
       ...(FEATURES.rewards ? [{ id: "tool-rewards", label: "Rewards", icon: NAV_ICONS.star, href: "/org/rewards" }] : []),
+      ...(FEATURES.events ? [{ id: "events", label: "Competitions", icon: NAV_ICONS.ticket }] : []),
+      ...(FEATURES.opportunities ? [{ id: "opportunities", label: "Trials & scholarships", icon: NAV_ICONS.trophy }] : []),
       ...(FEATURES.marketplace ? [{ id: "store", label: "Kit Store", icon: NAV_ICONS.shop }] : []),
       ...(FEATURES.sponsorship || FEATURES.inclusive ? [{ id: "brand", label: "Brand Studio", icon: NAV_ICONS.star }] : []),
-      ...(FEATURES.events ? [{ id: "events", label: "Competitions", icon: NAV_ICONS.ticket }] : []),
-      ...(FEATURES.opportunities ? [{ id: "opportunities", label: "Opportunities", icon: NAV_ICONS.trophy }] : []),
     ],
   },
   {
     label: "Admin",
     items: [
-      { id: "operations", label: "Operations", icon: NAV_ICONS.building },
+      { id: "operations", label: "Facilities & transport", icon: NAV_ICONS.building },
       ...(FEATURES.education ? [{ id: "institution", label: "Institution", icon: NAV_ICONS.students }] : []),
-      ...(FEATURES.waivers ? [{ id: "tool-waivers", label: "Waivers & families", icon: NAV_ICONS.people, href: "/org/waivers" }] : []),
-      ...(FEATURES.dataRequests ? [{ id: "tool-data", label: "Data requests", icon: NAV_ICONS.bell, href: "/org/data-requests" }] : []),
-      ...(FEATURES.triqBilling ? [{ id: "tool-billing", label: "TRIQ billing", icon: NAV_ICONS.wallet, href: "/org/billing" }] : []),
-      { id: "tool-notifications", label: "Notification settings", icon: NAV_ICONS.bell, href: "/settings/notifications" },
       { id: "settings", label: "Settings", icon: NAV_ICONS.settings },
     ],
   },
 ];
+
+const PEOPLE_TABS = [
+  { id: "people", label: "Students" },
+  { id: "leads", label: "Leads" },
+];
+const TEAM_TABS = [
+  { id: "team", label: "Team" },
+  { id: "payroll", label: "Payroll" },
+];
+const BATCH_TABS = [
+  { id: "batches", label: "Batches" },
+  ...(FEATURES.opsCalendar ? [{ id: "calendar", label: "Calendar" }] : []),
+];
+const SETTINGS_LINKS = [
+  { id: "settings", label: "Academy" },
+  { id: "l-notify", label: "Notifications", href: "/settings/notifications" },
+  ...(FEATURES.waivers ? [{ id: "l-waivers", label: "Waivers & families", href: "/org/waivers" }] : []),
+  ...(FEATURES.dataRequests ? [{ id: "l-data", label: "Data requests", href: "/org/data-requests" }] : []),
+  ...(FEATURES.triqBilling ? [{ id: "l-billing", label: "TRIQ billing", href: "/org/billing" }] : []),
+];
+
+/** Screens that were folded into another one: old links and bookmarks land on the new home. */
+const TAB_ALIASES: Record<string, string> = { report: "analytics" };
 
 /** Tabs whose feature flag is off: programmatic navigation (palette, tour) falls back to Today. */
 const HIDDEN_TABS = new Set<string>([
@@ -252,7 +265,6 @@ const HIDDEN_TABS = new Set<string>([
   ...(FEATURES.opportunities ? [] : ["opportunities"]),
   ...(FEATURES.education ? [] : ["institution"]),
   ...(FEATURES.opsCalendar ? [] : ["calendar"]),
-  ...(FEATURES.businessReport ? [] : ["report"]),
   ...(FEATURES.marketplace ? [] : ["store"]),
   ...(FEATURES.sponsorship || FEATURES.inclusive ? [] : ["brand"]),
   ...(FEATURES.enterprise ? [] : ["enterprise"]),
@@ -283,6 +295,8 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
     return () => window.clearTimeout(t);
   }, []);
   const [selectedStudent, setSelectedStudent] = React.useState<any>(null);
+  const [feesView, setFeesView] = React.useState<"collect" | "month" | "setup">("collect");
+  const [paidTick, setPaidTick] = React.useState(0);
   const setActiveTabRef = React.useRef<(tab: string) => void>(() => {});
   const exportStudents = students.map((s: any) => ({
     name: s.name,
@@ -330,7 +344,8 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
         </div>
       }
     >
-      {(activeTab, setActiveTab) => {
+      {(rawTab, setActiveTab) => {
+        const activeTab = TAB_ALIASES[rawTab] ?? rawTab;
         // Flag-hidden tabs fall back to Today (palette / tour may still point at them)
         const go = (tab: string) => setActiveTab(HIDDEN_TABS.has(tab) ? "overview" : tab);
         setActiveTabRef.current = go;
@@ -360,7 +375,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
               top={
                 <>
                   <OnboardingWizard session={session} hasBatches={batches.length > 0} hasCoaches={coaches.length > 0} hasStudents={students.length > 0} coaches={coaches} batches={batches} />
-                  {batches.length > 0 && <RainDayCard />}
+                  {batches.some((b: any) => scheduleRunsOn(b.schedule, istWeekday()) !== false) && <RainDayCard />}
                 </>
               }
             />
@@ -379,15 +394,25 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {/* PEOPLE */}
           {activeTab === "people" && (
             <div className="space-y-8">
+              <SubTabs items={PEOPLE_TABS} active={activeTab} onSelect={go} label="People" />
               <div>
                 <SectionHeader
                   title="Students"
                   description={`${totalStudents} enrolled`}
                   actions={
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <ImportExcelButton />
-                      <WhatsAppRosterImport existingBatches={batches} />
-                      <RegisterPhotoImport batches={batches.map((b: any) => ({ id: b.id, name: b.name }))} />
+                    <div className="flex items-center gap-2">
+                      {/* Import options stay mounted inside <details> so their dialogs survive it closing. */}
+                      <details className="relative">
+                        <summary className="list-none cursor-pointer inline-flex h-10 items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium text-ink hover:bg-surface-2">
+                          Import list
+                        </summary>
+                        <div className="absolute right-0 z-30 mt-2 w-64 space-y-2 rounded-xl border border-line bg-surface p-3 shadow-lg [&_button]:w-full [&_button]:justify-start">
+                          <p className="text-xs text-ink-subtle">Bring in many children at once</p>
+                          <WhatsAppRosterImport existingBatches={batches} />
+                          <RegisterPhotoImport batches={batches.map((b: any) => ({ id: b.id, name: b.name }))} />
+                          <ImportExcelButton />
+                        </div>
+                      </details>
                       <CreateStudentDialog batches={batches.map((b: any) => ({ id: b.id, name: b.name, sport: b.sport }))} orgId={session.orgId} />
                     </div>
                   }
@@ -514,6 +539,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {/* BATCHES & FEES */}
           {activeTab === "batches" && (
             <div className="space-y-8">
+              <SubTabs items={BATCH_TABS} active={activeTab} onSelect={go} label="Batches" />
               <div>
                 <SectionHeader title="Batches" actions={<div className="flex gap-2"><GenerateSessionsButton /><CreateBatchDialog coaches={coaches} /></div>} />
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -568,111 +594,134 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
             </div>
           )}
 
-          {/* FEES */}
+          {/* FEES: Collect (to confirm, unpaid, recently paid) · This month (every child) · Setup */}
           {activeTab === "fees" && (
-            <div className="space-y-8">
-              <div>
-                <SectionHeader title="Overdue" description="Unpaid fees by days past due (IST). Remind a family with one tap." />
-                <OverduePanel />
+            <div className="space-y-6">
+              <div role="tablist" aria-label="Fees" className="inline-flex rounded-xl border border-line bg-surface p-1 text-sm">
+                {([
+                  ["collect", "Collect"],
+                  ["month", "This month"],
+                  ["setup", "Setup"],
+                ] as const).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={feesView === id}
+                    onClick={() => setFeesView(id)}
+                    className={`rounded-lg px-4 py-2 font-medium transition-colors ${feesView === id ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink"}`}
+                  >
+                    {label}
+                    {id === "collect" && pendingVerification.length > 0 && (
+                      <span className="ml-1.5 rounded-full bg-[var(--brand)] px-1.5 text-[11px] text-[#000000]">{pendingVerification.length}</span>
+                    )}
+                  </button>
+                ))}
               </div>
-              <div>
-                <SectionHeader title="Collect fees" description="Unpaid fees across your academy — remind, mark paid, share receipts." />
-                <CollectFees academyName={academyName} upiId={upiId} razorpayConnected={Boolean((org as any)?.razorpayConnected)} />
-              </div>
-              <div>
-                <SectionHeader title="Payments to confirm" description={`${pendingVerification.length} reported by parents via UPI`} />
-                {!upiId && (
-                  <div className="mb-3 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-2 text-xs text-amber-300">
-                    Add your UPI ID in{" "}
-                    <button type="button" onClick={() => setActiveTab("settings")} className="underline">Settings</button>{" "}
-                    so parents can pay you directly.
-                  </div>
-                )}
-                <PendingPayments items={pendingVerification} />
-              </div>
-              {FEATURES.upiAutopay && (
-                <div>
-                  <SectionHeader title="UPI AutoPay" description="Monthly fee mandates parents approved in their UPI app" />
-                  <AutopayMandatesPanel />
-                </div>
-              )}
-              {FEATURES.gstInvoices && (
-                <div>
-                  <SectionHeader title="GST invoices" description="Tax invoices for paid fees, credit notes for reversals" />
-                  <GstInvoicesPanel onOpenSettings={() => setActiveTab("settings")} />
-                </div>
-              )}
-              <div>
-                <SectionHeader
-                  title="Monthly Fees"
-                  description={(() => {
-                    const [y, m] = (currentMonth || "").split("-").map(Number);
-                    if (!y || !m) return currentMonth;
-                    return `Billing Cycle: ${new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}`;
-                  })()}
-                  actions={<GenerateFeesButton />}
-                />
-                {FEATURES.familyAccounts && <div className="mb-4"><SiblingDiscountCard /></div>}
-                <div className="rounded-xl border border-zinc-800/50 overflow-hidden">
-                  <div className="overflow-x-auto w-full custom-scrollbar">
-                    <Table className="min-w-[560px]">
-                      <TableHeader><TableRow className="border-zinc-800/50 bg-zinc-900/40 hover:bg-zinc-900/40">
-                        <TableHead className="text-zinc-500 text-xs uppercase">Student</TableHead>
-                        <TableHead className="text-zinc-500 text-xs uppercase">Parent</TableHead>
-                        <TableHead className="text-zinc-500 text-xs uppercase text-right">Fee</TableHead>
-                        <TableHead className="text-zinc-500 text-xs uppercase text-right">Status</TableHead>
-                      </TableRow></TableHeader>
-                      <TableBody>
-                        {students.map((s: any) => {
-                          const feeRecord = s.feeRecords?.[0];
-                          const feeStatus = feeRecord?.status || "PENDING";
-                          const feeAmount = feeRecord?.amount || studentFees[s.id] || 0;
-                          return (
-                          <TableRow key={s.id} className="border-zinc-800/30 hover:bg-zinc-800/20">
-                            <TableCell><a href={`/student/${s.id}`} className="brand-text hover:underline">{s.name}</a></TableCell>
-                            <TableCell className="text-zinc-400 text-sm">{s.parent?.name}</TableCell>
-                            <TableCell className="text-right text-sm">
-                              {feeAmount > 0 ? <span className="text-zinc-200">₹{feeAmount.toLocaleString("en-IN")}</span> : (
-                                <button type="button" onClick={() => setActiveTab("batches")} className="text-xs text-amber-400 hover:underline">Set fee</button>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right flex items-center justify-end gap-2">
-                              <FeeToggle studentId={s.id} month={currentMonth} initialStatus={feeStatus} />
-                              <PaymentMethodBadge status={feeStatus} method={feeRecord?.paymentMethod} />
-                              {(feeStatus === "PENDING" || feeStatus === "PENDING_VERIFICATION") && s.parent?.phone && feeAmount > 0 && (
-                                <>
-                                  <PayNowButton studentName={s.name} studentId={s.id} amount={feeAmount} month={currentMonth} parentPhone={s.parent.phone} academyName={academyName} upiId={upiId} feeRecordId={feeRecord?.id} feeStatus={feeStatus} razorpayConnected={Boolean((org as any)?.razorpayConnected)} />
-                                  {feeStatus === "PENDING" && (
-                                    <WhatsAppReminder parentPhone={s.parent.phone} parentName={s.parent?.name} studentName={s.name} month={currentMonth} amount={feeAmount} academyName={academyName} upiId={upiId} />
-                                  )}
-                                </>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                  <SectionHeader title="Fee Plans" description="Monthly, quarterly & annual options" />
-                  <Deferred promise={secondary}>
-                    {(d) => <PaymentPlans academyName={academyName} feePlans={d.feePlans} />}
-                  </Deferred>
-                </div>
-                {/* Coupons are not redeemable yet: growth tools flag (default off) */}
-                {FEATURES.growthTools && (
+
+              {feesView === "collect" && (
+                <>
+                  {!upiId && !(org as any)?.razorpayConnected && (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-ink">
+                      Parents can&apos;t pay online yet.{" "}
+                      <button type="button" onClick={() => setActiveTab("settings")} className="font-medium underline">Add your UPI ID</button>{" "}
+                      and every reminder carries a one-tap pay link.
+                    </div>
+                  )}
+                  {pendingVerification.length > 0 && (
+                    <div>
+                      <SectionHeader title="Payments to confirm" description={`${pendingVerification.length} ${pendingVerification.length === 1 ? "parent says they've" : "parents say they've"} paid by UPI. Check your bank app, then confirm.`} />
+                      <PendingPayments items={pendingVerification} />
+                    </div>
+                  )}
                   <div>
-                    <SectionHeader title="Coupons" />
+                    <SectionHeader title="Unpaid" description="By family, oldest first. Remind one family, remind everyone in a range, or tap Paid when money comes in." />
+                    <OverduePanel academyName={academyName} onPaid={() => setPaidTick((n) => n + 1)} />
+                  </div>
+                  <RecentlyPaid refreshKey={paidTick} />
+                </>
+              )}
+
+              {feesView === "month" && (
+                <div>
+                  <SectionHeader
+                    title={(() => {
+                      const [y, m] = (currentMonth || "").split("-").map(Number);
+                      if (!y || !m) return "This month";
+                      return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });
+                    })()}
+                    description="Every child's fee this month. Tap the status to mark cash or bank payments."
+                    actions={<GenerateFeesButton />}
+                  />
+                  <div className="rounded-xl border border-zinc-800/50 overflow-hidden">
+                    <div className="overflow-x-auto w-full custom-scrollbar">
+                      <Table className="min-w-[520px]">
+                        <TableHeader><TableRow className="border-zinc-800/50 bg-zinc-900/40 hover:bg-zinc-900/40">
+                          <TableHead className="text-zinc-500 text-xs uppercase">Student</TableHead>
+                          <TableHead className="text-zinc-500 text-xs uppercase">Parent</TableHead>
+                          <TableHead className="text-zinc-500 text-xs uppercase text-right">Fee</TableHead>
+                          <TableHead className="text-zinc-500 text-xs uppercase text-right">Status</TableHead>
+                        </TableRow></TableHeader>
+                        <TableBody>
+                          {students.map((s: any) => {
+                            const feeRecord = s.feeRecords?.[0];
+                            const feeStatus = feeRecord?.status || "PENDING";
+                            const feeAmount = feeRecord?.amount || studentFees[s.id] || 0;
+                            return (
+                            <TableRow key={s.id} className="border-zinc-800/30 hover:bg-zinc-800/20">
+                              <TableCell><a href={`/student/${s.id}`} className="brand-text hover:underline">{s.name}</a></TableCell>
+                              <TableCell className="text-zinc-400 text-sm">{s.parent?.name}</TableCell>
+                              <TableCell className="text-right text-sm">
+                                {feeAmount > 0 ? <span className="text-zinc-200">₹{feeAmount.toLocaleString("en-IN")}</span> : (
+                                  <button type="button" onClick={() => setActiveTab("batches")} className="text-xs text-amber-400 hover:underline">Set fee</button>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right flex items-center justify-end gap-2">
+                                <FeeToggle studentId={s.id} month={currentMonth} initialStatus={feeStatus} />
+                                <PaymentMethodBadge status={feeStatus} method={feeRecord?.paymentMethod} />
+                              </TableCell>
+                            </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {feesView === "setup" && (
+                <div className="space-y-8">
+                  <div>
+                    <SectionHeader title="Fee plans" description="Monthly, quarterly and annual options" />
                     <Deferred promise={secondary}>
-                      {(d) => <CouponManager initialCoupons={d.coupons} />}
+                      {(d) => <PaymentPlans academyName={academyName} feePlans={d.feePlans} />}
                     </Deferred>
                   </div>
-                )}
-              </div>
+                  {FEATURES.familyAccounts && <SiblingDiscountCard />}
+                  {FEATURES.upiAutopay && (
+                    <div>
+                      <SectionHeader title="UPI AutoPay" description="Monthly fee mandates parents approved in their UPI app" />
+                      <AutopayMandatesPanel />
+                    </div>
+                  )}
+                  {FEATURES.gstInvoices && (
+                    <div>
+                      <SectionHeader title="GST invoices" description="Tax invoices for paid fees, credit notes for reversals" />
+                      <GstInvoicesPanel onOpenSettings={() => setActiveTab("settings")} />
+                    </div>
+                  )}
+                  {/* Coupons are not redeemable yet: growth tools flag */}
+                  {FEATURES.growthTools && (
+                    <div>
+                      <SectionHeader title="Coupons" />
+                      <Deferred promise={secondary}>
+                        {(d) => <CouponManager initialCoupons={d.coupons} />}
+                      </Deferred>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -707,23 +756,52 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
 
           {/* ANALYTICS */}
           {activeTab === "analytics" && (
-            <div className="space-y-6">
+            <div className="space-y-10">
               {FEATURES.askTriq && <AskTriq />}
-              {FEATURES.weeklyDigest && <WeeklyDigest />}
-              {FEATURES.ownerInsights && <OwnerInsights />}
-              {FEATURES.atRiskStudents && <AtRiskStudents />}
-              {FEATURES.funnelCohorts && <FunnelAndRetention />}
-              {/* `sessions` is unused by AnalyticsDashboard — no longer fetched/shipped */}
-              <AnalyticsDashboard students={students} batches={batches} feeSummary={feeSummary} sessions={[]} />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <RevenueProjection paidCount={stats.paidFeesCount} totalStudents={stats.totalStudents} ratePerStudent={stats.typicalFee ?? 0} collectedAmount={stats.revenueThisMonth} targetAmount={stats.billedThisMonth} />
+
+              <section className="space-y-4" aria-labelledby="an-month">
+                <SectionHeader title="How the academy is doing" description="This week against last, then the last 12 months" />
+                {FEATURES.weeklyDigest && <WeeklyDigest />}
+                {FEATURES.ownerInsights && <OwnerInsights trendsOnly />}
                 <CapacityAlerts batches={batches} />
-              </div>
-              {FEATURES.coachInsights ? <CoachInsights /> : <CoachPerformance coaches={coaches as any} sessionRate={coachRate} />}
-              <SectionHeader title="Export Data" />
-              <Card className="bg-zinc-900/30 border-zinc-800/50 p-6">
-                <ExportCSV students={exportStudents} />
-              </Card>
+              </section>
+
+              {FEATURES.atRiskStudents && (
+                <section className="space-y-4">
+                  <SectionHeader title="Who needs a call" description="Children whose attendance has dropped or whose fees are late. Call these families first." />
+                  <AtRiskStudents />
+                </section>
+              )}
+
+              {FEATURES.funnelCohorts && (
+                <section className="space-y-4">
+                  <SectionHeader title="Growth" description="Where new families come from, and whether they stay" />
+                  <FunnelAndRetention />
+                </section>
+              )}
+
+              <section className="space-y-4">
+                <SectionHeader title="Coaches" />
+                {FEATURES.coachInsights ? <CoachInsights /> : <CoachPerformance coaches={coaches as any} sessionRate={coachRate} />}
+              </section>
+
+              <section className="space-y-4">
+                <SectionHeader title="Reports and downloads" />
+                {FEATURES.businessReport && (
+                  <details className="group rounded-xl border border-line bg-surface">
+                    <summary className="cursor-pointer list-none px-4 py-3 font-medium text-ink flex items-center justify-between">
+                      Monthly business report
+                      <span className="text-xs text-ink-subtle group-open:hidden">Open</span>
+                    </summary>
+                    <div className="border-t border-line p-4">
+                      <BusinessReport currentMonth={currentMonth} />
+                    </div>
+                  </details>
+                )}
+                <div className="rounded-xl border border-line bg-surface p-4">
+                  <ExportCSV students={exportStudents} />
+                </div>
+              </section>
             </div>
           )}
 
@@ -756,6 +834,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {/* LEADS */}
           {activeTab === "leads" && (
             <div className="space-y-6">
+              <SubTabs items={PEOPLE_TABS} active={activeTab} onSelect={go} label="People" />
               <div className="flex justify-between items-center">
                 <SectionHeader title="Lead Pipeline" description="Manage inquiries and track conversions" />
                 <AddLeadForm orgId={session.orgId} />
@@ -848,11 +927,17 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {/* TEAM: coaches, staff, roles, daily attendance */}
           {activeTab === "team" && (
             <>
+              <SubTabs items={TEAM_TABS} active={activeTab} onSelect={go} label="Team" />
               <AcademySwitcher className="mb-4 w-full" />
               <TeamPanel />
             </>
           )}
-          {activeTab === "payroll" && <PayrollPanel onOpenTeam={() => go("team")} />}
+          {activeTab === "payroll" && (
+            <>
+              <SubTabs items={TEAM_TABS} active={activeTab} onSelect={go} label="Team" />
+              <PayrollPanel onOpenTeam={() => go("team")} />
+            </>
+          )}
 
           {activeTab === "institution" && FEATURES.education && (
             <div className="space-y-4">
@@ -869,12 +954,6 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           )}
 
           {/* BUSINESS REPORT (V1 Business, flag businessReport) */}
-          {activeTab === "report" && FEATURES.businessReport && (
-            <div className="space-y-6">
-              <SectionHeader title="Business report" description="Revenue, outstanding fees, attendance and utilisation from your real records" />
-              <BusinessReport currentMonth={currentMonth} />
-            </div>
-          )}
 
           {/* ENTERPRISE (V11, flag enterprise) */}
           {activeTab === "enterprise" && FEATURES.enterprise && (
@@ -887,6 +966,7 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {/* CALENDAR (V1 Business, flag opsCalendar) */}
           {activeTab === "calendar" && FEATURES.opsCalendar && (
             <div className="space-y-6">
+              <SubTabs items={BATCH_TABS} active={activeTab} onSelect={go} label="Batches" />
               <SectionHeader title="Calendar" description="Sessions, planned batches, trials, holidays and court allocations" />
               <OpsCalendar />
             </div>
@@ -914,19 +994,16 @@ export function AdminClient({ session, org, students, batches, coaches, feeSumma
           {/* SETTINGS */}
           {activeTab === "settings" && (
             <div className="space-y-6">
+              <SubTabs items={SETTINGS_LINKS} active={activeTab} onSelect={go} label="Settings" />
               <SectionHeader title="Academy Settings" description="Manage your academy profile" />
               {org && <AcademySettings org={org} />}
               {FEATURES.gstInvoices && <GstSettingsCard />}
               <ThemePicker />
               {FEATURES.auditLogViewer && <AuditLogPanel />}
-              <div>
-                <SectionHeader title="Import Data" description="Import students from WhatsApp, a register photo, Excel or CSV" />
-                <div className="mb-4 flex flex-wrap items-center gap-2">
-                  <WhatsAppRosterImport existingBatches={batches} />
-                  <RegisterPhotoImport batches={batches.map((b: any) => ({ id: b.id, name: b.name }))} />
-                </div>
-                <ExcelImport />
-              </div>
+              <p className="text-sm text-ink-muted">
+                To import students from WhatsApp, a register photo or Excel, use{" "}
+                <button type="button" onClick={() => go("people")} className="font-medium underline">People → Import list</button>.
+              </p>
               <Card className="bg-zinc-900/30 border-zinc-800/50 p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Data Management</h3>
                 <ExportCSV students={exportStudents} />

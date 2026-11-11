@@ -61,7 +61,8 @@ function Change({ value, kind }: { value: number | null; kind: "pct" | "pts" }) 
 
 const pct = (r: number | null) => (r == null ? "—" : `${Math.round(r * 100)}%`);
 
-export function OwnerInsights() {
+/** `trendsOnly`: just the 12-month trends (today's numbers live on Today, unpaid ageing on Fees). */
+export function OwnerInsights({ trendsOnly = false }: { trendsOnly?: boolean } = {}) {
   const [data, setData] = useState<Insights | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,11 +90,11 @@ export function OwnerInsights() {
     );
   }
   if (error || !data) return <p className="text-sm text-danger">{error ?? "Couldn't load insights."}</p>;
-  return <OwnerInsightsView data={data} />;
+  return <OwnerInsightsView data={data} trendsOnly={trendsOnly} />;
 }
 
 /** Pure view (no data fetching) — also used by the local visual preview. */
-export function OwnerInsightsView({ data }: { data: Insights }) {
+export function OwnerInsightsView({ data, trendsOnly = false }: { data: Insights; trendsOnly?: boolean }) {
   const [showTable, setShowTable] = useState(false);
   const colors = useThemeColors();
   const money = (n: number) => formatCurrency(n, data.currency);
@@ -117,6 +118,7 @@ export function OwnerInsightsView({ data }: { data: Insights }) {
     <section className="space-y-8" aria-labelledby="owner-insights-title">
       <h2 id="owner-insights-title" className="sr-only">Owner insights</h2>
 
+      {!trendsOnly && (<>
       {/* Today */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-ink">Today</h3>
@@ -168,6 +170,8 @@ export function OwnerInsightsView({ data }: { data: Insights }) {
           </ul>
         )}
       </div>
+
+      </>)}
 
       {/* 12-month trends */}
       <div className="space-y-4">

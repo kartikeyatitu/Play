@@ -15,7 +15,7 @@ export interface OverdueFamilyView {
   hasPhone: boolean;
   total: number;
   maxDaysOverdue: number;
-  lines: Array<{ feeRecordId: string; studentName: string; month: string; amount: number; daysOverdue: number }>;
+  lines: Array<{ feeRecordId: string; studentId: string; studentName: string; month: string; amount: number; daysOverdue: number }>;
   lastRemindedAt: string | null;
   /** wa.me link with the reminder text; null without a usable phone */
   waLink: string | null;
@@ -108,7 +108,7 @@ export async function loadOverdueReport(orgId: string, now = new Date()): Promis
           hasPhone: String(f.familyPhone || "").replace(/\D/g, "").length >= 10,
           total: f.total,
           maxDaysOverdue: f.maxDaysOverdue,
-          lines: f.lines.map((l) => ({ feeRecordId: l.feeRecordId, studentName: l.studentName, month: l.month, amount: l.amount, daysOverdue: l.daysOverdue })),
+          lines: f.lines.map((l) => ({ feeRecordId: l.feeRecordId, studentId: l.studentId, studentName: l.studentName, month: l.month, amount: l.amount, daysOverdue: l.daysOverdue })),
           lastRemindedAt: last.get(f.familyId) ?? null,
           waLink: familyWaLink(f.familyPhone, text, org?.phoneCountry || "91"),
         };

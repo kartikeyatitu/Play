@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { MessageCircle, Loader2, Users, X } from "lucide-react";
+import { MessageCircle, Loader2, Users, X, Check } from "lucide-react";
 import { toast } from "sonner";
-import { getOverdueAging } from "@/app/actions/fees";
+import { getOverdueAging, getFeeReceiptToken } from "@/app/actions/fees";
+import { markFeePaid } from "@/app/actions/payments";
+import { getAppUrl } from "@/lib/app-url";
 import { recordFamilyFeeReminder, sendFamilyFeeReminder, startBucketReminders } from "@/app/actions/reminders";
 import { useFormatMoney } from "@/lib/org-locale-context";
 import type { OverdueBucketView, OverdueFamilyView, OverdueView } from "@/lib/fee-overdue-server";
@@ -29,11 +31,21 @@ const TONE: Record<string, string> = {
   d30_plus: "text-danger",
 };
 
+/** "https://wa.me/9198…?text=…" → "9198…" (the family's WhatsApp number, if the link has one). */
+function phoneFromWaLink(link: string | null): string | null {
+  if (!link) return null;
+  try {
+    return new URL(link).pathname.replace(/\D/g, "") || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Overdue fees by age (0–7, 8–15, 16–30, 30+ days, academy-local). Tap a bucket to see its families,
  * largest amount first; remind one family with one tap, or walk the whole bucket with "Remind all".
  */
-export function OverduePanel() {
+export function OverduePanel({ academyName = "", onPaid }: { academyName?: string; onPaid?: () => void } = {}) {
   const fmt = useFormatMoney();
   const [view, setView] = useState<OverdueView | null>(null);
   const [canRemind, setCanRemind] = useState(false);
@@ -73,6 +85,60 @@ export function OverduePanel() {
         ? { ...v, buckets: v.buckets.map((b) => ({ ...b, families: b.families.map((f) => (f.familyId === familyId ? { ...f, lastRemindedAt: at } : f)) })) }
         : v,
     );
+
+  const [paying, setPaying] = useState<string | null>(null);
+
+  /** Take one fee out of the view (and its family / bucket totals) once it is paid. */
+  const dropLine = (feeRecordId: string) =>
+    setView((v) => {
+      if (!v) return v;
+      let removed = 0;
+      const buckets = v.buckets.map((b) => {
+        let bRemoved = 0;
+        let bRecords = 0;
+        const families = b.families
+          .map((f) => {
+            const line = f.lines.find((l) => l.feeRecordId === feeRecordId);
+            if (!line) return f;
+            bRemoved += line.amount;
+            bRecords += 1;
+            const lines = f.lines.filter((l) => l.feeRecordId !== feeRecordId);
+            return { ...f, lines, total: f.total - line.amount };
+          })
+          .filter((f) => f.lines.length > 0);
+        removed += bRemoved;
+        return { ...b, families, total: b.total - bRemoved, recordCount: b.recordCount - bRecords, familyCount: families.length };
+      });
+      return { ...v, buckets, total: v.total - removed };
+    });
+
+  const markPaid = async (family: OverdueFamilyView, line: OverdueFamilyView["lines"][number]) => {
+    setPaying(line.feeRecordId);
+    try {
+      const r = await markFeePaid(line.studentId, line.month, `manual-${Date.now()}`);
+      if (!r?.success) return void toast.error((r as { error?: string })?.error || "Could not mark paid.");
+      dropLine(line.feeRecordId);
+      onPaid?.();
+      const phone = phoneFromWaLink(family.waLink);
+      toast.success(`${fmt(line.amount)} marked paid · ${line.studentName}`, {
+        action: phone
+          ? {
+              label: "Send receipt",
+              onClick: async () => {
+                const t = await getFeeReceiptToken(line.feeRecordId);
+                if (!t.token) return void toast.error("Receipt not ready yet. Try again in a moment.");
+                const text = `Thank you${family.familyName ? ` ${family.familyName}` : ""}, we have received ${fmt(line.amount)} for ${line.studentName} (${monthLabel(line.month)}).\nReceipt: ${getAppUrl()}/api/receipts/${t.token}/image${academyName ? `\n— ${academyName}` : ""}`;
+                window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank");
+              },
+            }
+          : undefined,
+      });
+    } catch {
+      toast.error("You're offline. Try again in a moment.");
+    } finally {
+      setPaying(null);
+    }
+  };
 
   // The <a> opens WhatsApp synchronously (no popup blocker); recording happens alongside.
   const onRemind = (family: OverdueFamilyView, bucket: string) => {
@@ -235,12 +301,27 @@ export function OverduePanel() {
               <li key={f.familyId} className="flex items-start justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <div className="truncate font-medium text-ink">{f.familyName || "Parent"}</div>
-                  <div className="text-xs text-ink-muted">
-                    {f.lines.map((l) => `${l.studentName} · ${monthLabel(l.month)}`).join(", ")}
-                  </div>
                   <div className="text-xs text-ink-subtle">
                     {f.maxDaysOverdue}d overdue{f.lastRemindedAt ? ` · ${ago(f.lastRemindedAt)}` : ""}
                   </div>
+                  <ul className="mt-2 space-y-1.5">
+                    {f.lines.map((l) => (
+                      <li key={l.feeRecordId} className="flex items-center gap-2 text-xs">
+                        <span className="min-w-0 truncate text-ink-muted">
+                          {l.studentName} · {monthLabel(l.month)} · <span className="tabular-nums">{fmt(l.amount)}</span>
+                        </span>
+                        <button
+                          type="button"
+                          disabled={paying === l.feeRecordId}
+                          onClick={() => markPaid(f, l)}
+                          aria-label={`Mark ${l.studentName}'s ${monthLabel(l.month)} fee paid`}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line px-2 py-1 text-[11px] font-medium text-ink hover:bg-surface-2 disabled:opacity-60"
+                        >
+                          {paying === l.feeRecordId ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Paid
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
                   <span className={`font-semibold tabular-nums ${TONE[bucket.key]}`}>{fmt(f.total)}</span>

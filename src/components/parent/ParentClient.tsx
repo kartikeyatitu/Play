@@ -77,37 +77,31 @@ export function ParentClient({
     { id: 'chat', label: 'Messages', icon: NAV_ICONS.communication },
     { id: 'more', label: 'More', icon: NAV_ICONS.more },
   ];
+  // Kept short on purpose: privacy choices sit inside Family (per child), and Parent help links to
+  // professionals and urgent help from its own page.
   const moreGroups: NavGroup[] = [
     {
       label: 'Your child',
       items: [
         ...(FEATURES.rewards ? [{ id: 'l-rewards', label: 'Rewards & badges', icon: NAV_ICONS.trophy, href: '/rewards' }] : []),
         ...(FEATURES.media ? [{ id: 'l-photos', label: 'Photos', icon: NAV_ICONS.heart, href: '/gallery' }] : []),
-        { id: 'l-mind', label: 'Mind & Performance', icon: NAV_ICONS.star, href: '/mind' },
-        ...(FEATURES.opportunities ? [{ id: 'opportunities', label: 'Trials & scholarships', icon: NAV_ICONS.ticket }] : []),
         { id: 'coaches', label: 'Coaches', icon: NAV_ICONS.people },
-      ],
-    },
-    {
-      label: 'Help for parents',
-      items: [
-        { id: 'l-support', label: 'Supporting your athlete', icon: NAV_ICONS.heart, href: '/mind/parents' },
-        { id: 'l-pros', label: 'Find a professional', icon: NAV_ICONS.people, href: '/pros' },
-        { id: 'l-help', label: 'Need help now?', icon: NAV_ICONS.bell, href: '/mind/support' },
+        ...(FEATURES.opportunities ? [{ id: 'opportunities', label: 'Trials & scholarships', icon: NAV_ICONS.ticket }] : []),
       ],
     },
     {
       label: 'Family',
       items: [
         { id: 'enrol', label: 'Enrol another child', icon: NAV_ICONS.students },
-        { id: 'l-family', label: 'Family & waivers', icon: NAV_ICONS.people, href: '/family' },
-        { id: 'l-consent', label: 'Privacy & consent', icon: NAV_ICONS.settings, href: '/consent' },
+        { id: 'l-family', label: FEATURES.consentLedger ? 'Family, waivers & privacy' : 'Family & waivers', icon: NAV_ICONS.people, href: '/family' },
+        ...(FEATURES.consentLedger ? [] : [{ id: 'l-consent', label: 'Privacy & consent', icon: NAV_ICONS.settings, href: '/consent' }]),
         { id: 'l-notify', label: 'Notification settings', icon: NAV_ICONS.bell, href: '/settings/notifications' },
       ],
     },
     {
-      label: 'Academy',
+      label: 'More',
       items: [
+        { id: 'l-support', label: 'Parent help', icon: NAV_ICONS.heart, href: '/mind/parents' },
         ...(FEATURES.marketplace ? [{ id: 'shop', label: 'Kit store', icon: NAV_ICONS.shop }] : []),
         { id: 'feedback', label: 'Feedback & referrals', icon: NAV_ICONS.send },
       ],
